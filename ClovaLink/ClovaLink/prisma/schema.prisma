@@ -1,0 +1,155 @@
+// This is a forced update to regenerate the Prisma client
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = []
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  USER
+}
+
+model Company {
+  id          String    @id @default(cuid())
+  name        String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  employees   Employee[]
+  documents   Document[]
+  folders     Folder[]
+  activities  Activity[]
+  downloadLinks DownloadLink[]
+
+  @@map("companies")
+}
+
+model Employee {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  password      String
+  role          String    @default("USER")
+  companyId     String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  company       Company   @relation(fields: [companyId], references: [id])
+  documents     Document[]
+  activities    Activity[]
+  folders       Folder[]
+  downloadLinks DownloadLink[]
+  uploadLinks   UploadLink[]
+
+  @@map("employees")
+}
+
+model Document {
+  id          String    @id @default(cuid())
+  name        String
+  path        String
+  mimeType    String
+  size        Int
+  metadata    Json?
+  employeeId  String
+  companyId   String
+  folderId    String?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  uploadedBy  Employee  @relation(fields: [employeeId], references: [id])
+  company     Company   @relation(fields: [companyId], references: [id])
+  folder      Folder?   @relation(fields: [folderId], references: [id])
+  activities  Activity[]
+  downloadLinks DownloadLink[]
+
+  @@map("documents")
+}
+
+model Folder {
+  id          String    @id @default(cuid())
+  name        String
+  parentId    String?
+  companyId   String
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  parent      Folder?   @relation("FolderHierarchy", fields: [parentId], references: [id])
+  children    Folder[]  @relation("FolderHierarchy")
+  company     Company   @relation(fields: [companyId], references: [id])
+  createdBy   Employee  @relation(fields: [createdById], references: [id])
+  documents   Document[]
+  downloadLinks DownloadLink[]
+
+  @@unique([name, companyId])
+  @@map("folders")
+}
+
+model Activity {
+  id          String    @id @default(cuid())
+  type        String
+  description String
+  metadata    Json?
+  employeeId  String
+  documentId  String?
+  companyId   String
+  timestamp   DateTime  @default(now())
+  ipAddress   String?
+  userAgent   String?
+  
+  employee    Employee  @relation(fields: [employeeId], references: [id])
+  document    Document? @relation(fields: [documentId], references: [id])
+  company     Company   @relation(fields: [companyId], references: [id])
+
+  @@map("activities")
+}
+
+model DownloadLink {
+  id          String    @id @default(cuid())
+  token       String    @unique
+  folderId    String?
+  documentId  String?
+  createdById String
+  companyId   String
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  isActive    Boolean   @default(true)
+  downloads   Int       @default(0)
+
+  folder      Folder?   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  document    Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdBy   Employee  @relation(fields: [createdById], references: [id])
+  company     Company   @relation(fields: [companyId], references: [id])
+
+  @@index([token])
+  @@index([folderId])
+  @@index([documentId])
+  @@index([companyId])
+  @@map("download_links")
+}
+
+model UploadLink {
+  id          String    @id @default(cuid())
+  name        String?
+  token       String    @unique
+  maxUses     Int
+  useCount    Int       @default(0)
+  used        Boolean   @default(false)
+  expiresAt   DateTime
+  metadata    Json?
+  employeeId  String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  employee    Employee  @relation(fields: [employeeId], references: [id])
+
+  @@index([token])
+  @@map("upload_links")
+} 
