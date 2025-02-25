@@ -118,7 +118,7 @@ export async function DELETE(
     const folder = await prisma.folder.findFirst({
       where: {
         id: folderId,
-        companyId: employee.company.id
+        ...(employee.role !== 'ADMIN' ? { companyId: employee.company.id } : {})
       },
       include: {
         parent: true,
@@ -198,7 +198,7 @@ export async function PATCH(
     const folder = await prisma.folder.findFirst({
       where: {
         id: folderId,
-        companyId: employee.company.id
+        ...(employee.role !== 'ADMIN' ? { companyId: employee.company.id } : {})
       }
     });
 

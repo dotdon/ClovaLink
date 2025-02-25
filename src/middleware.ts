@@ -29,6 +29,15 @@ export default withAuth(
         if (req.nextUrl.pathname.startsWith('/auth')) {
           return true;
         }
+        
+        // Allow public upload link endpoints
+        if (
+          req.nextUrl.pathname.startsWith('/api/upload-links/validate') ||
+          req.nextUrl.pathname.startsWith('/api/upload')
+        ) {
+          return true;
+        }
+        
         return !!token;
       },
     },
@@ -39,6 +48,7 @@ export const config = {
   matcher: [
     '/dashboard/:path*',
     '/auth/:path*',
-    '/api/:path*',
+    // Use a more specific matcher instead of protecting all API routes
+    '/api/((?!upload-links/validate|upload/).)*',
   ],
 }; 

@@ -53,7 +53,7 @@ export async function GET(
       where: { email: session.user.email }
     });
 
-    if (!employee || employee.companyId !== document.companyId) {
+    if (!employee || (employee.role !== 'ADMIN' && employee.companyId !== document.companyId)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -97,7 +97,7 @@ export async function PATCH(
       where: { email: session.user.email }
     });
 
-    if (!employee || employee.companyId !== document.companyId) {
+    if (!employee || (employee.role !== 'ADMIN' && employee.companyId !== document.companyId)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -201,7 +201,7 @@ export async function DELETE(
       where: { email: session.user.email }
     });
 
-    if (!employee || employee.companyId !== document.companyId) {
+    if (!employee || (employee.role !== 'ADMIN' && employee.companyId !== document.companyId)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
