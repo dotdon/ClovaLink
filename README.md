@@ -2,7 +2,7 @@
 
 A secure document management and sharing platform built with Next.js, Prisma, and PostgreSQL.
 
-![ClovaLink Logo](public/logo.png)
+![ClovaLink Logo](public/logo.svg)
 
 ## Overview
 
