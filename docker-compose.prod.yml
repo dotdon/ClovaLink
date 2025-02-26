@@ -7,7 +7,7 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@db:5432/linkvault?schema=public
+      - DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@db:5432/clovalink?schema=public
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - NEXTAUTH_URL=https://${DOMAIN}
       - UPLOAD_DIR=/app/uploads
