@@ -32,8 +32,8 @@
     "jszip": "^3.10.1",
     "lodash": "^4.17.21",
     "next": "^15.0.3",
-    "next-auth": "^4.24.10",
-    "nodemailer": "^6.9.16",
+    "next-auth": "^4.24.12",
+    "nodemailer": "^7.0.10",
     "pdfjs-dist": "^4.8.69",
     "pino": "^9.5.0",
     "pino-pretty": "^11.3.0",
@@ -55,5 +55,9 @@
     "@types/socket.io-client": "^3.0.0",
     "prisma": "^5.22.0",
     "ts-node": "^10.9.2"
+  },
+  "overrides": {
+    "@babel/runtime": "^7.26.10",
+    "brace-expansion": "^2.0.2"
   }
 }
