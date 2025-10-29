@@ -1,6 +1,8 @@
-import { PrismaClient, Activity } from '@prisma/client';
+import { Activity } from '@prisma/client';
+import prisma from '../prisma';
+import { createLogger, logError } from '../logger';
 
-const prisma = new PrismaClient();
+const logger = createLogger('activity');
 
 export type ActivityType = 'VIEW' | 'DOWNLOAD' | 'EDIT' | 'DELETE' | 'UPLOAD' | 'SHARE';
 
@@ -65,9 +67,10 @@ export async function logActivity({
     // If you want to implement real-time notifications, you could emit an event here
     // await notifyRelevantUsers(activity);
 
+    logger.debug({ type, employeeId, documentId, companyId }, 'Activity logged');
     return activity;
   } catch (error) {
-    console.error('Failed to log activity:', error);
+    logError(error, { type, employeeId, documentId, companyId, context: 'logActivity' });
     // Don't throw the error - we don't want to break the main functionality
     // if activity logging fails
     return null;

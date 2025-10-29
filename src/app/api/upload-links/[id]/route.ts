@@ -6,9 +6,10 @@ import { hasPermission, Permission } from '@/lib/permissions';
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
@@ -23,7 +24,7 @@ export async function DELETE(
     // Find the upload link and verify ownership
     const uploadLink = await prisma.uploadLink.findFirst({
       where: {
-        id: params.id,
+        id,
         employeeId: session.user.id,
       },
       include: {
@@ -41,7 +42,7 @@ export async function DELETE(
 
     // Delete the upload link
     await prisma.uploadLink.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     // Create activity record for the deletion

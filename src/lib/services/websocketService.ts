@@ -1,9 +1,10 @@
 import { Server as HTTPServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
-import { PrismaClient } from '@prisma/client';
 import { getToken } from 'next-auth/jwt';
+import prisma from '../prisma';
+import { createLogger } from '../logger';
 
-const prisma = new PrismaClient();
+const logger = createLogger('websocket');
 
 interface NotificationPayload {
   type: 'DOCUMENT_UPLOAD' | 'DOCUMENT_SHARE' | 'DOCUMENT_EXPIRING' | 'ACTIVITY';
@@ -57,13 +58,13 @@ export function initializeWebSocketServer(server: HTTPServer) {
 
       const companyId = verified.companyId as string;
       socket.join(`company:${companyId}`);
-      console.log('Client authenticated and joined company room:', socket.id);
+      logger.info({ socketId: socket.id, companyId }, 'Client authenticated and joined company room');
 
       socket.on('disconnect', () => {
-        console.log('Client disconnected:', socket.id);
+        logger.info({ socketId: socket.id }, 'Client disconnected');
       });
     } catch (error) {
-      console.error('WebSocket authentication error:', error);
+      logger.error({ error, socketId: socket.id }, 'WebSocket authentication error');
       socket.disconnect();
     }
   });

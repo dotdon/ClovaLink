@@ -48,7 +48,17 @@ export const config = {
   matcher: [
     '/dashboard/:path*',
     '/auth/:path*',
-    // Use a more specific matcher instead of protecting all API routes
-    '/api/((?!upload-links/validate|upload/).)*',
+    '/api/activities/:path*',
+    '/api/admin/:path*',
+    '/api/companies/:path*',
+    '/api/documents/:path*',
+    '/api/employees/:path*',
+    '/api/download-links/:path*',
+    '/api/upload-links/cleanup',
+    '/api/upload-links/:id',
+    // Explicitly exclude public routes:
+    // /api/upload-links/validate/:token
+    // /api/upload/:token
+    // /api/download/:token
   ],
 }; 

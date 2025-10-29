@@ -1,15 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { PrismaClient } from '@prisma/client';
 import { authOptions } from '@/lib/auth';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
@@ -17,7 +16,7 @@ export async function GET(
     }
 
     const employees = await prisma.employee.findMany({
-      where: { companyId: params.id },
+      where: { companyId: id },
       select: {
         id: true,
         name: true,

@@ -28,11 +28,10 @@ async function checkIsChildFolder(sourceId: string, targetId: string, visited = 
 
 export async function PATCH(
   request: Request,
-  context: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Get dynamic param
-    const folderId = await context.params.id;
+    const { id: folderId } = await params;
 
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {

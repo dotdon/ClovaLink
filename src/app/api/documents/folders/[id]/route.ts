@@ -83,9 +83,10 @@ async function recursivelyDeleteFolder(folderId: string, companyId: string) {
 
 export async function DELETE(
   request: Request,
-  context: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: folderId } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       console.log('Unauthorized: No session or email');
@@ -95,8 +96,6 @@ export async function DELETE(
         message: 'You must be logged in to delete folders'
       }, { status: 401 });
     }
-
-    const folderId = context.params.id;
     console.log('Delete request received for folder:', folderId);
 
     // Get the employee with their company info
@@ -170,10 +169,10 @@ export async function DELETE(
 
 export async function PATCH(
   request: Request,
-  context: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const folderId = await context.params.id;
+    const { id: folderId } = await params;
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {

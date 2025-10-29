@@ -14,14 +14,11 @@ const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads';
 
 export async function POST(
   request: Request,
-  context: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Wait for session and params concurrently
-    const [session, params] = await Promise.all([
-      getServerSession(authOptions),
-      Promise.resolve(context.params)
-    ]);
+    const { id } = await params;
+    const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -60,7 +57,7 @@ export async function POST(
     // Get the document to move
     const document = await prisma.document.findUnique({
       where: {
-        id: params.id,
+        id,
         companyId: employee.company.id,
       }
     });
@@ -89,7 +86,7 @@ export async function POST(
       // Update the document in database
       const updatedDocument = await prisma.document.update({
         where: {
-          id: params.id,
+          id,
         },
         data: {
           folderId: null,
@@ -181,7 +178,7 @@ export async function POST(
     // Update the document in database
     const updatedDocument = await prisma.document.update({
       where: {
-        id: params.id,
+        id,
       },
       data: {
         folderId: targetFolderRecord?.id || null,
@@ -230,7 +227,7 @@ export async function POST(
         type: 'MOVE',
         description: `Document moved to folder: ${targetFolder || 'root'}`,
         employeeId: employee.id,
-        documentId: params.id,
+        documentId: id,
         companyId: employee.company.id,
       },
     });

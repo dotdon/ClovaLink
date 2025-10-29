@@ -1,7 +1,8 @@
 import nodemailer from 'nodemailer';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma';
+import { createLogger, logError } from '../logger';
 
-const prisma = new PrismaClient();
+const logger = createLogger('email');
 
 // Configure email transport
 const transporter = nodemailer.createTransport({
@@ -29,9 +30,10 @@ export async function sendEmail({ to, subject, html, from }: EmailOptions) {
       subject,
       html,
     });
+    logger.info({ to, subject }, 'Email sent successfully');
     return result;
   } catch (error) {
-    console.error('Failed to send email:', error);
+    logError(error, { to, subject, context: 'sendEmail' });
     throw error;
   }
 }

@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
-import { PrismaClient } from '@prisma/client';
 import { existsSync } from 'fs';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
+import { validateFile } from '@/lib/fileValidation';
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
 
 export const dynamic = 'force-dynamic';
@@ -171,8 +170,17 @@ export async function POST(
 
     // Process each file
     for (const file of files) {
-      // Use original filename without timestamp
-      const filename = file.name;
+      // Validate file
+      const validation = validateFile(file);
+      if (!validation.valid) {
+        return NextResponse.json(
+          { success: false, error: `File "${file.name}" validation failed: ${validation.error}` },
+          { status: 400 }
+        );
+      }
+
+      // Use sanitized filename
+      const filename = validation.sanitizedFilename;
       const filePath = join(folderPath, filename);
 
       // Save the file
@@ -192,7 +200,7 @@ export async function POST(
       // Create document record
       const document = await prisma.document.create({
         data: {
-          name: file.name,
+          name: validation.sanitizedFilename,
           path: join(sanitizedFolderName, filename),
           mimeType: file.type,
           size: file.size,
@@ -202,6 +210,8 @@ export async function POST(
           metadata: {
             uploaderName: uploaderName,
             uploadLinkId: uploadLink.id,
+            originalName: file.name,
+            sanitizedName: validation.sanitizedFilename,
             isDirectUpload: false
           }
         }
@@ -213,7 +223,7 @@ export async function POST(
       await prisma.activity.create({
         data: {
           type: 'UPLOAD',
-          description: `File "${file.name}" uploaded via upload link to folder: ${folderName}`,
+          description: `File "${validation.sanitizedFilename}" uploaded via upload link to folder: ${folderName}`,
           employeeId: uploadLink.employee.id,
           documentId: document.id,
           companyId: uploadLink.employee.companyId,

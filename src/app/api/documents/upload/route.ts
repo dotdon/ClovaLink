@@ -6,6 +6,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import prisma from '@/lib/prisma';
+import { validateFile } from '@/lib/fileValidation';
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
 
@@ -71,8 +72,17 @@ export async function POST(request: Request) {
 
     // Process each file
     for (const file of files) {
+      // Validate file
+      const validation = validateFile(file);
+      if (!validation.valid) {
+        return NextResponse.json(
+          { error: `File "${file.name}" validation failed: ${validation.error}` },
+          { status: 400 }
+        );
+      }
+
       const timestamp = Date.now();
-      const filename = `${timestamp}-${file.name}`;
+      const filename = `${timestamp}-${validation.sanitizedFilename}`;
       const filePath = join(UPLOAD_DIR, filename);
 
       // Save the file
@@ -92,7 +102,7 @@ export async function POST(request: Request) {
       // Create document record
       const document = await prisma.document.create({
         data: {
-          name: file.name,
+          name: validation.sanitizedFilename,
           path: filename,
           mimeType: file.type,
           size: file.size,
@@ -101,6 +111,7 @@ export async function POST(request: Request) {
           folderId: folderId,
           metadata: {
             originalName: file.name,
+            sanitizedName: validation.sanitizedFilename,
             uploadedAt: new Date().toISOString(),
             isDirectUpload: true
           }
@@ -113,7 +124,7 @@ export async function POST(request: Request) {
       await prisma.activity.create({
         data: {
           type: 'UPLOAD',
-          description: `Uploaded file "${file.name}"${folderId ? ' to folder' : ''}`,
+          description: `Uploaded file "${validation.sanitizedFilename}"${folderId ? ' to folder' : ''}`,
           employeeId: session.user.id,
           documentId: document.id,
           companyId: targetCompanyId,

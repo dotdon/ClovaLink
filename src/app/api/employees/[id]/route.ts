@@ -7,9 +7,10 @@ import { prisma } from '@/lib/prisma';
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
@@ -28,7 +29,7 @@ export async function PUT(
 
     // Get the target employee
     const targetEmployee = await prisma.employee.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!targetEmployee) {
@@ -79,7 +80,7 @@ export async function PUT(
       where: {
         email: data.email,
         NOT: {
-          id: params.id,
+          id,
         },
       },
     });
@@ -105,7 +106,7 @@ export async function PUT(
     }
 
     const employee = await prisma.employee.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       select: {
         id: true,
@@ -133,9 +134,10 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
@@ -144,7 +146,7 @@ export async function DELETE(
 
     // Check if employee exists
     const employee = await prisma.employee.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!employee) {
@@ -178,7 +180,7 @@ export async function DELETE(
 
     // Delete the employee
     await prisma.employee.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: 'Employee deleted successfully' });
@@ -193,15 +195,14 @@ export async function DELETE(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: employeeId } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const employeeId = params.id;
     
     // Get the target employee
     const targetEmployee = await prisma.employee.findUnique({

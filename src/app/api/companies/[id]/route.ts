@@ -1,30 +1,25 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { PrismaClient } from '@prisma/client';
 import { authOptions } from '@/lib/auth';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 export const dynamicParams = true;
 
 export async function GET(
   request: Request,
-  context: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Wait for session and params
-    const [session, params] = await Promise.all([
-      getServerSession(authOptions),
-      Promise.resolve(context.params)
-    ]);
+    const { id } = await params;
+    const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const company = await prisma.company.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         _count: {
           select: {

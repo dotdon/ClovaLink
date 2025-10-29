@@ -6,12 +6,10 @@ export const dynamicParams = true;
 
 export async function GET(
   request: Request,
-  context: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    // Wait for params to be available
-    const params = await Promise.resolve(context.params);
-    const token = params.token;
+    const { token } = await params;
 
     // Find and validate the upload link
     const uploadLink = await prisma.uploadLink.findFirst({

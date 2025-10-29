@@ -44,6 +44,8 @@ model Employee {
   downloadLinks DownloadLink[]
   uploadLinks   UploadLink[]
 
+  @@index([companyId])
+  @@index([role])
   @@map("employees")
 }
 
@@ -67,6 +69,11 @@ model Document {
   activities    Activity[]
   downloadLinks DownloadLink[]
 
+  @@index([companyId])
+  @@index([employeeId])
+  @@index([folderId])
+  @@index([createdAt])
+  @@index([expiresAt])
   @@map("documents")
 }
 
@@ -87,6 +94,9 @@ model Folder {
   downloadLinks DownloadLink[]
 
   @@unique([name, companyId])
+  @@index([companyId])
+  @@index([parentId])
+  @@index([createdById])
   @@map("folders")
 }
 
@@ -106,6 +116,11 @@ model Activity {
   document    Document?     @relation(fields: [documentId], references: [id])
   company     Company       @relation(fields: [companyId], references: [id])
 
+  @@index([companyId])
+  @@index([employeeId])
+  @@index([documentId])
+  @@index([timestamp])
+  @@index([type])
   @@map("activities")
 }
 
@@ -150,5 +165,8 @@ model UploadLink {
   employee    Employee      @relation(fields: [employeeId], references: [id])
 
   @@index([token])
+  @@index([employeeId])
+  @@index([expiresAt])
+  @@index([used])
   @@map("upload_links")
 } 

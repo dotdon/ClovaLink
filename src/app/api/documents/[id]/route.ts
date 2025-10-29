@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { PrismaClient } from '@prisma/client';
 import { authOptions } from '@/lib/auth';
 import { unlink, readFile, readdir, rmdir } from 'fs/promises';
 import { join, dirname } from 'path';
@@ -31,16 +30,17 @@ async function removeEmptyDirectory(dirPath: string) {
 // GET: Download a document
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const document = await prisma.document.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { company: true }
     });
 
@@ -72,9 +72,10 @@ export async function GET(
 // PATCH: Rename document or move to folder
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -84,7 +85,7 @@ export async function PATCH(
     const { name, folderId } = data;
 
     const document = await prisma.document.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { company: true }
     });
 
@@ -140,7 +141,7 @@ export async function PATCH(
     if (folderId !== undefined) updateData.folderId = folderId;
 
     const updatedDocument = await prisma.document.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData
     });
 
@@ -179,16 +180,17 @@ export async function PATCH(
 // DELETE: Delete a document
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const document = await prisma.document.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { company: true }
     });
 
@@ -214,7 +216,7 @@ export async function DELETE(
 
     // Delete from database
     await prisma.document.delete({
-      where: { id: params.id }
+      where: { id }
     });
 
     // Create activity log for document deletion

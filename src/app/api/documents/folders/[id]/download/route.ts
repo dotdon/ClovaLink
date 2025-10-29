@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { join } from 'path';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync } from 'fs';
+import { readFile } from 'fs/promises';
 import JSZip from 'jszip';
 import { Document } from '@prisma/client';
 
@@ -49,9 +50,10 @@ async function getAllDocumentsInFolder(
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -68,7 +70,7 @@ export async function GET(
 
     // Get folder and verify ownership
     const folder = await prisma.folder.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!folder || folder.companyId !== employee.companyId) {
@@ -87,7 +89,7 @@ export async function GET(
       if (existsSync(filePath)) {
         // Create full path in zip including folder structure
         const zipPath = join(...doc.folderPath, doc.name);
-        const fileContent = readFileSync(filePath);
+        const fileContent = await readFile(filePath);
         zip.file(zipPath.replace(/\\/g, '/'), new Uint8Array(fileContent));
       }
     }

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { join } from 'path';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync } from 'fs';
+import { readFile } from 'fs/promises';
 import JSZip from 'jszip';
 import { Document } from '@prisma/client';
 
@@ -50,12 +51,13 @@ async function getAllDocumentsInFolder(
 
 export async function GET(
   request: Request,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
+    const { token } = await params;
     // Find and validate download link
     const downloadLink = await prisma.downloadLink.findUnique({
-      where: { token: params.token },
+      where: { token },
       include: {
         folder: true,
         document: true
@@ -92,7 +94,7 @@ export async function GET(
         const filePath = join(UPLOAD_DIR, doc.path);
         if (existsSync(filePath)) {
           const zipPath = join(...doc.folderPath, doc.name);
-          const fileContent = readFileSync(filePath);
+          const fileContent = await readFile(filePath);
           zip.file(zipPath, new Uint8Array(fileContent));
         }
       }
@@ -120,7 +122,7 @@ export async function GET(
         return NextResponse.json({ error: 'File not found' }, { status: 404 });
       }
 
-      const fileContent = readFileSync(filePath);
+      const fileContent = await readFile(filePath);
       const response = new NextResponse(fileContent);
       response.headers.set('Content-Type', downloadLink.document.mimeType);
       response.headers.set('Content-Disposition', `attachment; filename="${downloadLink.document.name}"`);
