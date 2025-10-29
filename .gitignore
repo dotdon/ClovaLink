@@ -1,0 +1,53 @@
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Next.js build outputs
+.next/
+.next-cache/
+out/
+dist/
+build/
+.turbo/
+
+# Testing / coverage
+coverage/
+.nyc_output/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+!.env.prod.example
+
+# Prisma (local sqlite if ever used)
+prisma/*.db
+prisma/*.sqlite
+
+# Uploads & generated assets
+uploads/
+
+# Docker / Certbot
+certbot/
+certbot.conf
+certbot.log
+
+# Logs
+logs/
+*.log
+
+# Misc
+*.local
+*.bak
+*.tmp

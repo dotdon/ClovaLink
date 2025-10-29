@@ -2,9 +2,9 @@ version: '3.8'
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: node:20-bullseye
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
     ports:
       - "3000:3000"
     environment:
@@ -17,6 +17,8 @@ services:
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - SMTP_FROM=${SMTP_FROM}
     volumes:
+      - .:/app
+      - /app/node_modules
       - ./uploads:/app/uploads
     depends_on:
       - db
