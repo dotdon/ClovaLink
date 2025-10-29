@@ -5,7 +5,8 @@ export default withAuth(
   function middleware(req) {
     const token = req.nextauth.token;
     const isAuth = !!token;
-    const isAuthPage = req.nextUrl.pathname.startsWith('/auth');
+    const pathname = req.nextUrl.pathname;
+    const isAuthPage = pathname.startsWith('/auth') || pathname === '/login';
 
     // Prevent redirect loop by not redirecting on the signin page
     if (isAuthPage) {
@@ -15,9 +16,17 @@ export default withAuth(
       return NextResponse.next();
     }
 
-    // Protect admin routes
-    if (req.nextUrl.pathname.startsWith('/dashboard/admin') && token?.role !== 'ADMIN') {
+    // Protect admin dashboard routes (pages)
+    if (pathname.startsWith('/dashboard/admin') && token?.role !== 'ADMIN') {
       return NextResponse.redirect(new URL('/dashboard', req.url));
+    }
+
+    // Protect admin API routes
+    if (pathname.startsWith('/api/admin') && token?.role !== 'ADMIN') {
+      return new NextResponse(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     return NextResponse.next();
@@ -25,16 +34,21 @@ export default withAuth(
   {
     callbacks: {
       authorized: ({ req, token }) => {
-        // Allow auth pages without token
-        if (req.nextUrl.pathname.startsWith('/auth')) {
+        const path = req.nextUrl.pathname;
+
+        // Allow auth pages and login without token
+        if (path.startsWith('/auth') || path === '/login') {
           return true;
         }
         
-        // Allow public upload link endpoints
-        if (
-          req.nextUrl.pathname.startsWith('/api/upload-links/validate') ||
-          req.nextUrl.pathname.startsWith('/api/upload')
-        ) {
+        // Allow only specific public API endpoints by tokenized path
+        if (path.startsWith('/api/upload-links/validate/')) {
+          return true;
+        }
+        if (path.startsWith('/api/upload/')) {
+          return true;
+        }
+        if (path.startsWith('/api/download/')) {
           return true;
         }
         
