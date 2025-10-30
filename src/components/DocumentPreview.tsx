@@ -5,6 +5,13 @@ import { Card, Button, Spinner, Alert } from 'react-bootstrap';
 import { FaDownload, FaFilePdf, FaFileWord, FaFileImage, FaFile } from 'react-icons/fa';
 import dynamic from 'next/dynamic';
 import '../lib/polyfills';
+import { pdfjs } from 'react-pdf';
+
+declare global {
+  interface Window {
+    __pdfWorkerConfigured?: boolean;
+  }
+}
 
 // Import required CSS for react-pdf
 import 'react-pdf/dist/Page/AnnotationLayer.css';
@@ -22,12 +29,17 @@ const Page = dynamic(
 );
 
 // Configure PDF.js worker (client-side only)
-if (typeof window !== 'undefined') {
-  import('pdfjs-dist').then((pdfjs) => {
-    pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
-  }).catch((err) => {
-    console.error('Failed to configure PDF worker:', err);
-  });
+// Use minified version and add fallback to CDN
+if (typeof window !== 'undefined' && !window.__pdfWorkerConfigured) {
+  // Try to use local minified worker first
+  try {
+    pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+  } catch (e) {
+    // Fallback to CDN if local fails
+    console.warn('Failed to load local PDF worker, using CDN fallback');
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+  }
+  window.__pdfWorkerConfigured = true;
 }
 
 interface DocumentPreviewProps {
@@ -44,28 +56,10 @@ export default function DocumentPreview({ documentId, name, mimeType = 'applicat
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [fileData, setFileData] = useState<string | ArrayBuffer>('');
-  const [workerReady, setWorkerReady] = useState(false);
-
-  // Ensure PDF.js worker is configured before rendering PDFs
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      import('pdfjs-dist').then((pdfjs) => {
-        pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
-        setWorkerReady(true);
-      }).catch((err) => {
-        console.error('Failed to configure PDF worker:', err);
-        setError('Failed to initialize PDF viewer');
-      });
-    }
-  }, []);
 
   useEffect(() => {
-    const isPDF = mimeType === 'application/pdf' || name.toLowerCase().endsWith('.pdf');
-    // Only fetch document if worker is ready (for PDFs) or if it's not a PDF
-    if (!isPDF || workerReady) {
-      fetchDocument();
-    }
-  }, [documentId, url, workerReady, mimeType, name]);
+    fetchDocument();
+  }, [documentId, url, mimeType, name]);
 
   // Cleanup blob URL when component unmounts or fileData changes
   useEffect(() => {
@@ -155,7 +149,7 @@ export default function DocumentPreview({ documentId, name, mimeType = 'applicat
 
       {/* Preview Content */}
       <div className="preview-content">
-        {isPDF && fileData && workerReady && (
+        {isPDF && fileData && (
           <div className="pdf-viewer">
             <Document
               file={fileData}
