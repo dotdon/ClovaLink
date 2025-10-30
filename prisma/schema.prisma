@@ -169,4 +169,18 @@ model UploadLink {
   @@index([expiresAt])
   @@index([used])
   @@map("upload_links")
+}
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  category    String   // "smtp", "upload", "security", "general"
+  description String?
+  isEncrypted Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+
+  @@index([category])
+  @@map("system_settings")
 } 

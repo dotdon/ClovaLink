@@ -21,8 +21,21 @@ export default withAuth(
       return NextResponse.redirect(new URL('/dashboard', req.url));
     }
 
+    // Protect settings page (admin only)
+    if (pathname.startsWith('/dashboard/settings') && token?.role !== 'ADMIN') {
+      return NextResponse.redirect(new URL('/dashboard', req.url));
+    }
+
     // Protect admin API routes
     if (pathname.startsWith('/api/admin') && token?.role !== 'ADMIN') {
+      return new NextResponse(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Protect settings API (admin only)
+    if (pathname.startsWith('/api/settings') && token?.role !== 'ADMIN') {
       return new NextResponse(JSON.stringify({ error: 'Forbidden' }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' },
@@ -70,6 +83,7 @@ export const config = {
     '/api/download-links/:path*',
     '/api/upload-links/cleanup',
     '/api/upload-links/:id',
+    '/api/settings/:path*',
     // Explicitly exclude public routes:
     // /api/upload-links/validate/:token
     // /api/upload/:token

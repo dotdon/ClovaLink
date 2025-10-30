@@ -3,7 +3,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { ReactNode, useState } from 'react';
-import { FaHome, FaBuilding, FaUsers, FaFolder, FaLink, FaSignOutAlt, FaQuestionCircle, FaBars, FaTimes } from 'react-icons/fa';
+import { useSession } from 'next-auth/react';
+import { FaHome, FaBuilding, FaUsers, FaFolder, FaLink, FaSignOutAlt, FaQuestionCircle, FaBars, FaTimes, FaCog } from 'react-icons/fa';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -11,6 +12,7 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const isDocumentsPage = pathname === '/dashboard/documents';
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -20,8 +22,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { path: '/dashboard/employees', label: 'Employees', icon: FaUsers },
     { path: '/dashboard/documents', label: 'Documents', icon: FaFolder },
     { path: '/dashboard/upload-links', label: 'Upload Links', icon: FaLink },
+    { path: '/dashboard/settings', label: 'Settings', icon: FaCog, adminOnly: true },
     { path: '/dashboard/help', label: 'Help & FAQs', icon: FaQuestionCircle },
   ];
+
+  // Filter navigation items based on user role
+  const visibleItems = navigationItems.filter(item => {
+    if (item.adminOnly) {
+      return session?.user?.role === 'ADMIN';
+    }
+    return true;
+  });
 
   return (
     <div className="dashboard-layout">
@@ -42,7 +53,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </Link>
         </div>
         <div className="nav-items">
-          {navigationItems.map((item) => {
+          {visibleItems.map((item) => {
             const Icon = item.icon;
             return (
               <Link 
@@ -106,7 +117,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </button>
         </div>
         <div className="side-menu-items">
-          {navigationItems.map((item) => {
+          {visibleItems.map((item) => {
             const Icon = item.icon;
             return (
               <Link 

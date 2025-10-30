@@ -34,7 +34,7 @@
     "next": "^15.0.3",
     "next-auth": "^4.24.12",
     "nodemailer": "^7.0.10",
-    "pdfjs-dist": "^4.8.69",
+    "pdfjs-dist": "4.10.38",
     "pino": "^9.5.0",
     "pino-pretty": "^11.3.0",
     "react": "^19.0.0",
@@ -58,6 +58,7 @@
   },
   "overrides": {
     "@babel/runtime": "^7.26.10",
-    "brace-expansion": "^2.0.2"
+    "brace-expansion": "^2.0.2",
+    "pdfjs-dist": "4.10.38"
   }
 }

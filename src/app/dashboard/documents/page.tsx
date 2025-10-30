@@ -677,7 +677,14 @@ export default function DocumentsPage() {
                 >
                   <div 
                     className="item-main"
-                    onClick={() => isFolder ? handleNavigateToFolder(item as Folder) : setSelectedDocument(item as Document)}
+                    onClick={() => {
+                      if (isFolder) {
+                        handleNavigateToFolder(item as Folder);
+                      } else {
+                        setSelectedDocument(item as Document);
+                        setShowPreview(true);
+                      }
+                    }}
                   >
                     <div className="item-icon">
                       {isFolder ? <FaFolder className="folder-icon" /> : <FaFile className="file-icon" />}
@@ -771,7 +778,7 @@ export default function DocumentsPage() {
                 documentId={selectedDocument.id}
                 name={selectedDocument.name}
                 mimeType={selectedDocument.mimeType}
-                url={`/api/documents/${selectedDocument.id}`}
+                url={`/api/documents/${selectedDocument.id}/download`}
               />
             )}
           </Modal.Body>

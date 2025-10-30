@@ -1,19 +1,31 @@
 import nodemailer from 'nodemailer';
 import prisma from '../prisma';
 import { createLogger, logError } from '../logger';
+import { getSmtpConfig } from '../settings';
 
 const logger = createLogger('email');
 
-// Configure email transport
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+// Lazy transporter initialization
+let transporterInstance: nodemailer.Transporter | null = null;
+
+async function getTransporter() {
+  // Always create fresh transporter to use latest settings
+  const config = await getSmtpConfig();
+  
+  if (!config.host || !config.user || !config.password) {
+    throw new Error('SMTP configuration is incomplete. Please configure SMTP settings in the admin panel.');
+  }
+
+  return nodemailer.createTransport({
+    host: config.host,
+    port: config.port,
+    secure: config.port === 465, // Use TLS for port 465
+    auth: {
+      user: config.user,
+      pass: config.password,
+    },
+  });
+}
 
 interface EmailOptions {
   to: string;
@@ -24,8 +36,11 @@ interface EmailOptions {
 
 export async function sendEmail({ to, subject, html, from }: EmailOptions) {
   try {
+    const transporter = await getTransporter();
+    const config = await getSmtpConfig();
+    
     const result = await transporter.sendMail({
-      from: from || process.env.SMTP_FROM,
+      from: from || config.from || 'noreply@clovalink.local',
       to,
       subject,
       html,
