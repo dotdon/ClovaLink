@@ -1,40 +1,27 @@
 'use client';
 
-import { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { useEffect } from 'react';
+import { signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Form, Button, Alert } from 'react-bootstrap';
+import { Button } from 'react-bootstrap';
 
-export default function LoginPage() {
+export default function SignOut() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
+  useEffect(() => {
+    // Automatically sign out immediately to show the page briefly
+    signOut({ 
+      callbackUrl: '/auth/signin',
+      redirect: true 
+    });
+  }, []);
 
-    try {
-      const result = await signIn('credentials', {
-        redirect: false,
-        email,
-        password,
-      });
-
-      if (result?.error) {
-        setError('Invalid email or password');
-      } else {
-        router.push('/dashboard');
-      }
-    } catch (error) {
-      setError('An error occurred during login');
-    } finally {
-      setIsLoading(false);
-    }
+  const handleSignOut = () => {
+    signOut({ 
+      callbackUrl: '/auth/signin',
+      redirect: true 
+    });
   };
 
   return (
@@ -48,49 +35,26 @@ export default function LoginPage() {
               width={80}
               height={80}
               style={{ filter: 'brightness(0) invert(1)' }}
-              priority
             />
           </div>
-          <h1>Welcome to ClovaLink</h1>
-          <p className="auth-subtitle">Sign in to access your documents</p>
+          <h1>Signing Out</h1>
+          <p className="auth-subtitle">You are being signed out...</p>
         </div>
 
-        {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
-        
-        <Form onSubmit={handleSubmit}>
-          <Form.Group className="mb-3">
-            <Form.Label className="form-label">Email Address</Form.Label>
-            <Form.Control
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="auth-input"
-            />
-          </Form.Group>
+        <div className="signout-content">
+          <div className="spinner-wrapper">
+            <div className="spinner"></div>
+          </div>
+          <p className="signout-message">Please wait while we sign you out securely.</p>
+        </div>
 
-          <Form.Group className="mb-4">
-            <Form.Label className="form-label">Password</Form.Label>
-            <Form.Control
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="auth-input"
-            />
-          </Form.Group>
-
-          <Button
-            variant="primary"
-            type="submit"
-            className="w-100 auth-button"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Signing in...' : 'Sign In to ClovaLink'}
-          </Button>
-        </Form>
+        <Button
+          variant="primary"
+          onClick={handleSignOut}
+          className="w-100 auth-button"
+        >
+          Sign Out Now
+        </Button>
       </div>
 
       <style jsx>{`
@@ -151,24 +115,35 @@ export default function LoginPage() {
           margin: 0;
         }
 
-        :global(.form-label) {
-          font-weight: 600;
-          color: #1a1a2e;
+        .signout-content {
+          text-align: center;
+          margin-bottom: 2rem;
+        }
+
+        .spinner-wrapper {
+          display: flex;
+          justify-content: center;
+          margin-bottom: 1.5rem;
+        }
+
+        .spinner {
+          width: 50px;
+          height: 50px;
+          border: 4px solid #ecf0f1;
+          border-top: 4px solid #667eea;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        .signout-message {
+          color: #666;
           font-size: 0.9375rem;
-          margin-bottom: 0.5rem;
-        }
-
-        :global(.auth-input) {
-          border-radius: 12px;
-          border: 2px solid #ecf0f1;
-          padding: 0.875rem 1.25rem;
-          font-size: 1rem;
-          transition: all 0.3s ease;
-        }
-
-        :global(.auth-input:focus) {
-          border-color: #667eea;
-          box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+          margin: 0;
         }
 
         :global(.auth-button) {
@@ -176,7 +151,6 @@ export default function LoginPage() {
           font-size: 1.0625rem;
           font-weight: 600;
           border-radius: 12px;
-          margin-top: 1rem;
         }
 
         @media (max-width: 576px) {
@@ -197,4 +171,5 @@ export default function LoginPage() {
       `}</style>
     </div>
   );
-} 
+}
+

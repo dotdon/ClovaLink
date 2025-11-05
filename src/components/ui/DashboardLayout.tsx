@@ -1,9 +1,9 @@
 import { Container, Nav, Navbar, Dropdown } from 'react-bootstrap';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { FaHome, FaBuilding, FaUsers, FaFolder, FaLink, FaSignOutAlt, FaQuestionCircle, FaBars, FaTimes, FaCog } from 'react-icons/fa';
 
 interface DashboardLayoutProps {
@@ -12,9 +12,18 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session } = useSession();
   const isDocumentsPage = pathname === '/dashboard/documents';
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handleSignOut = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    await signOut({ 
+      callbackUrl: '/auth/signin',
+      redirect: true 
+    });
+  };
 
   const navigationItems = [
     { path: '/dashboard', label: 'Dashboard', icon: FaHome },
@@ -66,7 +75,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </Link>
             );
           })}
-          <a href="/api/auth/signout" className="nav-item">
+          <a href="/auth/signout" onClick={handleSignOut} className="nav-item">
             <FaSignOutAlt className="nav-icon" />
             <span className="nav-label">Sign Out</span>
           </a>
@@ -131,7 +140,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </Link>
             );
           })}
-          <a href="/api/auth/signout" className="side-menu-item">
+          <a href="/auth/signout" onClick={handleSignOut} className="side-menu-item">
             <FaSignOutAlt className="side-menu-icon" />
             <span className="side-menu-label">Sign Out</span>
           </a>
