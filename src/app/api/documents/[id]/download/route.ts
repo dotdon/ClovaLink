@@ -52,6 +52,12 @@ export async function GET(
     const response = new NextResponse(fileContent);
     response.headers.set('Content-Type', document.mimeType);
     response.headers.set('Content-Disposition', `inline; filename="${document.name}"`);
+    response.headers.set('Content-Length', fileContent.length.toString());
+    response.headers.set('Accept-Ranges', 'bytes');
+    response.headers.set('Cache-Control', 'public, max-age=3600');
+    
+    // Log for debugging
+    console.log(`Serving document: ${document.name} (${fileContent.length} bytes, ${document.mimeType})`);
     
     return response;
   } catch (error) {

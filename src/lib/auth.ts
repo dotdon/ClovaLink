@@ -29,8 +29,8 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error('Missing credentials');
+        if (!credentials?.email) {
+          throw new Error('Missing email');
         }
 
         const employee = await prisma.employee.findUnique({
@@ -41,10 +41,53 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Invalid credentials');
         }
 
+        // Check if this is a passkey authentication
+        if (credentials.passkey === 'true' || credentials.password === '__passkey__') {
+          // Passkey authentication - user is already verified via passkey endpoint
+          // Check if 2FA is enabled for passkey auth
+          if (employee.totpEnabled) {
+            if (!credentials.totpCode) {
+              throw new Error('TOTP_REQUIRED');
+            }
+            // Verify TOTP code
+            const { verifyTOTP } = await import('./totp');
+            const isValid = verifyTOTP(employee.totpSecret!, credentials.totpCode);
+            if (!isValid) {
+              throw new Error('Invalid TOTP code');
+            }
+          }
+          // Just return the user
+          return {
+            id: employee.id,
+            email: employee.email,
+            name: employee.name,
+            role: employee.role,
+            companyId: employee.companyId,
+          };
+        }
+
+        // Regular password authentication
+        if (!credentials.password) {
+          throw new Error('Missing password');
+        }
+
         const isPasswordValid = await compare(credentials.password, employee.password);
 
         if (!isPasswordValid) {
           throw new Error('Invalid credentials');
+        }
+
+        // Check if 2FA is enabled
+        if (employee.totpEnabled) {
+          if (!credentials.totpCode) {
+            throw new Error('TOTP_REQUIRED');
+          }
+          // Verify TOTP code
+          const { verifyTOTP } = await import('./totp');
+          const isValid = verifyTOTP(employee.totpSecret!, credentials.totpCode);
+          if (!isValid) {
+            throw new Error('Invalid TOTP code');
+          }
         }
 
         return {

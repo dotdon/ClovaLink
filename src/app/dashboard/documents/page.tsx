@@ -6,6 +6,7 @@ import DashboardLayout from '@/components/ui/DashboardLayout';
 import { FaDownload, FaTrash, FaFolder, FaEye, FaUpload, FaFolderPlus, FaFile, FaEdit, FaArrowLeft, FaEllipsisV, FaSearch, FaCheckCircle, FaShare, FaFilePdf, FaFileWord, FaFileImage, FaInfo, FaTh, FaList, FaSortAlphaDown, FaSortAmountDown, FaCalendarAlt } from 'react-icons/fa';
 import { useSession } from 'next-auth/react';
 import { hasPermission, Permission, canAccessFolder, canManageFolder, canManageDocument } from '@/lib/permissions';
+import DocumentViewerModal from '@/components/viewers/DocumentViewerModal';
 
 interface Document {
   id: string;
@@ -671,7 +672,8 @@ export default function DocumentsPage() {
               setCurrentFolderId(null);
             }}
           >
-            Documents
+            <FaFolder className="breadcrumb-icon" />
+            <span>Documents</span>
           </button>
           {currentPath.map((item, index) => (
             <React.Fragment key={item.id}>
@@ -680,7 +682,8 @@ export default function DocumentsPage() {
                 className={`breadcrumb-item ${index === currentPath.length - 1 ? 'active' : ''}`}
                 onClick={() => handleBreadcrumbClick(index)}
               >
-                {item.name}
+                <FaFolder className="breadcrumb-icon" />
+                <span>{item.name}</span>
               </button>
             </React.Fragment>
           ))}
@@ -836,41 +839,12 @@ export default function DocumentsPage() {
         </div>
 
         {/* Modals */}
-        <Modal show={showPreview} onHide={() => setShowPreview(false)} centered>
-          <Modal.Header closeButton>
-            <Modal.Title>{selectedDocument?.name}</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            {selectedDocument && (
-              <div className="text-center py-4">
-                <div className="mb-4">
-                  {selectedDocument.mimeType === 'application/pdf' && <FaFilePdf size={64} className="text-danger" />}
-                  {selectedDocument.mimeType.startsWith('image/') && <FaFileImage size={64} className="text-success" />}
-                  {(selectedDocument.mimeType.includes('word') || selectedDocument.name.endsWith('.docx')) && <FaFileWord size={64} className="text-primary" />}
-                  {!selectedDocument.mimeType.startsWith('image/') && !selectedDocument.mimeType.includes('pdf') && !selectedDocument.mimeType.includes('word') && !selectedDocument.name.endsWith('.docx') && <FaFile size={64} className="text-secondary" />}
-                </div>
-                <h5 className="mb-3">{selectedDocument.name}</h5>
-                <p className="text-muted mb-4">
-                  Size: {formatFileSize(selectedDocument.size)}
-                </p>
-                <Alert variant="info" className="mb-4">
-                  <small>Preview is not available. Please download the file to view it.</small>
-                </Alert>
-                <Button 
-                  variant="primary" 
-                  size="lg"
-                  onClick={() => {
-                    handleDownload(selectedDocument);
-                    setShowPreview(false);
-                  }}
-                >
-                  <FaDownload className="me-2" />
-                  Download File
-                </Button>
-              </div>
-            )}
-          </Modal.Body>
-        </Modal>
+        <DocumentViewerModal
+          show={showPreview}
+          onHide={() => setShowPreview(false)}
+          document={selectedDocument}
+          onDownload={handleDownload}
+        />
 
         <Modal show={showUploadModal} onHide={() => setShowUploadModal(false)}>
           <Modal.Header closeButton>

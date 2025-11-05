@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Form, Button, Alert, Tabs, Tab, Spinner } from 'react-bootstrap';
+import { Card, Form, Button, Alert, Tabs, Tab, Spinner, ListGroup, Badge } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
-import { FaSave, FaSync, FaCog } from 'react-icons/fa';
+import ThemedModal from '@/components/ui/ThemedModal';
+import { FaSave, FaSync, FaCog, FaKey, FaTrash, FaPlus, FaShieldAlt, FaQrcode, FaCheck, FaTimes } from 'react-icons/fa';
+import { startAttestation } from '@simplewebauthn/browser';
 
 interface Setting {
   id: string;
@@ -17,6 +19,13 @@ interface SettingsGroup {
   [category: string]: Setting[];
 }
 
+interface Passkey {
+  id: string;
+  deviceName: string | null;
+  createdAt: string;
+  lastUsedAt: string;
+}
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<SettingsGroup>({});
   const [loading, setLoading] = useState(true);
@@ -24,12 +33,41 @@ export default function SettingsPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [activeTab, setActiveTab] = useState('smtp');
+  const [passkeys, setPasskeys] = useState<Passkey[]>([]);
+  const [registeringPasskey, setRegisteringPasskey] = useState(false);
+  const [deviceName, setDeviceName] = useState('');
+  
+  // 2FA state
+  const [totpEnabled, setTotpEnabled] = useState(false);
+  const [totpLoading, setTotpLoading] = useState(false);
+  const [totpSetupMode, setTotpSetupMode] = useState(false);
+  const [qrCode, setQrCode] = useState<string>('');
+  const [totpSecret, setTotpSecret] = useState<string>('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [showBackupCodes, setShowBackupCodes] = useState(false);
+  const [disablePassword, setDisablePassword] = useState('');
+  const [require2FA, setRequire2FA] = useState(false);
+  const [twoFactorRequired, setTwoFactorRequired] = useState(false);
+  const [hasPasskey, setHasPasskey] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [savedCategory, setSavedCategory] = useState('');
 
   // Local form state
   const [formData, setFormData] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchSettings();
+    fetchPasskeys();
+    fetchTOTPStatus();
+    check2FARequirement();
+    
+    // Check URL params for require2fa flag
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('require2fa') === 'true') {
+      setRequire2FA(true);
+      setActiveTab('security');
+    }
   }, []);
 
   const fetchSettings = async () => {
@@ -56,6 +94,221 @@ export default function SettingsPage() {
 
   const handleInputChange = (key: string, value: string) => {
     setFormData(prev => ({ ...prev, [key]: value }));
+  };
+
+  const fetchPasskeys = async () => {
+    try {
+      const response = await fetch('/api/passkey/list');
+      if (!response.ok) throw new Error('Failed to fetch passkeys');
+      const data = await response.json();
+      setPasskeys(data.passkeys || []);
+    } catch (err) {
+      console.error('Error fetching passkeys:', err);
+    }
+  };
+
+  const handleRegisterPasskey = async () => {
+    try {
+      setRegisteringPasskey(true);
+      setError('');
+      setSuccess('');
+
+      // Step 1: Get registration options
+      const optionsRes = await fetch('/api/passkey/register/options', {
+        method: 'POST',
+      });
+
+      if (!optionsRes.ok) {
+        const errorData = await optionsRes.json();
+        throw new Error(errorData.error || 'Failed to start passkey registration');
+      }
+
+      const { options, challenge } = await optionsRes.json();
+
+      // Step 2: Start registration with browser
+      const registrationResponse = await startAttestation(options);
+
+      // Step 3: Verify registration
+      const verifyRes = await fetch('/api/passkey/register/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          response: registrationResponse,
+          challenge,
+          deviceName: deviceName || 'My Device',
+        }),
+      });
+
+      if (!verifyRes.ok) {
+        const errorData = await verifyRes.json();
+        throw new Error(errorData.error || 'Passkey registration failed');
+      }
+
+      setSuccess('Passkey registered successfully!');
+      setDeviceName('');
+      fetchPasskeys();
+      setHasPasskey(true);
+      setRequire2FA(false); // Clear the requirement flag
+      check2FARequirement(); // Refresh requirement status
+    } catch (error: any) {
+      setError(error.message || 'Failed to register passkey. Please try again.');
+    } finally {
+      setRegisteringPasskey(false);
+    }
+  };
+
+  const handleDeletePasskey = async (passkeyId: string) => {
+    if (!confirm('Are you sure you want to delete this passkey?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/passkey/delete?id=${passkeyId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete passkey');
+      }
+
+      setSuccess('Passkey deleted successfully');
+      fetchPasskeys();
+      check2FARequirement(); // Refresh requirement status after deleting passkey
+    } catch (error: any) {
+      setError(error.message || 'Failed to delete passkey');
+    }
+  };
+
+  const fetchTOTPStatus = async () => {
+    try {
+      const response = await fetch('/api/totp/status');
+      if (response.ok) {
+        const data = await response.json();
+        setTotpEnabled(data.enabled || false);
+      }
+    } catch (err) {
+      console.error('Error fetching TOTP status:', err);
+    }
+  };
+
+  const check2FARequirement = async () => {
+    try {
+      const response = await fetch('/api/auth/check-2fa-requirement');
+      if (response.ok) {
+        const data = await response.json();
+        setTwoFactorRequired(data.required || false);
+        setHasPasskey(passkeys.length > 0);
+      }
+    } catch (err) {
+      console.error('Error checking 2FA requirement:', err);
+    }
+  };
+
+  const handleSetup2FA = async () => {
+    try {
+      setTotpLoading(true);
+      setError('');
+      setSuccess('');
+
+      const response = await fetch('/api/totp/setup', {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to setup 2FA');
+      }
+
+      const data = await response.json();
+      setQrCode(data.qrCode);
+      setTotpSecret(data.manualEntryKey);
+      setTotpSetupMode(true);
+    } catch (error: any) {
+      setError(error.message || 'Failed to setup 2FA');
+    } finally {
+      setTotpLoading(false);
+    }
+  };
+
+  const handleVerifyAndEnable2FA = async () => {
+    if (!verificationCode || !/^\d{6}$/.test(verificationCode)) {
+      setError('Please enter a valid 6-digit code');
+      return;
+    }
+
+    try {
+      setTotpLoading(true);
+      setError('');
+      setSuccess('');
+
+      const response = await fetch('/api/totp/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: verificationCode,
+          secret: totpSecret,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to verify code');
+      }
+
+      const data = await response.json();
+      setBackupCodes(data.backupCodes);
+      setShowBackupCodes(true);
+      setTotpEnabled(true);
+      setTotpSetupMode(false);
+      setVerificationCode('');
+      setQrCode('');
+      setTotpSecret('');
+      setSuccess('2FA has been enabled successfully!');
+      setRequire2FA(false); // Clear the requirement flag
+      check2FARequirement(); // Refresh requirement status
+    } catch (error: any) {
+      setError(error.message || 'Failed to enable 2FA');
+    } finally {
+      setTotpLoading(false);
+    }
+  };
+
+  const handleDisable2FA = async () => {
+    if (!disablePassword) {
+      setError('Please enter your password to disable 2FA');
+      return;
+    }
+
+    if (!confirm('Are you sure you want to disable 2FA? This will make your account less secure.')) {
+      return;
+    }
+
+    try {
+      setTotpLoading(true);
+      setError('');
+      setSuccess('');
+
+      const response = await fetch('/api/totp/disable', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          password: disablePassword,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to disable 2FA');
+      }
+
+      setTotpEnabled(false);
+      setDisablePassword('');
+      setSuccess('2FA has been disabled successfully');
+    } catch (error: any) {
+      setError(error.message || 'Failed to disable 2FA');
+    } finally {
+      setTotpLoading(false);
+    }
   };
 
   const handleSaveCategory = async (category: string) => {
@@ -85,6 +338,7 @@ export default function SettingsPage() {
           { key: 'storage_limit_gb', description: 'Total storage limit in GB (0 = unlimited)', isEncrypted: false, defaultValue: '0' },
         ],
         security: [
+          { key: 'require_two_factor', description: 'Require two-factor authentication for all users (true/false). Passkeys count as 2FA.', isEncrypted: false, defaultValue: 'false' },
           { key: 'session_timeout', description: 'Session timeout in seconds (3600 = 1 hour)', isEncrypted: false, defaultValue: '3600' },
           { key: 'max_login_attempts', description: 'Maximum login attempts before temporary lockout', isEncrypted: false, defaultValue: '5' },
           { key: 'lockout_duration', description: 'Account lockout duration in minutes', isEncrypted: false, defaultValue: '15' },
@@ -133,8 +387,9 @@ export default function SettingsPage() {
       if (!response.ok) throw new Error('Failed to save settings');
 
       setSuccess('Settings saved successfully!');
+      setSavedCategory(category);
+      setShowSuccessModal(true);
       await fetchSettings();
-      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError('Failed to save settings');
       console.error(err);
@@ -360,11 +615,52 @@ export default function SettingsPage() {
           </Alert>
         )}
 
-        {success && (
+        {success && !showSuccessModal && (
           <Alert variant="success" dismissible onClose={() => setSuccess('')}>
             {success}
           </Alert>
         )}
+
+        <ThemedModal
+          show={showSuccessModal}
+          onHide={() => {
+            setShowSuccessModal(false);
+            setSuccess('');
+          }}
+          title="Settings Saved Successfully!"
+          size="sm"
+        >
+          <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+            <div style={{ 
+              width: '80px', 
+              height: '80px', 
+              margin: '0 auto 1.5rem',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 8px 24px rgba(102, 126, 234, 0.4)'
+            }}>
+              <FaCheck style={{ fontSize: '2rem', color: '#fff' }} />
+            </div>
+            <p style={{ 
+              fontSize: '1.1rem', 
+              color: '#1a1a2e',
+              marginBottom: '0.5rem',
+              fontWeight: 600
+            }}>
+              Your {savedCategory === 'smtp' ? 'Email' : savedCategory === 'upload' ? 'Upload' : savedCategory === 'security' ? 'Security' : 'General'} settings have been saved successfully!
+            </p>
+            <p style={{ 
+              fontSize: '0.9rem', 
+              color: '#666',
+              margin: 0
+            }}>
+              Changes will take effect immediately.
+            </p>
+          </div>
+        </ThemedModal>
 
         <Card className="settings-card">
           <Card.Body>
@@ -418,6 +714,7 @@ export default function SettingsPage() {
                     variant="primary"
                     onClick={() => handleSaveCategory('smtp')}
                     disabled={saving}
+                    className="save-settings-btn"
                   >
                     <FaSave className="me-2" />
                     {saving ? 'Saving...' : 'Save SMTP Settings'}
@@ -477,6 +774,7 @@ export default function SettingsPage() {
                     variant="primary"
                     onClick={() => handleSaveCategory('upload')}
                     disabled={saving}
+                    className="save-settings-btn"
                   >
                     <FaSave className="me-2" />
                     {saving ? 'Saving...' : 'Save Upload Settings'}
@@ -496,6 +794,29 @@ export default function SettingsPage() {
             {/* Security Settings */}
             <Tab eventKey="security" title="Security">
               <Form>
+                <div className="settings-section">
+                  <h5 className="section-title">
+                    <FaShieldAlt className="me-2" />
+                    Organization 2FA Policy (Admin Only)
+                  </h5>
+                  <Alert variant="info" className="mb-3">
+                    <strong>Organization-Wide Setting</strong>
+                    <p className="mb-0 mt-2">
+                      When enabled, all users in your organization must have two-factor authentication enabled.
+                      Users can satisfy this requirement by setting up either:
+                      <br />• A 6-digit authenticator app (TOTP), OR
+                      <br />• A passkey (Face ID, Touch ID, or security key)
+                    </p>
+                  </Alert>
+                  {(!settings.security || settings.security.length === 0) ? (
+                    <>
+                      {renderFieldFromDefault({ key: 'require_two_factor', description: 'Require two-factor authentication for all users (true/false). Passkeys count as 2FA.', isEncrypted: false, defaultValue: 'false' })}
+                    </>
+                  ) : (
+                    settings.security.filter(s => s.key === 'require_two_factor').map(renderSettingInput)
+                  )}
+                </div>
+
                 <div className="settings-section">
                   <h5 className="section-title">Session Management</h5>
                   {(!settings.security || settings.security.length === 0) ? (
@@ -525,13 +846,167 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="settings-section">
-                  <h5 className="section-title">Two-Factor Authentication</h5>
-                  {(!settings.security || settings.security.length === 0) ? (
-                    <>
-                      {renderFieldFromDefault({ key: 'enable_two_factor', description: 'Enable two-factor authentication (true/false)', isEncrypted: false, defaultValue: 'false' })}
-                    </>
+                  <h5 className="section-title">
+                    <FaShieldAlt className="me-2" />
+                    Your Personal 2FA Settings
+                  </h5>
+                  <p className="text-muted mb-3">
+                    Configure two-factor authentication for your personal account. This is separate from the organization-wide 2FA policy above.
+                  </p>
+                  
+                  {twoFactorRequired && !totpEnabled && passkeys.length === 0 && (
+                    <Alert variant="danger" className="mb-3">
+                      <strong>⚠️ 2FA is Required for Your Account</strong>
+                      <p className="mb-0 mt-2">
+                        Your organization requires two-factor authentication. Please set up either:
+                        <br />• A 6-digit authenticator app (TOTP) below, OR
+                        <br />• A passkey in the Passkeys tab above
+                      </p>
+                    </Alert>
+                  )}
+                  
+                  {(totpEnabled || passkeys.length > 0) && (
+                    <Alert variant="success" className="mb-3 d-flex align-items-center">
+                      <FaCheck className="me-2" />
+                      {totpEnabled && passkeys.length > 0 
+                        ? 'You have both TOTP and passkey 2FA enabled'
+                        : totpEnabled 
+                        ? 'TOTP 2FA is enabled'
+                        : 'Passkey 2FA is enabled'}
+                    </Alert>
+                  )}
+                  
+                  {totpEnabled ? (
+                    <div className="totp-enabled">
+                      <Alert variant="success" className="d-flex align-items-center">
+                        <FaCheck className="me-2" />
+                        2FA is currently enabled on your account
+                      </Alert>
+                      
+                      <div className="mt-3">
+                        <Form.Group className="mb-3">
+                          <Form.Label>Enter your password to disable 2FA</Form.Label>
+                          <Form.Control
+                            type="password"
+                            value={disablePassword}
+                            onChange={(e) => setDisablePassword(e.target.value)}
+                            placeholder="Enter your password"
+                            disabled={totpLoading}
+                          />
+                        </Form.Group>
+                        <Button
+                          variant="danger"
+                          onClick={handleDisable2FA}
+                          disabled={totpLoading || !disablePassword}
+                        >
+                          <FaTimes className="me-2" />
+                          {totpLoading ? 'Disabling...' : 'Disable 2FA'}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : totpSetupMode ? (
+                    <div className="totp-setup">
+                      <Alert variant="info">
+                        <strong>Step 1:</strong> Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
+                      </Alert>
+                      
+                      {qrCode && (
+                        <div className="text-center my-4">
+                          <img src={qrCode} alt="TOTP QR Code" style={{ maxWidth: '250px', border: '1px solid #ddd', borderRadius: '8px', padding: '1rem', background: '#fff' }} />
+                        </div>
+                      )}
+                      
+                      <Alert variant="secondary" className="mb-3">
+                        <strong>Can't scan?</strong> Enter this code manually: <code>{totpSecret}</code>
+                      </Alert>
+                      
+                      <Alert variant="info">
+                        <strong>Step 2:</strong> Enter the 6-digit code from your authenticator app to verify and enable 2FA
+                      </Alert>
+                      
+                      <Form.Group className="mb-3 mt-3">
+                        <Form.Label>Verification Code</Form.Label>
+                        <Form.Control
+                          type="text"
+                          value={verificationCode}
+                          onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                          placeholder="000000"
+                          maxLength={6}
+                          disabled={totpLoading}
+                          className="text-center"
+                          style={{ fontSize: '1.5rem', letterSpacing: '0.5rem', fontFamily: 'monospace' }}
+                        />
+                        <Form.Text className="text-muted">
+                          Enter the 6-digit code from your authenticator app
+                        </Form.Text>
+                      </Form.Group>
+                      
+                      <div className="d-flex gap-2">
+                        <Button
+                          variant="primary"
+                          onClick={handleVerifyAndEnable2FA}
+                          disabled={totpLoading || verificationCode.length !== 6}
+                        >
+                          <FaCheck className="me-2" />
+                          {totpLoading ? 'Verifying...' : 'Verify and Enable 2FA'}
+                        </Button>
+                        <Button
+                          variant="outline-secondary"
+                          onClick={() => {
+                            setTotpSetupMode(false);
+                            setQrCode('');
+                            setTotpSecret('');
+                            setVerificationCode('');
+                          }}
+                          disabled={totpLoading}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
                   ) : (
-                    settings.security.filter(s => ['enable_two_factor'].includes(s.key)).map(renderSettingInput)
+                    <div className="totp-disabled">
+                      <Alert variant="warning">
+                        <FaShieldAlt className="me-2" />
+                        2FA is not enabled. Add an extra layer of security to your account.
+                      </Alert>
+                      
+                      <p className="text-muted mt-3">
+                        Two-factor authentication adds an extra layer of security by requiring a 6-digit code from your authenticator app in addition to your password.
+                      </p>
+                      
+                      <Button
+                        variant="primary"
+                        onClick={handleSetup2FA}
+                        disabled={totpLoading}
+                        className="mt-3"
+                      >
+                        <FaQrcode className="me-2" />
+                        {totpLoading ? 'Setting up...' : 'Enable 2FA'}
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {showBackupCodes && backupCodes.length > 0 && (
+                    <Alert variant="warning" className="mt-4">
+                      <strong>⚠️ Save these backup codes!</strong>
+                      <p className="mb-2 mt-2">These codes can be used to access your account if you lose your authenticator device. Save them in a safe place - they won't be shown again.</p>
+                      <div className="d-flex flex-wrap gap-2">
+                        {backupCodes.map((code, index) => (
+                          <Badge key={index} bg="secondary" className="p-2" style={{ fontSize: '0.875rem', fontFamily: 'monospace' }}>
+                            {code}
+                          </Badge>
+                        ))}
+                      </div>
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        className="mt-3"
+                        onClick={() => setShowBackupCodes(false)}
+                      >
+                        I've saved these codes
+                      </Button>
+                    </Alert>
                   )}
                 </div>
                 <div className="d-flex gap-2">
@@ -539,6 +1014,7 @@ export default function SettingsPage() {
                     variant="primary"
                     onClick={() => handleSaveCategory('security')}
                     disabled={saving}
+                    className="save-settings-btn"
                   >
                     <FaSave className="me-2" />
                     {saving ? 'Saving...' : 'Save Security Settings'}
@@ -612,6 +1088,7 @@ export default function SettingsPage() {
                     variant="primary"
                     onClick={() => handleSaveCategory('general')}
                     disabled={saving}
+                    className="save-settings-btn"
                   >
                     <FaSave className="me-2" />
                     {saving ? 'Saving...' : 'Save General Settings'}
@@ -626,6 +1103,79 @@ export default function SettingsPage() {
                   </Button>
                 </div>
               </Form>
+            </Tab>
+
+            {/* Passkeys Tab */}
+            <Tab eventKey="passkeys" title="Passkeys">
+              <div className="settings-section">
+                <h5 className="section-title">
+                  <FaKey className="me-2" />
+                  Register New Passkey
+                </h5>
+                <p className="text-muted mb-3">
+                  Register a new passkey to sign in with Face ID, Touch ID, or your device's security key.
+                </p>
+                <Form.Group className="mb-3">
+                  <Form.Label>Device Name (optional)</Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="e.g., iPhone, MacBook Pro"
+                    value={deviceName}
+                    onChange={(e) => setDeviceName(e.target.value)}
+                    disabled={registeringPasskey}
+                  />
+                  <Form.Text className="text-muted">
+                    Give this device a name to help you identify it later.
+                  </Form.Text>
+                </Form.Group>
+                <Button
+                  variant="primary"
+                  onClick={handleRegisterPasskey}
+                  disabled={registeringPasskey}
+                >
+                  <FaPlus className="me-2" />
+                  {registeringPasskey ? 'Registering...' : 'Register New Passkey'}
+                </Button>
+              </div>
+
+              <div className="settings-section">
+                <h5 className="section-title">
+                  <FaKey className="me-2" />
+                  Registered Passkeys
+                </h5>
+                {passkeys.length === 0 ? (
+                  <Alert variant="info">
+                    No passkeys registered yet. Register a passkey above to enable passwordless sign-in.
+                  </Alert>
+                ) : (
+                  <ListGroup>
+                    {passkeys.map((passkey) => (
+                      <ListGroup.Item
+                        key={passkey.id}
+                        className="d-flex justify-content-between align-items-center"
+                      >
+                        <div>
+                          <div className="fw-bold">{passkey.deviceName || 'Unknown Device'}</div>
+                          <div className="text-muted small">
+                            Registered: {new Date(passkey.createdAt).toLocaleDateString()}
+                            {passkey.lastUsedAt && (
+                              <> • Last used: {new Date(passkey.lastUsedAt).toLocaleDateString()}</>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          onClick={() => handleDeletePasskey(passkey.id)}
+                        >
+                          <FaTrash className="me-1" />
+                          Delete
+                        </Button>
+                      </ListGroup.Item>
+                    ))}
+                  </ListGroup>
+                )}
+              </div>
             </Tab>
           </Tabs>
         </Card.Body>
@@ -859,6 +1409,21 @@ export default function SettingsPage() {
           :global(.d-flex.gap-2 .btn) {
             width: 100%;
           }
+        }
+
+        :global(.save-settings-btn) {
+          color: #fff !important;
+        }
+
+        :global(.save-settings-btn:hover),
+        :global(.save-settings-btn:focus),
+        :global(.save-settings-btn:active) {
+          color: #fff !important;
+        }
+
+        :global(.save-settings-btn:disabled) {
+          color: #fff !important;
+          opacity: 0.65;
         }
       `}</style>
     </DashboardLayout>

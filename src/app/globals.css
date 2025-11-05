@@ -278,3 +278,348 @@ h1, h2, h3, h4, h5, h6 {
   color: #666 !important;
 }
 
+/* ========================================
+   Document Viewer Styles
+   ======================================== */
+
+/* Document Viewer Modal */
+.document-viewer-modal .modal-dialog {
+  max-width: 95vw !important;
+  height: 95vh !important;
+  margin: 2.5vh auto !important;
+}
+
+.document-viewer-modal .modal-content {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.document-viewer-modal .modal-body {
+  flex: 1 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+.document-viewer-header {
+  background: #1a1a1a !important;
+  color: #fff !important;
+  padding: 1rem 1.5rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  border-bottom: 1px solid #333 !important;
+}
+
+.document-viewer-header .header-content {
+  flex: 1 !important;
+}
+
+.document-viewer-header .modal-title {
+  color: #fff !important;
+  margin-bottom: 0.25rem !important;
+  font-size: 1.25rem !important;
+}
+
+.document-viewer-header .document-meta {
+  display: flex !important;
+  gap: 1rem !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-size: 0.875rem !important;
+}
+
+.document-viewer-header .header-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+.document-viewer-header .btn-outline-light {
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  color: #fff !important;
+}
+
+.document-viewer-header .btn-outline-light:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: #fff !important;
+}
+
+.document-viewer-header .close-btn {
+  color: #fff !important;
+  opacity: 1 !important;
+  padding: 0.25rem !important;
+}
+
+.document-viewer-header .close-btn:hover {
+  opacity: 0.8 !important;
+}
+
+.document-viewer-body {
+  height: 100% !important;
+  overflow: auto !important;
+}
+
+/* PDF Viewer */
+.pdf-viewer {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  background: #f5f5f5 !important;
+}
+
+.pdf-viewer.fullscreen {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 9999 !important;
+  background: #fff !important;
+}
+
+.pdf-controls {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 1rem 1.5rem !important;
+  background: #fff !important;
+  border-bottom: 1px solid #e0e0e0 !important;
+  flex-shrink: 0 !important;
+}
+
+.pdf-controls-left,
+.pdf-controls-right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+}
+
+.pdf-controls .page-info,
+.pdf-controls .zoom-info {
+  font-weight: 600 !important;
+  color: #333 !important;
+  font-size: 0.9rem !important;
+  padding: 0 0.5rem !important;
+}
+
+.pdf-content {
+  flex: 1 !important;
+  overflow: auto !important;
+  display: flex !important;
+  justify-content: center !important;
+  padding: 2rem !important;
+  background: #f5f5f5 !important;
+}
+
+.pdf-content canvas {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  background: #fff !important;
+}
+
+.pdf-loading,
+.pdf-error {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 3rem !important;
+  text-align: center !important;
+}
+
+.pdf-loading p {
+  color: #667eea !important;
+  font-weight: 500 !important;
+}
+
+.pdf-error p {
+  font-weight: 500 !important;
+}
+
+/* DOCX Viewer */
+.docx-viewer {
+  height: 100% !important;
+  overflow: auto !important;
+  background: #f5f5f5 !important;
+}
+
+.docx-loading {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 3rem !important;
+  text-align: center !important;
+  min-height: 400px !important;
+}
+
+.docx-loading p {
+  color: #667eea !important;
+  font-weight: 500 !important;
+}
+
+.docx-content {
+  padding: 2rem !important;
+  max-width: 900px !important;
+  margin: 0 auto !important;
+  background: #fff !important;
+  min-height: 400px !important;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Style the rendered DOCX content */
+.docx-content .docx-wrapper {
+  background: #fff !important;
+  padding: 2rem !important;
+}
+
+.docx-content .docx-wrapper section.docx {
+  background: #fff !important;
+  padding: 1rem !important;
+}
+
+/* Unsupported File Type */
+.unsupported-viewer {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 400px !important;
+  padding: 2rem !important;
+}
+
+.unsupported-viewer .alert {
+  max-width: 600px !important;
+  text-align: center !important;
+}
+
+/* ========================================
+   Enhanced Breadcrumb Navigation
+   ======================================== */
+
+.breadcrumb-nav {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 0.5rem !important;
+  padding: 1rem 0 !important;
+  margin-bottom: 1rem !important;
+  font-size: 0.95rem !important;
+}
+
+.breadcrumb-item {
+  background: transparent !important;
+  border: none !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  padding: 0.5rem 0.75rem !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  font-weight: 500 !important;
+}
+
+.breadcrumb-item:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #fff !important;
+  transform: translateY(-1px) !important;
+}
+
+.breadcrumb-item.active {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+  font-weight: 600 !important;
+}
+
+.breadcrumb-icon {
+  font-size: 0.875rem !important;
+  opacity: 0.9 !important;
+}
+
+.breadcrumb-separator {
+  color: rgba(255, 255, 255, 0.5) !important;
+  user-select: none !important;
+  font-weight: 300 !important;
+}
+
+/* Responsive Breadcrumbs */
+@media (max-width: 768px) {
+  .breadcrumb-nav {
+    font-size: 0.875rem !important;
+    gap: 0.25rem !important;
+  }
+  
+  .breadcrumb-item {
+    padding: 0.4rem 0.6rem !important;
+  }
+  
+  .breadcrumb-item span {
+    max-width: 100px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+}
+
+/* ========================================
+   React-PDF and DOCX-Preview Overrides
+   ======================================== */
+
+/* React-PDF Text Layer */
+.react-pdf__Page__textContent {
+  border: 1px solid transparent !important;
+}
+
+.react-pdf__Page__annotations {
+  border: 1px solid transparent !important;
+}
+
+/* React-PDF Loading */
+.react-pdf__message {
+  padding: 20px !important;
+  color: #667eea !important;
+}
+
+/* Docx Preview Container */
+.docx-preview-container {
+  background: #fff !important;
+  color: #333 !important;
+  line-height: 1.6 !important;
+}
+
+.docx-preview-container section {
+  background: #fff !important;
+  padding: 1rem !important;
+  margin: 0 auto !important;
+}
+
+/* Docx Preview Typography */
+.docx-preview-container h1,
+.docx-preview-container h2,
+.docx-preview-container h3,
+.docx-preview-container h4,
+.docx-preview-container h5,
+.docx-preview-container h6 {
+  color: #1a1a2e !important;
+  margin-top: 1rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.docx-preview-container p {
+  color: #333 !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.docx-preview-container table {
+  border-collapse: collapse !important;
+  width: 100% !important;
+  margin: 1rem 0 !important;
+}
+
+.docx-preview-container table td,
+.docx-preview-container table th {
+  border: 1px solid #ddd !important;
+  padding: 0.5rem !important;
+  color: #333 !important;
+}
+

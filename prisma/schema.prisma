@@ -43,6 +43,10 @@ model Employee {
   folders       Folder[]
   downloadLinks DownloadLink[]
   uploadLinks   UploadLink[]
+  passkeys      Passkey[]
+  totpSecret    String?       // TOTP secret for 2FA
+  totpEnabled   Boolean       @default(false) // Whether 2FA is enabled
+  backupCodes   String[]      @default([]) // Backup codes for 2FA (encrypted)
 
   @@index([companyId])
   @@index([role])
@@ -183,4 +187,20 @@ model SystemSetting {
 
   @@index([category])
   @@map("system_settings")
+}
+
+model Passkey {
+  id              String   @id @default(cuid())
+  credentialId    String   @unique
+  publicKey       String   // Base64 encoded public key
+  counter         Int      @default(0)
+  deviceName      String?  // User-friendly name for the device
+  employeeId      String
+  employee        Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  lastUsedAt      DateTime @default(now())
+
+  @@index([employeeId])
+  @@index([credentialId])
+  @@map("passkeys")
 } 

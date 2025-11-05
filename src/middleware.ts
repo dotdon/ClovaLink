@@ -2,11 +2,13 @@ import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 
 export default withAuth(
-  function middleware(req) {
+  async function middleware(req) {
     const token = req.nextauth.token;
     const isAuth = !!token;
     const pathname = req.nextUrl.pathname;
     const isAuthPage = pathname.startsWith('/auth') || pathname === '/login';
+    const isSettingsPage = pathname.startsWith('/dashboard/settings');
+    const isAPI = pathname.startsWith('/api');
 
     // Prevent redirect loop by not redirecting on the signin page
     if (isAuthPage) {
@@ -14,6 +16,23 @@ export default withAuth(
         return NextResponse.redirect(new URL('/dashboard', req.url));
       }
       return NextResponse.next();
+    }
+
+    // Check 2FA requirement for authenticated users (skip API routes and settings page)
+    if (isAuth && token && !isAPI && !isSettingsPage && pathname.startsWith('/dashboard')) {
+      try {
+        // Import the check function
+        const { userNeeds2FA } = await import('@/lib/twoFactor');
+        const needs2FA = await userNeeds2FA(token.id as string, token.companyId as string);
+        
+        if (needs2FA) {
+          // Redirect to settings page to set up 2FA
+          return NextResponse.redirect(new URL('/dashboard/settings?tab=security&require2fa=true', req.url));
+        }
+      } catch (error) {
+        console.error('Error checking 2FA requirement in middleware:', error);
+        // Continue if check fails to avoid blocking access
+      }
     }
 
     // Protect admin dashboard routes (pages)
