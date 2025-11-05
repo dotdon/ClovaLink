@@ -1,5 +1,10 @@
 #!/bin/sh
 
+# Exit on error
+set -e
+
+echo "Starting application setup..."
+
 # Wait for database to be ready
 echo "Waiting for database to be ready..."
 /app/wait-for-it.sh db:5432 -t 60

@@ -1,0 +1,280 @@
+/* ClovaLink Global Styles - Purple-Blue Gradient Theme */
+
+/* Consistent Page Padding */
+.page-container {
+  padding: 2.5rem 2rem !important;
+  max-width: 1400px !important;
+  margin: 0 auto !important;
+}
+
+@media (max-width: 767px) {
+  .page-container {
+    padding: 1.5rem 1rem !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .page-container {
+    padding: 2rem 1.5rem !important;
+  }
+}
+
+@media (min-width: 1440px) {
+  .page-container {
+    padding: 3rem 2.5rem !important;
+  }
+}
+
+/* Primary Gradient Buttons */
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  transition: all 0.3s ease !important;
+  color: #fff !important;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
+}
+
+.btn-primary:focus {
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2) !important;
+}
+
+/* Outline Primary Buttons */
+.btn-outline-primary {
+  border: 2px solid #667eea !important;
+  color: #667eea !important;
+  background: transparent !important;
+  transition: all 0.3s ease !important;
+}
+
+.btn-outline-primary:hover {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border-color: #667eea !important;
+  color: #fff !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+}
+
+/* Secondary Gradient (Info) */
+.btn-info {
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
+  border: none !important;
+  transition: all 0.3s ease !important;
+  color: #fff !important;
+}
+
+.btn-info:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4) !important;
+}
+
+/* Success Gradient */
+.btn-success {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  transition: all 0.3s ease !important;
+  color: #fff !important;
+}
+
+.btn-success:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
+}
+
+/* Warning Gradient */
+.btn-warning {
+  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%) !important;
+  border: none !important;
+  transition: all 0.3s ease !important;
+  color: #fff !important;
+}
+
+.btn-warning:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(243, 156, 18, 0.4) !important;
+}
+
+/* Danger Button - Red */
+.btn-danger {
+  background: #e74c3c !important;
+  border: none !important;
+  transition: all 0.3s ease !important;
+  color: #fff !important;
+}
+
+.btn-danger:hover {
+  background: #c0392b !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4) !important;
+}
+
+/* Cards - Solid White */
+.card {
+  border: none !important;
+  border-radius: 20px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.3s ease !important;
+}
+
+.card:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15) !important;
+}
+
+.card-header {
+  background: #ffffff !important;
+  border-bottom: 1px solid #ecf0f1 !important;
+  font-weight: 600 !important;
+  color: #1a1a2e !important;
+}
+
+/* Tables */
+.table {
+  color: #333 !important;
+}
+
+.table thead th {
+  background: #f8f9fa !important;
+  color: #1a1a2e !important;
+  font-weight: 600 !important;
+  border-bottom: 2px solid #ecf0f1 !important;
+}
+
+.table-hover tbody tr:hover {
+  background: rgba(102, 126, 234, 0.05) !important;
+}
+
+/* Forms */
+.form-control:focus {
+  border-color: #667eea !important;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+}
+
+.form-select:focus {
+  border-color: #667eea !important;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+}
+
+/* Alerts */
+.alert {
+  border: none !important;
+  border-radius: 12px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+.alert-info {
+  background: rgba(102, 126, 234, 0.1) !important;
+  color: #5568d3 !important;
+}
+
+.alert-success {
+  background: rgba(102, 126, 234, 0.1) !important;
+  color: #5568d3 !important;
+}
+
+.alert-warning {
+  background: rgba(243, 156, 18, 0.1) !important;
+  color: #d68910 !important;
+}
+
+.alert-danger {
+  background: rgba(231, 76, 60, 0.1) !important;
+  color: #c0392b !important;
+}
+
+/* Modal */
+.modal-content {
+  border-radius: 20px !important;
+  border: none !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.modal-header {
+  border-bottom: 1px solid #ecf0f1 !important;
+  background: #ffffff !important;
+}
+
+.modal-body {
+  background: #ffffff !important;
+}
+
+.modal-title {
+  color: #1a1a2e !important;
+  font-weight: 700 !important;
+}
+
+.modal-footer {
+  border-top: 1px solid #ecf0f1 !important;
+  background: #ffffff !important;
+}
+
+/* Links */
+a {
+  color: #667eea !important;
+  transition: color 0.2s ease !important;
+}
+
+a:hover {
+  color: #5568d3 !important;
+}
+
+/* Badges */
+.badge {
+  font-weight: 500 !important;
+  padding: 0.5em 0.875em !important;
+  border-radius: 8px !important;
+}
+
+.badge-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+/* Spinners */
+.spinner-border-primary {
+  border-color: #667eea !important;
+  border-right-color: transparent !important;
+}
+
+/* Page Headers - White on Dark Background */
+h1, h2, h3, h4, h5, h6 {
+  color: #ffffff !important;
+}
+
+/* Page specific headings */
+.page-header h1,
+.page-header h2,
+.page-header h3 {
+  color: #ffffff !important;
+}
+
+/* Text Colors */
+.text-muted {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.text-primary {
+  color: #667eea !important;
+}
+
+/* Card text stays dark */
+.card h1,
+.card h2,
+.card h3,
+.card h4,
+.card h5,
+.card h6 {
+  color: #1a1a2e !important;
+}
+
+.card .text-muted {
+  color: #666 !important;
+}
+

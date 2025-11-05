@@ -155,40 +155,50 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         /* Base styles */
         .dashboard-layout {
           min-height: 100vh;
-          background: #f8f9fa;
+          background: linear-gradient(135deg, #0a0015 0%, #1a0033 50%, #2d1b4e 100%);
+          background-size: 200% 200%;
+          animation: gradientShift 20s ease infinite;
           display: flex;
           flex-direction: column;
+        }
+        
+        @keyframes gradientShift {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
         }
 
         /* Desktop Navigation */
         .desktop-nav {
           display: none;
           width: 280px;
-          background: #1a1d21;
+          background: #000000;
           position: fixed;
           top: 0;
           left: 0;
           height: 100vh;
           color: #fff;
-          padding: 1rem;
+          padding: 1.5rem 1rem;
           z-index: 1000;
           flex-shrink: 0;
+          box-shadow: 2px 0 10px rgba(0,0,0,0.3);
         }
 
         .nav-header {
           padding: 0.5rem;
-          border-bottom: 1px solid rgba(255,255,255,0.1);
-          margin-bottom: 0.5rem;
+          border-bottom: 1px solid rgba(255,255,255,0.15);
+          margin-bottom: 1.5rem;
         }
 
         .brand {
           color: #fff;
           text-decoration: none;
-          font-size: 1.25rem;
-          font-weight: 600;
+          font-size: 1.5rem;
+          font-weight: 700;
           display: flex;
           justify-content: center;
           width: 100%;
+          letter-spacing: 0.5px;
         }
 
         .logo-container {
@@ -217,16 +227,53 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         .nav-item {
           display: flex;
           align-items: center;
-          padding: 0.75rem 1rem;
-          color: #8b949e;
+          padding: 1rem 1.25rem;
+          color: #ffffff !important;
           text-decoration: none;
-          border-radius: 6px;
-          transition: all 0.2s;
+          border-radius: 12px;
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          font-weight: 500;
+          position: relative;
+          overflow: visible;
+          margin-bottom: 0.375rem;
         }
 
-        .nav-item:hover, .nav-item.active {
-          background: rgba(255,255,255,0.1);
-          color: #fff;
+        .nav-item:hover {
+          background: rgba(255, 255, 255, 0.08);
+          color: #ffffff !important;
+          transform: translateX(6px) scale(1.02);
+        }
+        
+        .nav-item.active {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: #ffffff !important;
+          box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+          transform: translateX(8px) scale(1.05);
+        }
+        
+        .nav-item.active::before {
+          content: '';
+          position: absolute;
+          left: -8px;
+          top: 50%;
+          transform: translateY(-50%);
+          height: 70%;
+          width: 5px;
+          background: #ffffff;
+          border-radius: 0 8px 8px 0;
+          box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+        
+        .nav-item.active::after {
+          content: '';
+          position: absolute;
+          inset: -1px;
+          border-radius: 12px;
+          padding: 1px;
+          background: linear-gradient(135deg, rgba(255,255,255,0.3), rgba(255,255,255,0.1));
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
         }
 
         .nav-icon {
@@ -236,7 +283,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         /* Mobile Header Styles */
         .mobile-header {
-          background: #1a1d21;
+          background: #000000;
           padding: 0;
           position: fixed;
           top: 0;
@@ -245,7 +292,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           z-index: 1000;
           width: 100%;
           height: 60px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          box-shadow: 0 2px 12px rgba(0,0,0,0.3);
         }
 
         .header-content {
@@ -354,11 +401,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           left: -280px;
           width: 280px;
           height: 100vh;
-          background: #1a1d21;
+          background: #000000;
           z-index: 1100;
           transition: left 0.3s ease;
           display: flex;
           flex-direction: column;
+          box-shadow: 2px 0 10px rgba(0,0,0,0.3);
         }
 
         .mobile-side-menu.open {
@@ -375,17 +423,53 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         .side-menu-item {
           display: flex;
           align-items: center;
-          padding: 0.75rem 1rem;
-          color: #8b949e;
+          padding: 1rem 1.25rem;
+          color: #ffffff !important;
           text-decoration: none;
-          border-radius: 6px;
-          transition: all 0.2s;
+          border-radius: 12px;
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          font-weight: 500;
+          position: relative;
+          overflow: visible;
+          margin-bottom: 0.375rem;
         }
 
-        .side-menu-item:hover,
+        .side-menu-item:hover {
+          background: rgba(255, 255, 255, 0.08);
+          color: #ffffff !important;
+          transform: translateX(6px) scale(1.02);
+        }
+        
         .side-menu-item.active {
-          background: rgba(255,255,255,0.1);
-          color: #fff;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: #ffffff !important;
+          box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+          transform: translateX(8px) scale(1.05);
+        }
+        
+        .side-menu-item.active::before {
+          content: '';
+          position: absolute;
+          left: -8px;
+          top: 50%;
+          transform: translateY(-50%);
+          height: 70%;
+          width: 5px;
+          background: #ffffff;
+          border-radius: 0 8px 8px 0;
+          box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+        
+        .side-menu-item.active::after {
+          content: '';
+          position: absolute;
+          inset: -1px;
+          border-radius: 12px;
+          padding: 1px;
+          background: linear-gradient(135deg, rgba(255,255,255,0.3), rgba(255,255,255,0.1));
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
         }
 
         .side-menu-icon {

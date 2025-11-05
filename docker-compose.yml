@@ -1,10 +1,12 @@
-version: '3.8'
+# ClovaLink Development Environment
+# IMPORTANT: Use "docker-compose down" (WITHOUT -v) to keep database data
+# Use "docker-compose down -v" only if you want to reset everything including database
 
 services:
   app:
     image: node:20-bullseye
     working_dir: /app
-    command: sh -c "npm install && npm run dev"
+    command: sh -c "npm install && npx prisma db push --skip-generate && npm run dev"
     ports:
       - "3000:3000"
     environment:
@@ -16,6 +18,8 @@ services:
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - SMTP_FROM=${SMTP_FROM}
+      - NODE_ENV=development
+      - UPLOAD_DIR=/app/uploads
     volumes:
       - .:/app
       - /app/node_modules
@@ -23,6 +27,12 @@ services:
     depends_on:
       - db
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   db:
     image: postgres:15-alpine
@@ -35,6 +45,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data: 

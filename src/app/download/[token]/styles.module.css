@@ -1,6 +1,6 @@
 .container {
   min-height: 100vh;
-  background-color: #F9FAFB;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -8,29 +8,30 @@
 }
 
 .card {
-  max-width: 28rem;
+  max-width: 32rem;
   width: 100%;
   background-color: white;
-  border-radius: 0.5rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  padding: 2rem;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  padding: 3rem;
 }
 
 .header {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
 }
 
 .title {
-  font-size: 1.5rem;
-  line-height: 2rem;
+  font-size: 2rem;
+  line-height: 2.5rem;
   font-weight: 700;
-  color: #111827;
-  margin-bottom: 0.5rem;
+  color: #1a1a2e;
+  margin-bottom: 0.75rem;
 }
 
 .subtitle {
-  color: #4B5563;
+  color: #666;
+  font-size: 1rem;
 }
 
 .errorMessage {
@@ -55,38 +56,43 @@
 }
 
 .itemName {
-  font-size: 1.125rem;
-  line-height: 1.75rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: #1a1a2e;
 }
 
 .expiryInfo {
-  color: #4B5563;
+  color: #666;
+  font-size: 1rem;
 }
 
 .downloadButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.75rem 1.5rem;
-  border: 1px solid transparent;
-  font-size: 1rem;
-  font-weight: 500;
-  border-radius: 0.375rem;
+  padding: 1rem 2.5rem;
+  border: none;
+  font-size: 1.125rem;
+  font-weight: 600;
+  border-radius: 12px;
   color: white;
-  background-color: #2563EB;
-  transition: background-color 0.2s;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  transition: all 0.3s ease;
   text-decoration: none;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
 }
 
 .downloadButton:hover {
-  background-color: #1D4ED8;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+  color: white;
 }
 
 .downloadButton:focus {
   outline: none;
-  box-shadow: 0 0 0 2px #93C5FD;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.3);
 }
 
 .buttonIcon {

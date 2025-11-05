@@ -247,29 +247,45 @@ export default function CompaniesPage() {
 
         <style jsx>{`
           .companies-container {
-            padding: 1rem;
+            padding: 2.5rem 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
           }
 
           .page-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1.5rem;
+            margin-bottom: 2.5rem;
           }
 
           .page-header h1 {
             margin: 0;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ffffff;
+          }
+          
+          :global(.btn-primary) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            transition: all 0.3s ease;
+          }
+          
+          :global(.btn-primary:hover) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
           }
 
           /* Mobile Styles */
           @media (max-width: 1023px) {
             .companies-container {
-              padding: 0.5rem;
+              padding: 1.5rem 1rem;
             }
 
             .page-header {
-              padding: 0.5rem;
-              margin-bottom: 1rem;
+              padding: 0;
+              margin-bottom: 1.5rem;
               flex-wrap: wrap;
               gap: 1rem;
             }
@@ -277,6 +293,7 @@ export default function CompaniesPage() {
             .page-header h1 {
               font-size: 1.5rem;
               width: 100%;
+              color: #ffffff !important;
             }
 
             .page-header button {
@@ -324,21 +341,26 @@ export default function CompaniesPage() {
               align-items: center;
               justify-content: center;
               border-radius: 50%;
-              color: #6c757d;
-              transition: all 0.2s ease;
+              color: #666;
+              transition: all 0.3s ease;
+              border: 2px solid #ecf0f1;
+              background: #fff;
             }
 
             :global(.action-btn:hover) {
-              background-color: rgba(108, 117, 125, 0.1);
-              color: #0d6efd;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: #fff;
+              border-color: #667eea;
+              transform: scale(1.1);
+              box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
             }
 
             :global(.view-btn) {
-              color: #0d6efd;
+              color: #667eea;
             }
 
             :global(.export-btn) {
-              color: #198754;
+              color: #667eea;
             }
 
             :global(.action-btn svg) {
@@ -350,7 +372,11 @@ export default function CompaniesPage() {
           /* Desktop Styles */
           @media (min-width: 1024px) {
             .companies-container {
-              padding: 2rem;
+              padding: 3rem 2.5rem;
+            }
+            
+            .page-header {
+              margin-bottom: 3rem;
             }
 
             .mobile-view {
@@ -359,6 +385,12 @@ export default function CompaniesPage() {
 
             .desktop-view {
               display: block;
+            }
+          }
+          
+          @media (min-width: 1440px) {
+            .companies-container {
+              padding: 3.5rem 3rem;
             }
           }
         `}</style>

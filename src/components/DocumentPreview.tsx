@@ -33,11 +33,21 @@ const Page = dynamic(
 if (typeof window !== 'undefined' && !window.__pdfWorkerConfigured) {
   // Try to use local minified worker first
   try {
-    pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+    // Use absolute URL from the root public folder
+    const workerUrl = new URL('/pdf.worker.min.mjs', window.location.origin).href;
+    pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+    console.log('PDF worker configured with .mjs version from:', workerUrl);
   } catch (e) {
-    // Fallback to CDN if local fails
-    console.warn('Failed to load local PDF worker, using CDN fallback');
-    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+    try {
+      // Fallback to .js version
+      const workerUrl = new URL('/pdf.worker.min.js', window.location.origin).href;
+      pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+      console.log('PDF worker configured with .js version from:', workerUrl);
+    } catch (e2) {
+      // Final fallback to CDN if local files fail
+      console.warn('Failed to load local PDF worker, using CDN fallback');
+      pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+    }
   }
   window.__pdfWorkerConfigured = true;
 }

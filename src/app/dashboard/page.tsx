@@ -94,14 +94,9 @@ export default function DashboardPage() {
   const StatCard = ({ title, value, icon: Icon, color }: { title: string; value: number; icon: any; color: string }) => (
     <Card className="stat-card">
       <Card.Body>
-        <div className="d-flex align-items-center">
-          <div className={`icon-wrapper bg-${color}`}>
-            <Icon size={20} />
-          </div>
-          <div className="stat-content">
-            <h3 className="stat-value">{value}</h3>
-            <p className="stat-title">{title}</p>
-          </div>
+        <div className="stat-content">
+          <p className="stat-title">{title}</p>
+          <h3 className="stat-value">{value}</h3>
         </div>
       </Card.Body>
     </Card>
@@ -128,12 +123,13 @@ export default function DashboardPage() {
     <DashboardLayout>
       <div className="dashboard-container">
         <div className="dashboard-header">
-          <h1>Dashboard</h1>
-          <p className="text-muted">Welcome to your secure document management portal</p>
+          <div className="header-badge">Welcome Back</div>
+          <h1>Document Management Dashboard</h1>
+          <p className="subtitle">Manage your files, track activity, and collaborate securely</p>
         </div>
 
         {!showStats && !showActivities && (
-          <Alert variant="info">
+          <Alert variant="info" className="custom-alert">
             Your role has limited access to the dashboard. Please contact your administrator for more information.
           </Alert>
         )}
@@ -168,22 +164,24 @@ export default function DashboardPage() {
         )}
 
         {showActivities ? (
-          <Card>
-            <Card.Header className="d-flex justify-content-between align-items-center">
-              <h2>Recent Activity</h2>
-              <small className="text-muted">Last 10 activities (30-day retention)</small>
+          <Card className="activity-card">
+            <Card.Header>
+              <div className="card-header-content">
+                <h2>Recent Activity</h2>
+                <small>Last 10 activities (30-day retention)</small>
+              </div>
             </Card.Header>
             <Card.Body className="p-0">
               {isLoading ? (
-                <div className="text-center py-4">
+                <div className="text-center py-5">
                   <div className="spinner-border text-primary" role="status">
                     <span className="visually-hidden">Loading...</span>
                   </div>
                 </div>
               ) : error ? (
-                <p className="text-danger text-center py-4">{error}</p>
+                <p className="text-danger text-center py-5">{error}</p>
               ) : activities.length === 0 ? (
-                <p className="text-muted text-center py-4">No recent activity to display</p>
+                <p className="text-muted text-center py-5">No recent activity to display</p>
               ) : (
                 <div className="activity-list">
                   {activities.slice(0, 10).map((activity) => (
@@ -194,7 +192,7 @@ export default function DashboardPage() {
             </Card.Body>
           </Card>
         ) : (
-          <Alert variant="warning">
+          <Alert variant="warning" className="custom-alert">
             You do not have permission to view activity logs.
           </Alert>
         )}
@@ -202,87 +200,139 @@ export default function DashboardPage() {
 
       <style jsx>{`
         .dashboard-container {
-          max-width: 100%;
+          max-width: 1400px;
           margin: 0 auto;
-          padding: 1rem;
+          padding: 2.5rem 2rem;
           overflow-x: hidden;
+          background: transparent;
         }
 
         .dashboard-header {
-          margin-bottom: 1.5rem;
+          margin-bottom: 3rem;
           padding: 0;
+          text-align: center;
+        }
+        
+        .header-badge {
+          display: inline-block;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: #ffffff;
+          padding: 0.5rem 1.5rem;
+          border-radius: 50px;
+          font-size: 0.875rem;
+          font-weight: 600;
+          margin-bottom: 1.25rem;
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
         }
 
         .dashboard-header h1 {
-          margin-bottom: 0.25rem;
-          font-size: 1.75rem;
+          margin-bottom: 0.75rem;
+          font-size: 2.75rem;
+          font-weight: 800;
+          color: #ffffff;
+          line-height: 1.2;
+          letter-spacing: -0.5px;
+        }
+        
+        .subtitle {
+          color: rgba(255, 255, 255, 0.85);
+          font-size: 1.125rem;
+          font-weight: 400;
+          margin: 0;
+          max-width: 600px;
+          margin-left: auto;
+          margin-right: auto;
         }
 
         .stats-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 1rem;
-          margin-bottom: 1.5rem;
+          gap: 2rem;
+          margin-bottom: 3rem;
         }
 
         :global(.stat-card) {
           border: none;
-          border-radius: 12px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+          border-radius: 16px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.08);
           margin: 0;
+          background: white;
+          transition: all 0.3s ease;
+        }
+        
+        :global(.stat-card:hover) {
+          transform: translateY(-4px);
+          box-shadow: 0 8px 20px rgba(0,0,0,0.12);
         }
 
         :global(.stat-card .card-body) {
-          padding: 1rem;
+          padding: 2.25rem;
+          text-align: center;
         }
-
-        :global(.icon-wrapper) {
-          width: 36px;
-          height: 36px;
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-right: 0.75rem;
-          flex-shrink: 0;
+        
+        :global(.stat-content) {
+          width: 100%;
         }
 
         :global(.stat-value) {
-          font-size: 1.125rem;
-          font-weight: 600;
-          margin: 0;
-          line-height: 1.2;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          font-size: 3rem;
+          font-weight: 800;
+          margin: 0.5rem 0 0;
+          line-height: 1;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
         }
 
         :global(.stat-title) {
-          color: #6c757d;
-          margin: 0.25rem 0 0;
-          font-size: 0.75rem;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          color: #666;
+          margin: 0;
+          font-size: 0.875rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 1px;
         }
 
         :global(.activity-card) {
           border: none;
-          border-radius: 12px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+          border-radius: 16px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.08);
           margin: 0;
+          background: white;
         }
 
         :global(.activity-card .card-header) {
-          background: transparent;
-          border-bottom: 1px solid #e9ecef;
-          padding: 1rem;
+          background: white;
+          border-bottom: 1px solid #ecf0f1;
+          padding: 2rem;
+          border-radius: 20px 20px 0 0;
         }
-
-        :global(.activity-card .card-header h2) {
-          font-size: 1rem;
+        
+        :global(.card-header-content) {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        
+        :global(.card-header-content h2) {
+          font-size: 1.5rem;
           margin: 0;
-          font-weight: 600;
+          font-weight: 700;
+          color: #1a1a2e;
+        }
+        
+        :global(.card-header-content small) {
+          color: #666;
+          font-size: 0.875rem;
+        }
+        
+        :global(.custom-alert) {
+          border-radius: 12px;
+          border: none;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         }
 
         :global(.activity-list) {
@@ -292,9 +342,14 @@ export default function DashboardPage() {
 
         :global(.activity-item) {
           display: flex;
-          padding: 1rem;
-          border-bottom: 1px solid #e9ecef;
+          padding: 1.5rem 2rem;
+          border-bottom: 1px solid #ecf0f1;
           align-items: flex-start;
+          transition: background 0.2s ease;
+        }
+        
+        :global(.activity-item:hover) {
+          background: #f8f9fa;
         }
 
         :global(.activity-item:last-child) {
@@ -302,37 +357,44 @@ export default function DashboardPage() {
         }
 
         :global(.activity-icon) {
-          width: 28px;
-          height: 28px;
-          border-radius: 50%;
-          background: rgba(13, 110, 253, 0.1);
-          color: #0d6efd;
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
           display: flex;
           align-items: center;
           justify-content: center;
-          margin-right: 0.75rem;
+          margin-right: 1rem;
           flex-shrink: 0;
-          font-size: 0.875rem;
+          font-size: 1rem;
+          box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
         }
 
         :global(.activity-content) {
           flex: 1;
           min-width: 0;
-          font-size: 0.875rem;
+          font-size: 0.9375rem;
         }
 
         :global(.activity-text) {
           margin: 0;
-          line-height: 1.4;
+          line-height: 1.6;
           overflow: hidden;
           text-overflow: ellipsis;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
+          color: #333;
+        }
+        
+        :global(.activity-text strong) {
+          font-weight: 600;
+          color: #1a1a2e;
         }
 
         :global(.activity-doc) {
-          color: #6c757d;
+          color: #666;
           display: inline-block;
           max-width: 200px;
           overflow: hidden;
@@ -343,38 +405,45 @@ export default function DashboardPage() {
 
         :global(.activity-time) {
           display: block;
-          color: #6c757d;
-          margin-top: 0.25rem;
-          font-size: 0.75rem;
+          color: #999;
+          margin-top: 0.375rem;
+          font-size: 0.8125rem;
         }
 
         /* Mobile styles */
         @media (max-width: 767px) {
           .dashboard-container {
-            padding: 1rem;
+            padding: 2rem 1.5rem;
+          }
+          
+          .header-badge {
+            font-size: 0.75rem;
+            padding: 0.375rem 1rem;
+            margin-bottom: 1rem;
           }
 
           .dashboard-header h1 {
-            font-size: 1.5rem;
+            font-size: 1.875rem;
+            color: #ffffff !important;
+          }
+          
+          .subtitle {
+            font-size: 0.9375rem;
+            color: rgba(255, 255, 255, 0.85) !important;
           }
 
           .stats-grid {
             grid-template-columns: repeat(2, 1fr);
-            gap: 0.75rem;
+            gap: 1rem;
+            margin-bottom: 2rem;
           }
 
           :global(.stat-card .card-body) {
-            padding: 0.75rem;
-          }
-
-          :global(.icon-wrapper) {
-            width: 32px;
-            height: 32px;
-            margin-right: 0.5rem;
+            padding: 1.5rem 1.25rem;
           }
 
           :global(.stat-value) {
-            font-size: 1rem;
+            font-size: 2rem;
           }
 
           :global(.stat-title) {
@@ -382,59 +451,102 @@ export default function DashboardPage() {
           }
 
           :global(.activity-card .card-header) {
-            padding: 0.75rem;
+            padding: 1.25rem;
+          }
+          
+          :global(.card-header-content) {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+          }
+          
+          :global(.card-header-content h2) {
+            font-size: 1.25rem;
           }
 
           :global(.activity-item) {
-            padding: 0.75rem;
+            padding: 1rem 1.25rem;
           }
 
           :global(.activity-icon) {
-            width: 24px;
-            height: 24px;
-            margin-right: 0.5rem;
+            width: 36px;
+            height: 36px;
+            margin-right: 0.875rem;
           }
 
           :global(.activity-text) {
-            font-size: 0.813rem;
+            font-size: 0.875rem;
           }
 
           :global(.activity-time) {
-            font-size: 0.688rem;
+            font-size: 0.75rem;
           }
         }
 
         /* Tablet styles */
         @media (min-width: 768px) and (max-width: 1023px) {
           .dashboard-container {
-            padding: 1.5rem;
+            padding: 2rem 1.5rem;
           }
 
           .stats-grid {
             grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
           }
         }
 
         /* Desktop styles */
         @media (min-width: 1024px) {
           .dashboard-container {
-            padding: 2rem;
+            padding: 3rem 2.5rem;
           }
 
           .stats-grid {
             grid-template-columns: repeat(4, 1fr);
+            gap: 2.5rem;
+          }
+
+          .dashboard-header {
+            margin-bottom: 4rem;
+          }
+          
+          .header-badge {
+            font-size: 0.875rem;
+            padding: 0.625rem 1.75rem;
           }
 
           .dashboard-header h1 {
-            font-size: 2rem;
+            font-size: 3rem;
+            color: #ffffff !important;
+          }
+          
+          .subtitle {
+            font-size: 1.25rem;
+            color: rgba(255, 255, 255, 0.85) !important;
+          }
+
+          :global(.stat-card .card-body) {
+            padding: 2.5rem;
           }
 
           :global(.stat-value) {
-            font-size: 1.5rem;
+            font-size: 3.5rem;
           }
-
-          :global(.activity-card .card-header h2) {
-            font-size: 1.25rem;
+          
+          :global(.stat-title) {
+            font-size: 0.875rem;
+          }
+          
+          :global(.activity-card .card-header) {
+            padding: 2rem;
+          }
+          
+          :global(.card-header-content h2) {
+            font-size: 1.75rem;
+          }
+          
+          :global(.activity-item) {
+            padding: 1.5rem 2rem;
           }
         }
       `}</style>

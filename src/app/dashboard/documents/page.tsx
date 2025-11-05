@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Button, Form, Modal } from 'react-bootstrap';
+import { Button, Form, Modal, Alert, Dropdown, ButtonGroup } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
-import { FaDownload, FaTrash, FaFolder, FaEye, FaUpload, FaFolderPlus, FaFile, FaEdit, FaArrowLeft, FaEllipsisV, FaSearch, FaCheckCircle, FaShare } from 'react-icons/fa';
-import DocumentPreview from '@/components/DocumentPreview';
+import { FaDownload, FaTrash, FaFolder, FaEye, FaUpload, FaFolderPlus, FaFile, FaEdit, FaArrowLeft, FaEllipsisV, FaSearch, FaCheckCircle, FaShare, FaFilePdf, FaFileWord, FaFileImage, FaInfo, FaTh, FaList, FaSortAlphaDown, FaSortAmountDown, FaCalendarAlt } from 'react-icons/fa';
 import { useSession } from 'next-auth/react';
 import { hasPermission, Permission, canAccessFolder, canManageFolder, canManageDocument } from '@/lib/permissions';
 
@@ -184,6 +183,10 @@ export default function DocumentsPage() {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<Document | Folder | null>(null);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [selectedInfo, setSelectedInfo] = useState<Document | Folder | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sortBy, setSortBy] = useState<'name' | 'date' | 'size'>('name');
 
   // Permission checks
   const canDeleteDocuments = hasPermission(session, Permission.DELETE_DOCUMENTS);
@@ -611,13 +614,52 @@ export default function DocumentsPage() {
 
         {/* Search Bar */}
         <div className="search-section">
-          <Form.Control
-            type="search"
-            placeholder="Search files and folders..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input"
-          />
+          <div className="search-controls">
+            <Form.Control
+              type="search"
+              placeholder="Search files and folders..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="search-input"
+            />
+            <div className="view-controls">
+              <ButtonGroup className="view-toggle">
+                <Button 
+                  variant={viewMode === 'grid' ? 'primary' : 'outline-light'}
+                  onClick={() => setViewMode('grid')}
+                  size="sm"
+                >
+                  <FaTh />
+                </Button>
+                <Button 
+                  variant={viewMode === 'list' ? 'primary' : 'outline-light'}
+                  onClick={() => setViewMode('list')}
+                  size="sm"
+                >
+                  <FaList />
+                </Button>
+              </ButtonGroup>
+              <Dropdown>
+                <Dropdown.Toggle variant="outline-light" size="sm" className="sort-dropdown">
+                  {sortBy === 'name' && <FaSortAlphaDown className="me-1" />}
+                  {sortBy === 'date' && <FaCalendarAlt className="me-1" />}
+                  {sortBy === 'size' && <FaSortAmountDown className="me-1" />}
+                  Sort
+                </Dropdown.Toggle>
+                <Dropdown.Menu>
+                  <Dropdown.Item onClick={() => setSortBy('name')}>
+                    <FaSortAlphaDown className="me-2" /> Name
+                  </Dropdown.Item>
+                  <Dropdown.Item onClick={() => setSortBy('date')}>
+                    <FaCalendarAlt className="me-2" /> Date Modified
+                  </Dropdown.Item>
+                  <Dropdown.Item onClick={() => setSortBy('size')}>
+                    <FaSortAmountDown className="me-2" /> Size
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
+            </div>
+          </div>
         </div>
 
         {/* Breadcrumb Navigation */}
@@ -645,7 +687,7 @@ export default function DocumentsPage() {
         </div>
 
         {/* Content List */}
-        <div className="content-list">
+        <div className={`content-list ${viewMode}`}>
           {isLoading ? (
             <div className="loading-state">Loading...</div>
           ) : filteredItems.length === 0 ? (
@@ -687,79 +729,105 @@ export default function DocumentsPage() {
                     }}
                   >
                     <div className="item-icon">
-                      {isFolder ? <FaFolder className="folder-icon" /> : <FaFile className="file-icon" />}
+                      {isFolder ? (
+                        <FaFolder className="folder-icon" />
+                      ) : (
+                        <>
+                          {(item as Document).mimeType === 'application/pdf' && <FaFilePdf className="file-icon pdf-icon" />}
+                          {(item as Document).mimeType.startsWith('image/') && <FaFileImage className="file-icon image-icon" />}
+                          {((item as Document).mimeType.includes('word') || (item as Document).name.endsWith('.docx')) && <FaFileWord className="file-icon word-icon" />}
+                          {!(item as Document).mimeType.includes('pdf') && !(item as Document).mimeType.startsWith('image/') && !(item as Document).mimeType.includes('word') && !((item as Document).name.endsWith('.docx')) && <FaFile className="file-icon" />}
+                        </>
+                      )}
                     </div>
                     <div className="item-details">
                       <div className="item-name">{item.name}</div>
                       {!isFolder && (
                         <div className="item-meta">
-                          {formatFileSize((item as Document).size)}
+                          <span>{formatFileSize((item as Document).size)}</span>
+                          <span className="meta-separator">•</span>
+                          <span>{new Date((item as Document).updatedAt).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                      {isFolder && (
+                        <div className="item-meta">
+                          <span>Folder</span>
+                          <span className="meta-separator">•</span>
+                          <span>{new Date(item.createdAt).toLocaleDateString()}</span>
                         </div>
                       )}
                     </div>
                   </div>
                   <div className="item-actions">
-                    {canRenameDocuments && (
-                      <button
-                        className="action-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRename(item);
-                        }}
-                        title={`Rename ${isFolder ? 'Folder' : 'Document'}`}
+                    <Dropdown onClick={(e) => e.stopPropagation()}>
+                      <Dropdown.Toggle 
+                        variant="link" 
+                        className="three-dot-menu"
+                        id={`dropdown-${item.id}`}
                       >
-                        <FaEdit />
-                      </button>
-                    )}
-                    <button
-                      className="action-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedShareItem(item);
-                        setShowShareModal(true);
-                      }}
-                      title="Share"
-                    >
-                      <FaShare />
-                    </button>
-                    {isFolder && (
-                      <button 
-                        className="action-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleFolderDownload(item as Folder);
-                        }}
-                        title="Download as ZIP"
-                      >
-                        <FaDownload />
-                      </button>
-                    )}
-                    {!isFolder && (
-                      <button 
-                        className="action-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDownload(item as Document);
-                        }}
-                        title="Download"
-                      >
-                        <FaDownload />
-                      </button>
-                    )}
-                    {canDeleteDocuments && (
-                      <button 
-                        className="action-btn delete-btn"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleDelete(item);
-                        }}
-                        disabled={isDeleting === item.id}
-                        title={`Delete ${isFolder ? 'Folder' : 'Document'}`}
-                      >
-                        <FaTrash />
-                      </button>
-                    )}
+                        <FaEllipsisV />
+                      </Dropdown.Toggle>
+
+                      <Dropdown.Menu align="end">
+                        <Dropdown.Item 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedInfo(item);
+                            setShowInfoModal(true);
+                          }}
+                        >
+                          <FaInfo className="me-2" /> Get Info
+                        </Dropdown.Item>
+                        <Dropdown.Divider />
+                        {canRenameDocuments && (
+                          <Dropdown.Item 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRename(item);
+                            }}
+                          >
+                            <FaEdit className="me-2" /> Rename
+                          </Dropdown.Item>
+                        )}
+                        <Dropdown.Item 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedShareItem(item);
+                            setShowShareModal(true);
+                          }}
+                        >
+                          <FaShare className="me-2" /> Share
+                        </Dropdown.Item>
+                        <Dropdown.Item 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isFolder) {
+                              handleFolderDownload(item as Folder);
+                            } else {
+                              handleDownload(item as Document);
+                            }
+                          }}
+                        >
+                          <FaDownload className="me-2" /> Download
+                        </Dropdown.Item>
+                        {canDeleteDocuments && (
+                          <>
+                            <Dropdown.Divider />
+                            <Dropdown.Item 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleDelete(item);
+                              }}
+                              className="text-danger"
+                              disabled={isDeleting === item.id}
+                            >
+                              <FaTrash className="me-2" /> Delete
+                            </Dropdown.Item>
+                          </>
+                        )}
+                      </Dropdown.Menu>
+                    </Dropdown>
                   </div>
                 </div>
               );
@@ -768,18 +836,38 @@ export default function DocumentsPage() {
         </div>
 
         {/* Modals */}
-        <Modal show={showPreview} onHide={() => setShowPreview(false)} fullscreen>
+        <Modal show={showPreview} onHide={() => setShowPreview(false)} centered>
           <Modal.Header closeButton>
             <Modal.Title>{selectedDocument?.name}</Modal.Title>
           </Modal.Header>
           <Modal.Body>
             {selectedDocument && (
-              <DocumentPreview
-                documentId={selectedDocument.id}
-                name={selectedDocument.name}
-                mimeType={selectedDocument.mimeType}
-                url={`/api/documents/${selectedDocument.id}/download`}
-              />
+              <div className="text-center py-4">
+                <div className="mb-4">
+                  {selectedDocument.mimeType === 'application/pdf' && <FaFilePdf size={64} className="text-danger" />}
+                  {selectedDocument.mimeType.startsWith('image/') && <FaFileImage size={64} className="text-success" />}
+                  {(selectedDocument.mimeType.includes('word') || selectedDocument.name.endsWith('.docx')) && <FaFileWord size={64} className="text-primary" />}
+                  {!selectedDocument.mimeType.startsWith('image/') && !selectedDocument.mimeType.includes('pdf') && !selectedDocument.mimeType.includes('word') && !selectedDocument.name.endsWith('.docx') && <FaFile size={64} className="text-secondary" />}
+                </div>
+                <h5 className="mb-3">{selectedDocument.name}</h5>
+                <p className="text-muted mb-4">
+                  Size: {formatFileSize(selectedDocument.size)}
+                </p>
+                <Alert variant="info" className="mb-4">
+                  <small>Preview is not available. Please download the file to view it.</small>
+                </Alert>
+                <Button 
+                  variant="primary" 
+                  size="lg"
+                  onClick={() => {
+                    handleDownload(selectedDocument);
+                    setShowPreview(false);
+                  }}
+                >
+                  <FaDownload className="me-2" />
+                  Download File
+                </Button>
+              </div>
             )}
           </Modal.Body>
         </Modal>
@@ -873,6 +961,62 @@ export default function DocumentsPage() {
           item={selectedShareItem}
         />
 
+        {/* Info Modal */}
+        <Modal show={showInfoModal} onHide={() => setShowInfoModal(false)}>
+          <Modal.Header closeButton>
+            <Modal.Title>
+              {selectedInfo && 'children' in selectedInfo ? 'Folder' : 'Document'} Information
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {selectedInfo && (
+              <div className="info-content">
+                <div className="info-row">
+                  <strong>Name:</strong>
+                  <span>{selectedInfo.name}</span>
+                </div>
+                <div className="info-row">
+                  <strong>Type:</strong>
+                  <span>{'children' in selectedInfo ? 'Folder' : (selectedInfo as Document).mimeType}</span>
+                </div>
+                {!('children' in selectedInfo) && (
+                  <>
+                    <div className="info-row">
+                      <strong>Size:</strong>
+                      <span>{formatFileSize((selectedInfo as Document).size)}</span>
+                    </div>
+                    <div className="info-row">
+                      <strong>Path:</strong>
+                      <span>{(selectedInfo as Document).path}</span>
+                    </div>
+                  </>
+                )}
+                <div className="info-row">
+                  <strong>Created:</strong>
+                  <span>{new Date(selectedInfo.createdAt).toLocaleString()}</span>
+                </div>
+                <div className="info-row">
+                  <strong>Modified:</strong>
+                  <span>{new Date(selectedInfo.updatedAt).toLocaleString()}</span>
+                </div>
+                {'children' in selectedInfo && (
+                  <div className="info-row">
+                    <strong>Items:</strong>
+                    <span>
+                      {(selectedInfo as Folder).documents.length} document(s), {(selectedInfo as Folder).children.length} folder(s)
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowInfoModal(false)}>
+              Close
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
         {/* Add Delete Confirmation Modal */}
         <Modal show={showDeleteModal} onHide={() => {
           setShowDeleteModal(false);
@@ -911,7 +1055,7 @@ export default function DocumentsPage() {
             display: flex;
             flex-direction: column;
             height: 100vh;
-            background: #f8f9fa;
+            background: transparent;
             position: fixed;
             top: 0;
             right: 0;
@@ -922,12 +1066,12 @@ export default function DocumentsPage() {
           }
 
           .mobile-doc-header {
-            background: #fff;
-            padding: 1rem;
+            background: transparent;
+            padding: 1.25rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid #e9ecef;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             position: fixed;
             top: 60px;
             left: 0;
@@ -952,8 +1096,9 @@ export default function DocumentsPage() {
           }
 
           .current-location {
-            font-weight: 600;
-            font-size: 1.25rem;
+            font-weight: 700;
+            font-size: 1.375rem;
+            color: #ffffff;
           }
 
           .header-actions {
@@ -963,30 +1108,101 @@ export default function DocumentsPage() {
           }
 
           .search-section {
-            padding: 1.25rem;
-            background: #fff;
-            border-bottom: 1px solid #e9ecef;
+            padding: 1.5rem 2rem;
+            background: transparent;
+            border-bottom: none;
             flex-shrink: 0;
             position: relative;
             z-index: 5;
           }
+          
+          .search-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            max-width: 1400px;
+            margin: 0 auto;
+          }
+          
+          .view-controls {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+          }
+          
+          :global(.view-toggle .btn) {
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+          }
+          
+          :global(.view-toggle .btn-outline-light) {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.8);
+          }
+          
+          :global(.view-toggle .btn-outline-light:hover) {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+            color: #ffffff;
+          }
+          
+          :global(.sort-dropdown) {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border-color: rgba(255, 255, 255, 0.2) !important;
+            color: rgba(255, 255, 255, 0.9) !important;
+            border-radius: 10px !important;
+          }
+          
+          :global(.sort-dropdown:hover) {
+            background: rgba(255, 255, 255, 0.2) !important;
+            border-color: rgba(255, 255, 255, 0.3) !important;
+            color: #ffffff !important;
+          }
 
           .search-input {
-            border-radius: 8px;
-            border: 1px solid #dee2e6;
-            padding: 0.875rem 1.25rem;
+            border-radius: 50px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            padding: 1rem 2rem;
             font-size: 1rem;
             width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            color: #ffffff;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+          }
+          
+          .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 400;
+          }
+          
+          .search-input:focus {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(102, 126, 234, 0.5);
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            outline: none;
+            color: #ffffff;
+            transform: translateY(-2px);
           }
 
           .breadcrumb-nav {
-            padding: 1rem 1.25rem;
+            padding: 0.75rem 1.5rem;
             display: flex;
             flex-wrap: wrap;
-            gap: 0.75rem;
+            gap: 0.5rem;
             align-items: center;
-            background: #fff;
-            border-bottom: 1px solid #e9ecef;
+            background: transparent;
+            border-bottom: none;
             flex-shrink: 0;
             position: relative;
             z-index: 5;
@@ -995,137 +1211,285 @@ export default function DocumentsPage() {
           .breadcrumb-item {
             border: none;
             background: none;
-            padding: 0.5rem 0.75rem;
-            color: #0d6efd;
+            padding: 0.5rem 0.875rem;
+            color: #667eea;
             cursor: pointer;
-            font-size: 1rem;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+          }
+          
+          .breadcrumb-item:hover:not(.active) {
+            background: rgba(102, 126, 234, 0.1);
+            color: #5568d3;
           }
 
           .breadcrumb-item.active {
-            color: #495057;
+            color: #ffffff;
             cursor: default;
+            font-weight: 600;
           }
 
           .breadcrumb-separator {
-            color: #6c757d;
-            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.875rem;
           }
 
           .content-list {
             flex: 1;
             overflow-y: auto;
-            padding: 1.5rem;
-            background: #fff;
+            padding: 2rem;
+            background: transparent;
             min-height: 0;
             position: relative;
             z-index: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.25rem;
+            align-content: start;
+          }
+          
+          .content-list.list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+          }
+          
+          .content-list.list .list-item {
+            flex-direction: row;
+            height: auto;
+            padding: 0.875rem 1.25rem;
+            align-items: center;
+          }
+          
+          .content-list.list .item-main {
+            flex-direction: row;
+            align-items: center;
+            text-align: left;
+            padding: 0;
+          }
+          
+          .content-list.list .item-details {
+            text-align: left;
+          }
+          
+          .content-list.list .item-meta {
+            justify-content: flex-start;
           }
 
           .list-item {
             display: flex;
-            align-items: center;
-            padding: 1.25rem;
-            border-radius: 12px;
-            margin-bottom: 0.75rem;
-            background: #fff;
-            border: 1px solid #e9ecef;
+            flex-direction: column;
+            padding: 0;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.98);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             position: relative;
-            cursor: move;
-            transition: all 0.2s ease;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             isolation: isolate;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            overflow: hidden;
+            height: 220px;
           }
 
           .list-item:hover {
-            background: #f8f9fa;
-            border-color: #dee2e6;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            background: rgba(255, 255, 255, 1);
+            border-color: rgba(102, 126, 234, 0.5);
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4);
+            transform: translateY(-6px) scale(1.02);
           }
 
           .list-item.drag-over {
-            background: #e9ecef;
-            border: 2px dashed #0d6efd;
+            background: rgba(102, 126, 234, 0.1);
+            border: 2px dashed #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
           }
 
           .item-main {
             display: flex;
+            flex-direction: column;
             align-items: center;
+            justify-content: center;
             flex: 1;
-            min-width: 0;
+            padding: 1.5rem 1rem 1rem;
             cursor: pointer;
+            text-align: center;
           }
 
           .item-icon {
-            width: 48px;
-            height: 48px;
+            width: 100%;
+            height: 100px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-right: 1.25rem;
+            margin-bottom: 0.75rem;
             flex-shrink: 0;
           }
 
           .folder-icon {
-            color: #ffd43b;
-            font-size: 2rem;
+            color: #FF9800;
+            font-size: 5.5rem;
+            filter: drop-shadow(0 2px 4px rgba(255, 152, 0, 0.3));
           }
 
           .file-icon {
-            color: #748ffc;
+            color: #2196F3;
+            font-size: 5.5rem;
+            filter: drop-shadow(0 2px 4px rgba(33, 150, 243, 0.3));
+          }
+          
+          .pdf-icon {
+            color: #e74c3c;
+            filter: drop-shadow(0 2px 4px rgba(231, 76, 60, 0.3));
+          }
+          
+          .word-icon {
+            color: #2980b9;
+            filter: drop-shadow(0 2px 4px rgba(41, 128, 185, 0.3));
+          }
+          
+          .image-icon {
+            color: #27ae60;
+            filter: drop-shadow(0 2px 4px rgba(39, 174, 96, 0.3));
+          }
+          
+          .content-list.list .item-icon {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 0;
+            margin-right: 1rem;
+          }
+          
+          .content-list.list .folder-icon,
+          .content-list.list .file-icon {
             font-size: 2rem;
           }
 
           .item-details {
-            flex: 1;
-            min-width: 0;
+            width: 100%;
           }
 
           .item-name {
             font-weight: 500;
-            margin-bottom: 0.375rem;
-            white-space: nowrap;
+            margin-bottom: 0.5rem;
+            font-size: 0.9375rem;
+            color: #1a1a2e;
             overflow: hidden;
             text-overflow: ellipsis;
-            font-size: 1rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            line-height: 1.3;
           }
 
           .item-meta {
-            font-size: 0.875rem;
-            color: #6c757d;
-          }
-
-          .item-actions {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-          }
-
-          .action-btn {
-            width: 32px;
-            height: 32px;
+            font-size: 0.75rem;
+            color: #999;
+            font-weight: 400;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 6px;
-            border: 1px solid #dee2e6;
-            background: #fff;
-            color: #6c757d;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            padding: 0;
+            gap: 0.375rem;
+          }
+          
+          .meta-separator {
+            color: #ccc;
+            font-size: 0.75rem;
           }
 
-          .action-btn:hover {
-            background: #f8f9fa;
-            border-color: #ced4da;
-            color: #495057;
+          .item-actions {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            display: flex;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+          }
+          
+          .list-item:hover .item-actions {
+            opacity: 1;
+          }
+          
+          :global(.three-dot-menu) {
+            color: #666 !important;
+            text-decoration: none !important;
+            padding: 0.5rem !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border-radius: 50% !important;
+            transition: all 0.2s ease !important;
+            width: 36px !important;
+            height: 36px !important;
+            background: transparent !important;
+            border: none !important;
+          }
+          
+          :global(.three-dot-menu:hover) {
+            background: rgba(102, 126, 234, 0.1) !important;
+            color: #667eea !important;
+          }
+          
+          :global(.three-dot-menu::after) {
+            display: none !important;
+          }
+          
+          :global(.dropdown-menu) {
+            border-radius: 12px !important;
+            border: 1px solid #ecf0f1 !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+            padding: 0.5rem 0 !important;
+          }
+          
+          :global(.dropdown-item) {
+            padding: 0.75rem 1.25rem !important;
+            font-size: 0.9375rem !important;
+            transition: all 0.2s ease !important;
+          }
+          
+          :global(.dropdown-item:hover) {
+            background: rgba(102, 126, 234, 0.1) !important;
+            color: #667eea !important;
+          }
+          
+          :global(.dropdown-divider) {
+            margin: 0.5rem 0 !important;
+            border-color: #ecf0f1 !important;
+          }
+          
+          .info-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+          }
+          
+          .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #ecf0f1;
+          }
+          
+          .info-row:last-child {
+            border-bottom: none;
+          }
+          
+          .info-row strong {
+            color: #1a1a2e;
+            font-weight: 600;
+            min-width: 100px;
+          }
+          
+          .info-row span {
+            color: #666;
+            text-align: right;
+            word-break: break-word;
           }
 
-          .action-btn.delete-btn:hover {
-            background: #dc3545;
-            border-color: #dc3545;
-            color: #fff;
-          }
 
           .loading-state {
             display: flex;
@@ -1141,19 +1505,21 @@ export default function DocumentsPage() {
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 300px;
-            color: #6c757d;
+            height: 400px;
+            color: rgba(255, 255, 255, 0.7);
           }
 
           .empty-icon {
-            margin-bottom: 1.5rem;
-            color: #dee2e6;
-            font-size: 4rem;
+            margin-bottom: 2rem;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 5rem;
+            opacity: 0.5;
           }
 
           .empty-state p {
             font-size: 1.25rem;
-            color: #6c757d;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 500;
           }
 
           /* Mobile styles */
@@ -1165,22 +1531,64 @@ export default function DocumentsPage() {
 
             .search-section {
               margin-top: 60px;
+              padding: 1.25rem;
             }
 
             .content-list {
               padding: 1rem;
+              grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+              gap: 1rem;
+            }
+            
+            .list-item {
+              height: 180px;
+            }
+            
+            .item-icon {
+              width: 48px;
+              height: 48px;
+              margin-bottom: 0.75rem;
+            }
+            
+            .folder-icon, .file-icon {
+              font-size: 2.5rem;
+            }
+            
+            .item-name {
+              font-size: 0.875rem;
+            }
+            
+            .item-meta {
+              font-size: 0.6875rem;
             }
 
-            :global(.upload-btn),
-            :global(.btn-outline-primary) {
-              padding: 0.5rem !important;
-              height: 40px !important;
-              width: 40px !important;
-              display: flex !important;
-              align-items: center !important;
-              justify-content: center !important;
-              font-size: 1.25rem !important;
-            }
+          :global(.upload-btn),
+          :global(.btn-outline-primary) {
+            padding: 0.5rem !important;
+            height: 44px !important;
+            width: 44px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 1.25rem !important;
+            border-radius: 12px !important;
+            border: 2px solid #ecf0f1 !important;
+            transition: all 0.3s ease !important;
+          }
+          
+          :global(.upload-btn:hover) {
+            transform: scale(1.05) !important;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border-color: #667eea !important;
+          }
+          
+          :global(.btn-outline-primary:hover) {
+            transform: scale(1.05) !important;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border-color: #667eea !important;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+          }
 
             .header-actions {
               position: relative;
@@ -1225,7 +1633,7 @@ export default function DocumentsPage() {
 
             .breadcrumb-nav {
               position: relative;
-              padding: 1.25rem 2rem;
+              padding: 1rem 2rem;
             }
 
             .content-list {
@@ -1233,6 +1641,21 @@ export default function DocumentsPage() {
               padding: 2rem;
               flex: 1;
               overflow-y: auto;
+              grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+              gap: 1.5rem;
+            }
+          }
+          
+          /* Large Desktop */
+          @media (min-width: 1440px) {
+            .content-list {
+              grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+              gap: 2rem;
+              padding: 2.5rem;
+            }
+            
+            .list-item {
+              height: 220px;
             }
           }
 
