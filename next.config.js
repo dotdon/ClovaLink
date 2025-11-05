@@ -6,18 +6,7 @@ const nextConfig = {
       config.resolve.alias.canvas = false;
     }
 
-    // Handle PDF.js worker for Next.js 15 + webpack
-    // Don't try to require these as modules - they're served statically
     if (!isServer) {
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        'pdfjs-dist/build/pdf.worker': false,
-        'pdfjs-dist/build/pdf.worker.mjs': false,
-        'pdfjs-dist/build/pdf.worker.min.mjs': false,
-        'pdfjs-dist/build/pdf.worker.min.js': false,
-      };
-      
-      // Add worker file as a static asset
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
@@ -25,10 +14,6 @@ const nextConfig = {
     }
 
     return config;
-  },
-  experimental: {
-    // Disable optimizePackageImports for pdfjs-dist to avoid worker resolution issues
-    // optimizePackageImports: ['pdfjs-dist']
   },
   // Security headers
   async headers() {

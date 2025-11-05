@@ -17,7 +17,6 @@ docker-compose up --build
 This will:
 - Clean up any previous containers
 - Install dependencies
-- Copy PDF worker files to public directory
 - Start the Next.js dev server
 - Start the PostgreSQL database
 
@@ -36,25 +35,6 @@ SMTP_FROM=noreply@example.com
 ```
 
 ## Troubleshooting
-
-### PDF Files Not Loading
-
-If PDF previews are not working:
-
-1. **Check PDF worker files exist**:
-```bash
-ls -la public/pdf.worker*
-```
-
-2. **Verify files were copied during build**:
-```bash
-# The build process should copy these files automatically
-npm run prebuild
-```
-
-3. **Check browser console** for errors (F12):
-   - Look for "PDF worker configured" messages
-   - Check for CORS or CSP issues
 
 ### Docker Containers Not Starting
 
@@ -100,15 +80,12 @@ docker-compose up
 - **docker-compose.prod.yml** - Production environment (multi-stage build)
 - **Dockerfile** - Production image definition
 - **docker-entrypoint.sh** - Entrypoint script for production containers
-- **public/pdf.worker.min.mjs** - PDF.js worker (ES modules)
-- **public/pdf.worker.min.js** - PDF.js worker (CommonJS)
 
 ## Key Improvements
 
-1. **PDF Worker Files**: Automatically copied from `node_modules/pdfjs-dist/build/` to `public/` during prebuild
-2. **Content Security Policy**: Updated to allow blob URLs for PDF workers
-3. **Healthchecks**: Added to both app and database services
-4. **Clean Environment**: Using `NODE_ENV` variables to differentiate dev/prod
+1. **Healthchecks**: Added to both app and database services
+2. **Clean Environment**: Using `NODE_ENV` variables to differentiate dev/prod
+3. **Content Security Policy**: Configured for secure content delivery
 
 ## Production Deployment
 
