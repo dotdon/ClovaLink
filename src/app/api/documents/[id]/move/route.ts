@@ -25,7 +25,7 @@ export async function POST(
     }
 
     // Validate request body
-    let targetFolder: string | undefined;
+    let targetFolderId: string | null = null;
     try {
       const contentType = request.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
@@ -35,7 +35,7 @@ export async function POST(
       }
 
       const body = await request.json();
-      targetFolder = body.targetFolder;
+      targetFolderId = body.targetFolderId || null;
     } catch (error) {
       console.error('Error parsing request body:', error);
       return NextResponse.json({ 
@@ -66,166 +66,40 @@ export async function POST(
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
 
-    // If moving to root directory
-    if (!targetFolder) {
-      const fileName = document.name;
-      const oldPath = document.path.startsWith(UPLOAD_DIR) 
-        ? document.path 
-        : join(UPLOAD_DIR, document.path);
-      const newPath = join(UPLOAD_DIR, fileName);
-
-      try {
-        // Move the file if it exists
-        if (existsSync(oldPath) && oldPath !== newPath) {
-          await rename(oldPath, newPath);
-        }
-      } catch (error) {
-        console.error('Error moving file:', error);
-      }
-
-      // Update the document in database
-      const updatedDocument = await prisma.document.update({
-        where: {
-          id,
-        },
-        data: {
-          folderId: null,
-          path: fileName,
-        },
-      });
-
-      // Get the updated document tree
-      const folders = await prisma.folder.findMany({
-        where: {
-          companyId: employee.company.id,
-        },
-        include: {
-          documents: true,
-        },
-        orderBy: {
-          name: 'asc',
-        },
-      });
-
-      // Get unorganized documents
-      const unorganizedDocuments = await prisma.document.findMany({
-        where: {
-          companyId: employee.company.id,
-          folderId: null,
-        },
-      });
-
-      // Format the response
-      const documentTree = [
-        ...folders.map(folder => ({
-          folder: folder.name,
-          documents: folder.documents,
-          count: folder.documents.length
-        })),
-        {
-          folder: '',
-          documents: unorganizedDocuments,
-          count: unorganizedDocuments.length
-        }
-      ];
-
-      return NextResponse.json({ 
-        success: true,
-        document: updatedDocument,
-        documentTree
-      });
-    }
-
-    // Find the target folder
-    const targetFolderRecord = await prisma.folder.findFirst({
-      where: {
-        name: targetFolder,
-        companyId: employee.company.id,
-      },
-    });
-
-    if (!targetFolderRecord) {
-      return NextResponse.json({ error: 'Target folder not found' }, { status: 404 });
-    }
-
-    // Create target directory if it doesn't exist
-    const sanitizedFolderName = targetFolder.replace(/[^a-zA-Z0-9-_]/g, '_').toLowerCase();
-    const targetDir = join(UPLOAD_DIR, sanitizedFolderName);
+    let targetFolderRecord = null;
     
-    try {
-      if (!existsSync(targetDir)) {
-        await mkdir(targetDir, { recursive: true });
-      }
-    } catch (error) {
-      console.error('Error creating target directory:', error);
-    }
+    // If moving to a specific folder, find it by ID
+    if (targetFolderId) {
+      targetFolderRecord = await prisma.folder.findFirst({
+        where: {
+          id: targetFolderId,
+          companyId: employee.company.id,
+        },
+      });
 
-    // Move the file
-    const fileName = document.name;
-    const oldPath = document.path.startsWith(UPLOAD_DIR) 
-      ? document.path 
-      : join(UPLOAD_DIR, document.path);
-    const newPath = join(targetDir, fileName);
-
-    try {
-      if (existsSync(oldPath) && oldPath !== newPath) {
-        await rename(oldPath, newPath);
+      if (!targetFolderRecord) {
+        return NextResponse.json({ 
+          error: 'Target folder not found',
+          message: 'The target folder does not exist or you do not have access to it'
+        }, { status: 404 });
       }
-    } catch (error) {
-      console.error('Error moving file:', error);
     }
 
     // Update the document in database
     const updatedDocument = await prisma.document.update({
-      where: {
-        id,
-      },
+      where: { id },
       data: {
-        folderId: targetFolderRecord?.id || null,
-        path: targetFolderRecord ? join(sanitizedFolderName, fileName) : fileName,
+        folderId: targetFolderId,
       },
     });
-
-    // Get the updated document tree
-    const folders = await prisma.folder.findMany({
-      where: {
-        companyId: employee.company.id,
-      },
-      include: {
-        documents: true,
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    });
-
-    // Get unorganized documents
-    const unorganizedDocuments = await prisma.document.findMany({
-      where: {
-        companyId: employee.company.id,
-        folderId: null,
-      },
-    });
-
-    // Format the response
-    const documentTree = [
-      ...folders.map(folder => ({
-        folder: folder.name,
-        documents: folder.documents,
-        count: folder.documents.length
-      })),
-      {
-        folder: '',
-        documents: unorganizedDocuments,
-        count: unorganizedDocuments.length
-      }
-    ];
 
     // Create an activity log
     await prisma.activity.create({
       data: {
         type: 'MOVE',
-        description: `Document moved to folder: ${targetFolder || 'root'}`,
+        description: targetFolderRecord 
+          ? `Document moved to folder: ${targetFolderRecord.name}`
+          : 'Document moved to root',
         employeeId: employee.id,
         documentId: id,
         companyId: employee.company.id,
@@ -235,7 +109,9 @@ export async function POST(
     return NextResponse.json({ 
       success: true,
       document: updatedDocument,
-      documentTree
+      message: targetFolderRecord 
+        ? `Document moved to ${targetFolderRecord.name} successfully`
+        : 'Document moved to root successfully'
     });
   } catch (error) {
     console.error('Error moving document:', error);

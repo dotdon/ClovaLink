@@ -583,11 +583,15 @@ export default function DocumentsPage() {
   };
 
   const findFolder = (folderId: string, folderList: Folder[]): Folder | null => {
+    if (!folderList || !Array.isArray(folderList)) return null;
+    
     for (const folder of folderList) {
+      if (!folder) continue;
+      
       if (folder.id === folderId) {
         return folder;
       }
-      if (folder.children.length > 0) {
+      if (folder.children && folder.children.length > 0) {
         const found = findFolder(folderId, folder.children);
         if (found) return found;
       }
@@ -597,20 +601,27 @@ export default function DocumentsPage() {
 
   const getCurrentFolderContents = () => {
     if (!currentFolderId) {
+      // Show only root-level folders (parentId is null)
+      const rootFolders = (folders || []).filter((folder: Folder) => 
+        folder && !folder.parentId && canAccessFolder(session, folder)
+      );
       return {
-        folders: folders.filter((folder: Folder) => canAccessFolder(session, folder)),
-        documents: unorganizedDocuments
+        folders: rootFolders,
+        documents: unorganizedDocuments || []
       };
     }
 
     const currentFolder = findFolder(currentFolderId, folders);
     if (!currentFolder) {
+      console.error('Current folder not found:', currentFolderId);
       return { folders: [], documents: [] };
     }
 
     return {
-      folders: currentFolder.children.filter((folder: Folder) => canAccessFolder(session, folder)),
-      documents: currentFolder.documents
+      folders: (currentFolder.children || []).filter((folder: Folder) => 
+        folder && canAccessFolder(session, folder)
+      ),
+      documents: currentFolder.documents || []
     };
   };
 
@@ -685,24 +696,37 @@ export default function DocumentsPage() {
         ? `/api/documents/${draggedItem.id}/move`
         : `/api/documents/folders/${draggedItem.id}/move`;
 
+      const bodyParam = draggedItem.type === 'document' 
+        ? { targetFolderId: targetFolderId }  // Documents use targetFolderId
+        : { parentId: targetFolderId };        // Folders use parentId
+
+      const method = draggedItem.type === 'document' ? 'POST' : 'PATCH';
+      
       const response = await fetch(endpoint, {
-        method: 'PATCH',
+        method: method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          targetFolderId: targetFolderId
-        })
+        body: JSON.stringify(bodyParam)
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to move item');
+        throw new Error(errorData.error || errorData.message || 'Failed to move item');
       }
 
-      setSuccessMessage(`${draggedItem.type === 'document' ? 'Document' : 'Folder'} moved successfully`);
+      const result = await response.json();
+      
+      setSuccessMessage(result.message || `${draggedItem.type === 'document' ? 'Document' : 'Folder'} moved successfully`);
       setShowSuccessModal(true);
+      
+      // Refresh the documents list to show the updated structure
       await fetchDocuments();
+      
+      // If we moved a folder that we're currently inside, navigate back
+      if (draggedItem.type === 'folder' && currentFolderId === draggedItem.id) {
+        handleNavigateBack();
+      }
     } catch (error) {
       console.error('Error moving item:', error);
       alert(error instanceof Error ? error.message : 'Failed to move item');
@@ -917,10 +941,10 @@ export default function DocumentsPage() {
                       }}
                     >
                       <div className="item-icon">
-                        {item.document.mimeType === 'application/pdf' && <FaFilePdf className="pdf-icon" style={{ color: '#ffffff' }} />}
-                        {item.document.mimeType.startsWith('image/') && <FaFileImage className="image-icon" style={{ color: '#ffffff' }} />}
-                        {(item.document.mimeType.includes('word') || item.document.name.endsWith('.docx')) && <FaFileWord className="word-icon" style={{ color: '#ffffff' }} />}
-                        {!(item.document.mimeType.includes('pdf') || item.document.mimeType.startsWith('image/') || item.document.mimeType.includes('word')) && <FaFile className="file-icon" style={{ color: '#ffffff' }} />}
+                        {item.document?.mimeType === 'application/pdf' && <FaFilePdf className="pdf-icon" style={{ color: '#ffffff' }} />}
+                        {item.document?.mimeType?.startsWith('image/') && <FaFileImage className="image-icon" style={{ color: '#ffffff' }} />}
+                        {(item.document?.mimeType?.includes('word') || item.document?.name?.endsWith('.docx')) && <FaFileWord className="word-icon" style={{ color: '#ffffff' }} />}
+                        {!(item.document?.mimeType?.includes('pdf') || item.document?.mimeType?.startsWith('image/') || item.document?.mimeType?.includes('word')) && item.document?.mimeType && <FaFile className="file-icon" style={{ color: '#ffffff' }} />}
                         <FaStar className="star-badge" />
                       </div>
                       <div className="item-name">{item.document.name}</div>
@@ -1092,9 +1116,9 @@ export default function DocumentsPage() {
                         ) : (
                           <>
                             {(item as Document).mimeType === 'application/pdf' && <FaFilePdf className="file-icon pdf-icon" size={64} style={{ color: '#ffffff' }} />}
-                            {(item as Document).mimeType.startsWith('image/') && <FaFileImage className="file-icon image-icon" size={64} style={{ color: '#ffffff' }} />}
-                            {((item as Document).mimeType.includes('word') || (item as Document).name.endsWith('.docx')) && <FaFileWord className="file-icon word-icon" size={64} style={{ color: '#ffffff' }} />}
-                            {!((item as Document).mimeType.includes('pdf') || (item as Document).mimeType.startsWith('image/') || (item as Document).mimeType.includes('word')) && <FaFile className="file-icon" size={64} style={{ color: '#ffffff' }} />}
+                            {(item as Document).mimeType?.startsWith('image/') && <FaFileImage className="file-icon image-icon" size={64} style={{ color: '#ffffff' }} />}
+                            {((item as Document).mimeType?.includes('word') || (item as Document).name?.endsWith('.docx')) && <FaFileWord className="file-icon word-icon" size={64} style={{ color: '#ffffff' }} />}
+                            {!((item as Document).mimeType?.includes('pdf') || (item as Document).mimeType?.startsWith('image/') || (item as Document).mimeType?.includes('word')) && (item as Document).mimeType && <FaFile className="file-icon" size={64} style={{ color: '#ffffff' }} />}
                           </>
                         )}
                       </div>
@@ -1220,9 +1244,9 @@ export default function DocumentsPage() {
                         ) : (
                           <>
                             {(item as Document).mimeType === 'application/pdf' && <FaFilePdf className="file-icon pdf-icon" style={{ color: '#ffffff' }} />}
-                            {(item as Document).mimeType.startsWith('image/') && <FaFileImage className="file-icon image-icon" style={{ color: '#ffffff' }} />}
-                            {((item as Document).mimeType.includes('word') || (item as Document).name.endsWith('.docx')) && <FaFileWord className="file-icon word-icon" style={{ color: '#ffffff' }} />}
-                            {!((item as Document).mimeType.includes('pdf') || (item as Document).mimeType.startsWith('image/') || (item as Document).mimeType.includes('word')) && <FaFile className="file-icon" style={{ color: '#ffffff' }} />}
+                            {(item as Document).mimeType?.startsWith('image/') && <FaFileImage className="file-icon image-icon" style={{ color: '#ffffff' }} />}
+                            {((item as Document).mimeType?.includes('word') || (item as Document).name?.endsWith('.docx')) && <FaFileWord className="file-icon word-icon" style={{ color: '#ffffff' }} />}
+                            {!((item as Document).mimeType?.includes('pdf') || (item as Document).mimeType?.startsWith('image/') || (item as Document).mimeType?.includes('word')) && (item as Document).mimeType && <FaFile className="file-icon" style={{ color: '#ffffff' }} />}
                           </>
                         )}
                       </div>

@@ -26,7 +26,7 @@ export async function GET(request: Request) {
       ? {} // Admins can see all documents
       : { companyId: session.user.companyId }; // Others can only see their company's documents
 
-    // Fetch folders with their documents
+    // Fetch folders with their documents - recursively include all levels
     const folders = await prisma.folder.findMany({
       where,
       include: {
@@ -34,6 +34,27 @@ export async function GET(request: Request) {
         children: {
           include: {
             documents: true,
+            children: {
+              include: {
+                documents: true,
+                favorites: {
+                  where: { employeeId: session.user.id },
+                  select: { id: true }
+                },
+                pinnedBy: {
+                  where: { employeeId: session.user.id },
+                  select: { id: true, order: true }
+                }
+              }
+            },
+            favorites: {
+              where: { employeeId: session.user.id },
+              select: { id: true }
+            },
+            pinnedBy: {
+              where: { employeeId: session.user.id },
+              select: { id: true, order: true }
+            }
           },
         },
         favorites: {
@@ -67,13 +88,17 @@ export async function GET(request: Request) {
       },
     });
 
-    // Add isFavorite and isPinned flags
-    const foldersWithFlags = folders.map(folder => ({
+    // Recursively add isFavorite and isPinned flags to all nested folders
+    const addFlagsToFolder = (folder: any): any => ({
       ...folder,
-      isFavorite: folder.favorites.length > 0,
-      isPinned: folder.pinnedBy.length > 0,
-      pinnedOrder: folder.pinnedBy[0]?.order
-    }));
+      isFavorite: folder.favorites?.length > 0 || false,
+      isPinned: folder.pinnedBy?.length > 0 || false,
+      pinnedOrder: folder.pinnedBy?.[0]?.order,
+      children: folder.children?.map(addFlagsToFolder) || [],
+      documents: folder.documents || []
+    });
+
+    const foldersWithFlags = folders.map(addFlagsToFolder);
 
     const documentsWithFlags = unorganizedDocuments.map(doc => ({
       ...doc,
