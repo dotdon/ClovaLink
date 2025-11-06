@@ -33,22 +33,38 @@ export default function SignIn() {
     setIsLoading(true);
     setError('');
 
+    console.log('Login attempt:', { email, hasTotpCode: !!totpCode, requiresTOTP });
+
     try {
-      const result = await signIn('credentials', {
+      // Only send totpCode if it has a value (avoid sending empty strings)
+      const credentials: any = {
         redirect: false,
         email,
         password,
-        totpCode: totpCode || undefined,
-      });
+      };
+      
+      // Only include totpCode if user actually entered one
+      if (totpCode && totpCode.trim().length > 0) {
+        credentials.totpCode = totpCode;
+      }
+      
+      console.log('Sending credentials:', { ...credentials, password: '***' });
+
+      const result = await signIn('credentials', credentials);
+
+      console.log('Login result:', result);
 
       if (result?.error) {
+        console.log('Login error:', result.error);
         if (result.error === 'TOTP_REQUIRED') {
+          console.log('✅ 2FA required - showing 6-digit input');
           setRequiresTOTP(true);
           setError('');
         } else {
           setError(result.error === 'Invalid TOTP code' ? 'Invalid 6-digit code. Please try again.' : 'Invalid email or password');
         }
       } else {
+        console.log('✅ Login successful');
         // Check if 2FA is required and user doesn't have it
         const check2FA = await fetch('/api/auth/check-2fa-requirement');
         if (check2FA.ok) {
@@ -269,6 +285,13 @@ export default function SignIn() {
 
         {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
         
+        {requiresTOTP && (
+          <Alert variant="info" className="mb-4">
+            <strong>Two-Factor Authentication Required</strong>
+            <p className="mb-0 mt-2">Please enter the 6-digit code from your authenticator app below.</p>
+          </Alert>
+        )}
+        
         <Form onSubmit={handleSubmit}>
           <Form.Group className="mb-3">
             <Form.Label className="form-label">Email Address</Form.Label>
@@ -276,7 +299,7 @@ export default function SignIn() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading}
+              disabled={isLoading || requiresTOTP}
               required
               className="auth-input"
               placeholder="Enter your email"
@@ -289,7 +312,7 @@ export default function SignIn() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              disabled={isLoading}
+              disabled={isLoading || requiresTOTP}
               required
               className="auth-input"
               placeholder="Enter your password"
@@ -297,23 +320,53 @@ export default function SignIn() {
           </Form.Group>
 
           {requiresTOTP && (
-            <Form.Group className="mb-4">
-              <Form.Label className="form-label">6-Digit Code</Form.Label>
-              <Form.Control
-                type="text"
-                value={totpCode}
-                onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                disabled={isLoading}
-                required
-                className="auth-input text-center"
-                placeholder="000000"
-                maxLength={6}
-                style={{ fontSize: '1.5rem', letterSpacing: '0.5rem', fontFamily: 'monospace' }}
-              />
-              <Form.Text className="text-muted d-block mt-2">
-                Enter the 6-digit code from your authenticator app
-              </Form.Text>
-            </Form.Group>
+            <div style={{ 
+              border: '3px solid #667eea', 
+              borderRadius: '16px', 
+              padding: '1.5rem',
+              background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
+              marginBottom: '1.5rem'
+            }}>
+              <Form.Group className="mb-0">
+                <Form.Label className="form-label" style={{ fontWeight: 700, fontSize: '1.1rem', color: '#667eea' }}>
+                  6-Digit Authentication Code
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  value={totpCode}
+                  onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  disabled={isLoading}
+                  required
+                  autoFocus
+                  className="auth-input text-center"
+                  placeholder="000000"
+                  maxLength={6}
+                  style={{ 
+                    fontSize: '2rem', 
+                    letterSpacing: '1rem', 
+                    fontFamily: 'monospace',
+                    fontWeight: 'bold',
+                    border: '2px solid #667eea'
+                  }}
+                />
+                <Form.Text className="text-muted d-block mt-2" style={{ textAlign: 'center' }}>
+                  📱 Open your authenticator app and enter the 6-digit code
+                </Form.Text>
+                <Button
+                  variant="link"
+                  size="sm"
+                  onClick={() => {
+                    setRequiresTOTP(false);
+                    setTotpCode('');
+                    setError('');
+                  }}
+                  className="mt-2 d-block w-100"
+                  style={{ color: '#666' }}
+                >
+                  ← Back to login
+                </Button>
+              </Form.Group>
+            </div>
           )}
 
           <Button 

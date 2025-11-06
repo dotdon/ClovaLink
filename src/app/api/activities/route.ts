@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hasPermission, Permission } from '@/lib/permissions';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     
@@ -31,32 +31,54 @@ export async function GET() {
       return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
     }
 
+    // Parse pagination parameters from URL
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const skip = (page - 1) * limit;
+
     // Build where clause based on role
     const where = session.user.role === 'ADMIN'
       ? {} // Admins can see all activities
       : { companyId: employee.companyId }; // Others only see their company's activities
 
-    const activities = await prisma.activity.findMany({
-      where,
-      take: 10,
-      orderBy: {
-        timestamp: 'desc',
-      },
-      include: {
-        employee: {
-          select: {
-            name: true,
+    // Fetch activities with pagination and total count
+    const [activities, total] = await Promise.all([
+      prisma.activity.findMany({
+        where,
+        take: limit,
+        skip: skip,
+        orderBy: {
+          timestamp: 'desc',
+        },
+        include: {
+          employee: {
+            select: {
+              name: true,
+            },
+          },
+          document: {
+            select: {
+              name: true,
+            },
           },
         },
-        document: {
-          select: {
-            name: true,
-          },
-        },
-      },
-    });
+      }),
+      prisma.activity.count({ where })
+    ]);
 
-    return NextResponse.json({ activities });
+    const totalPages = Math.ceil(total / limit);
+
+    return NextResponse.json({ 
+      activities,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasMore: page < totalPages
+      }
+    });
   } catch (error) {
     console.error('Error fetching activities:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

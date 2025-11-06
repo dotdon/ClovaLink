@@ -46,7 +46,8 @@ export const authOptions: NextAuthOptions = {
           // Passkey authentication - user is already verified via passkey endpoint
           // Check if 2FA is enabled for passkey auth
           if (employee.totpEnabled) {
-            if (!credentials.totpCode) {
+            // Check if TOTP code is provided and not empty
+            if (!credentials.totpCode || credentials.totpCode.trim().length === 0) {
               throw new Error('TOTP_REQUIRED');
             }
             // Verify TOTP code
@@ -79,7 +80,8 @@ export const authOptions: NextAuthOptions = {
 
         // Check if 2FA is enabled
         if (employee.totpEnabled) {
-          if (!credentials.totpCode) {
+          // Check if TOTP code is provided and not empty
+          if (!credentials.totpCode || credentials.totpCode.trim().length === 0) {
             throw new Error('TOTP_REQUIRED');
           }
           // Verify TOTP code

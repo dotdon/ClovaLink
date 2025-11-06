@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Alert } from 'react-bootstrap';
+import { Card, Row, Col, Alert, Button, ButtonGroup } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
-import { FaBuilding, FaUsers, FaFileAlt, FaLink, FaClock } from 'react-icons/fa';
+import { FaBuilding, FaUsers, FaFileAlt, FaLink, FaClock, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { useSession } from 'next-auth/react';
 import { hasPermission, Permission } from '@/lib/permissions';
 
@@ -38,15 +38,23 @@ export default function DashboardPage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0,
+    hasMore: false
+  });
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (page = 1) => {
     try {
       setIsLoading(true);
       const [statsResponse, activitiesResponse] = await Promise.all([
         // Only fetch stats if user is admin
         session?.user?.role === 'ADMIN' ? fetch('/api/admin/stats') : null,
         // Only fetch activities if user has permission
-        hasPermission(session, Permission.VIEW_ACTIVITIES) ? fetch('/api/activities') : null
+        hasPermission(session, Permission.VIEW_ACTIVITIES) ? fetch(`/api/activities?page=${page}&limit=10`) : null
       ]);
 
       if (statsResponse && !statsResponse.ok) {
@@ -66,8 +74,11 @@ export default function DashboardPage() {
         setStats(statsData.stats);
       }
 
-      if (activitiesData?.activities) {
-        setActivities(activitiesData.activities);
+      if (activitiesData) {
+        setActivities(activitiesData.activities || []);
+        if (activitiesData.pagination) {
+          setPagination(activitiesData.pagination);
+        }
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -75,6 +86,11 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    fetchDashboardData(newPage);
   };
 
   useEffect(() => {
@@ -168,7 +184,12 @@ export default function DashboardPage() {
             <Card.Header>
               <div className="card-header-content">
                 <h2>Recent Activity</h2>
-                <small>Last 10 activities (30-day retention)</small>
+                <small>
+                  {pagination.total > 0 
+                    ? `Showing ${((pagination.page - 1) * pagination.limit) + 1}-${Math.min(pagination.page * pagination.limit, pagination.total)} of ${pagination.total} activities`
+                    : '30-day retention'
+                  }
+                </small>
               </div>
             </Card.Header>
             <Card.Body className="p-0">
@@ -183,11 +204,36 @@ export default function DashboardPage() {
               ) : activities.length === 0 ? (
                 <p className="text-muted text-center py-5">No recent activity to display</p>
               ) : (
-                <div className="activity-list">
-                  {activities.slice(0, 10).map((activity) => (
-                    <ActivityItem key={activity.id} activity={activity} />
-                  ))}
-                </div>
+                <>
+                  <div className="activity-list">
+                    {activities.map((activity) => (
+                      <ActivityItem key={activity.id} activity={activity} />
+                    ))}
+                  </div>
+                  {pagination.totalPages > 1 && (
+                    <div className="d-flex justify-content-center align-items-center gap-3 py-3 border-top">
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1 || isLoading}
+                      >
+                        <FaChevronLeft /> Previous
+                      </Button>
+                      <span className="text-muted">
+                        Page {pagination.page} of {pagination.totalPages}
+                      </span>
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === pagination.totalPages || isLoading}
+                      >
+                        Next <FaChevronRight />
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </Card.Body>
           </Card>

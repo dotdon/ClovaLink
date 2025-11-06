@@ -799,18 +799,36 @@ export default function SettingsPage() {
                     <FaShieldAlt className="me-2" />
                     Organization 2FA Policy (Admin Only)
                   </h5>
+                  {twoFactorRequired ? (
+                    <Alert variant="success" className="mb-3">
+                      <strong>✓ 2FA is REQUIRED for all users</strong>
+                      <p className="mb-0 mt-2">
+                        All users in your organization must set up two-factor authentication before they can access the dashboard. New users will be prompted to enable 2FA immediately after their first login.
+                      </p>
+                    </Alert>
+                  ) : (
+                    <Alert variant="warning" className="mb-3">
+                      <strong>⚠️ 2FA is NOT required for users</strong>
+                      <p className="mb-0 mt-2">
+                        Set <code>require_two_factor</code> to <code>true</code> below to force all users to enable 2FA.
+                      </p>
+                    </Alert>
+                  )}
                   <Alert variant="info" className="mb-3">
                     <strong>Organization-Wide Setting</strong>
                     <p className="mb-0 mt-2">
-                      When enabled, all users in your organization must have two-factor authentication enabled.
+                      When enabled, ALL users (including new users) must have two-factor authentication enabled.
                       Users can satisfy this requirement by setting up either:
                       <br />• A 6-digit authenticator app (TOTP), OR
                       <br />• A passkey (Face ID, Touch ID, or security key)
                     </p>
+                    <p className="mb-0 mt-2">
+                      <strong>Note:</strong> This is different from enabling 2FA on your own account. This setting enforces 2FA for the entire organization.
+                    </p>
                   </Alert>
                   {(!settings.security || settings.security.length === 0) ? (
                     <>
-                      {renderFieldFromDefault({ key: 'require_two_factor', description: 'Require two-factor authentication for all users (true/false). Passkeys count as 2FA.', isEncrypted: false, defaultValue: 'false' })}
+                      {renderFieldFromDefault({ key: 'require_two_factor', description: 'Require two-factor authentication for all users (true/false). Passkeys count as 2FA. Set to "true" to enforce.', isEncrypted: false, defaultValue: 'false' })}
                     </>
                   ) : (
                     settings.security.filter(s => s.key === 'require_two_factor').map(renderSettingInput)
