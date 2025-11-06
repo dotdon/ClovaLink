@@ -94,9 +94,9 @@ export default function AccountPage() {
       }
     };
 
-    // Check on mount and periodically
+    // Check on mount and less frequently - every 15 seconds instead of 2
     checkAndBlock();
-    const interval = setInterval(checkAndBlock, 2000);
+    const interval = setInterval(checkAndBlock, 15000);
     
     return () => clearInterval(interval);
   }, [pathname, needs2FA, router]);
@@ -499,13 +499,14 @@ export default function AccountPage() {
                     >
                       {profilePicture ? (
                         <img 
-                          src={`/api/employees/profile-picture/${profilePicture}?t=${Date.now()}`}
+                          src={`/api/employees/profile-picture/${profilePicture}`}
                           alt="Profile"
                           style={{
                             width: '100%',
                             height: '100%',
                             objectFit: 'cover'
                           }}
+                          loading="eager"
                         />
                       ) : (
                         <FaUser style={{ fontSize: '3rem', color: '#999' }} />

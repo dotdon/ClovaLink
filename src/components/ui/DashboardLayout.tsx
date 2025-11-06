@@ -42,29 +42,30 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     };
     
     checkPasswordChange();
-    // Check periodically
-    const interval = setInterval(checkPasswordChange, 2000);
+    // Check less frequently - only every 30 seconds instead of 2
+    const interval = setInterval(checkPasswordChange, 30000);
     return () => clearInterval(interval);
   }, [pathname, router]);
 
-  // Fetch profile picture
+  // Fetch profile picture - only once on mount, cache in state
   useEffect(() => {
+    if (!session?.user?.id || profilePicture !== null) return; // Skip if already loaded
+    
     const fetchProfilePicture = async () => {
-      if (session?.user?.id) {
-        try {
-          const response = await fetch(`/api/employees/${session.user.id}`);
-          if (response.ok) {
-            const data = await response.json();
-            setProfilePicture(data.profilePicture);
-          }
-        } catch (err) {
-          console.error('Error fetching profile picture:', err);
+      try {
+        const response = await fetch(`/api/employees/${session.user.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setProfilePicture(data.profilePicture || '');
         }
+      } catch (err) {
+        console.error('Error fetching profile picture:', err);
+        setProfilePicture(''); // Set empty string to prevent refetch
       }
     };
     
     fetchProfilePicture();
-  }, [session?.user?.id]);
+  }, [session?.user?.id, profilePicture]);
 
   // Check if user needs 2FA (only if password change is not required)
   useEffect(() => {
@@ -89,8 +90,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     };
     
     check2FA();
-    // Check periodically
-    const interval = setInterval(check2FA, 3000);
+    // Check less frequently - only every 30 seconds
+    const interval = setInterval(check2FA, 30000);
     return () => clearInterval(interval);
   }, [pathname, router, mustChangePassword]);
 
@@ -144,9 +145,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="profile-avatar">
               {profilePicture ? (
                 <img 
-                  src={`/api/employees/profile-picture/${profilePicture}?v=${Date.now()}`}
+                  src={`/api/employees/profile-picture/${profilePicture}`}
                   alt={session?.user?.name || 'User'}
-                  key={profilePicture}
+                  loading="lazy"
                 />
               ) : (
                 <FaUserCircle />
@@ -211,9 +212,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <Link href="/dashboard/account" className="mobile-profile-avatar">
             {profilePicture ? (
               <img 
-                src={`/api/employees/profile-picture/${profilePicture}?v=${Date.now()}`}
+                src={`/api/employees/profile-picture/${profilePicture}`}
                 alt={session?.user?.name || 'User'}
-                key={profilePicture}
+                loading="lazy"
               />
             ) : (
               <FaUserCircle />

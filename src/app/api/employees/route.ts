@@ -139,7 +139,10 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json(employees);
+    const response = NextResponse.json(employees);
+    // Cache for 10 seconds to reduce API calls on employee list page
+    response.headers.set('Cache-Control', 'private, max-age=10, stale-while-revalidate=30');
+    return response;
   } catch (error) {
     console.error('Error fetching employees:', error);
     return NextResponse.json(

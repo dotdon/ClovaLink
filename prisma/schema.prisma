@@ -15,15 +15,16 @@ enum Role {
 }
 
 model Company {
-  id            String         @id @default(cuid())
-  name          String
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  employees     Employee[]
-  documents     Document[]
-  folders       Folder[]
-  activities    Activity[]
-  downloadLinks DownloadLink[]
+  id                    String                  @id @default(cuid())
+  name                  String
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  employees             Employee[]
+  documents             Document[]
+  folders               Folder[]
+  activities            Activity[]
+  downloadLinks         DownloadLink[]
+  crossCompanyEmployees EmployeeCompanyAccess[] // Employees with cross-company access
 
   @@map("companies")
 }
@@ -34,7 +35,7 @@ model Employee {
   name                String
   password            String
   role                Role          @default(USER)
-  companyId           String
+  companyId           String        // Primary company
   profilePicture      String?       // Filename of profile picture
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
@@ -49,10 +50,31 @@ model Employee {
   totpEnabled         Boolean       @default(false) // Whether 2FA is enabled
   backupCodes         String[]      @default([]) // Backup codes for 2FA (encrypted)
   mustChangePassword  Boolean       @default(false) // Force password change on next login
+  crossCompanyAccess  EmployeeCompanyAccess[] // Additional companies this employee can access
+  favoriteDocuments   FavoriteDocument[] // Documents favorited by this employee
+  favoriteFolders     FavoriteFolder[]   // Folders favorited by this employee
+  pinnedFolders       PinnedFolder[]     // Folders pinned by this employee
 
   @@index([companyId])
   @@index([role])
   @@map("employees")
+}
+
+// Cross-company access for employees
+model EmployeeCompanyAccess {
+  id          String   @id @default(cuid())
+  employeeId  String
+  companyId   String
+  grantedBy   String   // ID of admin/manager who granted access
+  grantedAt   DateTime @default(now())
+  
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  @@unique([employeeId, companyId]) // One access record per employee per company
+  @@index([employeeId])
+  @@index([companyId])
+  @@map("employee_company_access")
 }
 
 model Document {
@@ -74,6 +96,7 @@ model Document {
   folder        Folder?       @relation(fields: [folderId], references: [id])
   activities    Activity[]
   downloadLinks DownloadLink[]
+  favorites     FavoriteDocument[] // Users who favorited this document
 
   @@index([companyId])
   @@index([employeeId])
@@ -89,6 +112,7 @@ model Folder {
   parentId      String?
   companyId     String
   createdById   String
+  color         String?       // Optional color for folder (Google Drive style)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   
@@ -98,6 +122,8 @@ model Folder {
   createdBy     Employee      @relation(fields: [createdById], references: [id])
   documents     Document[]
   downloadLinks DownloadLink[]
+  favorites     FavoriteFolder[] // Users who favorited this folder
+  pinnedBy      PinnedFolder[]   // Users who pinned this folder
 
   @@unique([name, companyId])
   @@index([companyId])
@@ -205,4 +231,53 @@ model Passkey {
   @@index([employeeId])
   @@index([credentialId])
   @@map("passkeys")
+}
+
+// Favorite documents (like Google Drive starred files)
+model FavoriteDocument {
+  id          String   @id @default(cuid())
+  employeeId  String
+  documentId  String
+  createdAt   DateTime @default(now())
+  
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  
+  @@unique([employeeId, documentId])
+  @@index([employeeId])
+  @@index([documentId])
+  @@map("favorite_documents")
+}
+
+// Favorite folders
+model FavoriteFolder {
+  id         String   @id @default(cuid())
+  employeeId String
+  folderId   String
+  createdAt  DateTime @default(now())
+  
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  folder     Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  
+  @@unique([employeeId, folderId])
+  @@index([employeeId])
+  @@index([folderId])
+  @@map("favorite_folders")
+}
+
+// Pinned folders (quick access at top)
+model PinnedFolder {
+  id         String   @id @default(cuid())
+  employeeId String
+  folderId   String
+  order      Int      @default(0) // For custom ordering
+  createdAt  DateTime @default(now())
+  
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  folder     Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  
+  @@unique([employeeId, folderId])
+  @@index([employeeId])
+  @@index([folderId])
+  @@map("pinned_folders")
 } 

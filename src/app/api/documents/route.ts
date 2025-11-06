@@ -36,6 +36,14 @@ export async function GET(request: Request) {
             documents: true,
           },
         },
+        favorites: {
+          where: { employeeId: session.user.id },
+          select: { id: true }
+        },
+        pinnedBy: {
+          where: { employeeId: session.user.id },
+          select: { id: true, order: true }
+        }
       },
       orderBy: {
         name: 'asc',
@@ -48,14 +56,33 @@ export async function GET(request: Request) {
         ...where,
         folderId: null,
       },
+      include: {
+        favorites: {
+          where: { employeeId: session.user.id },
+          select: { id: true }
+        }
+      },
       orderBy: {
         name: 'asc',
       },
     });
 
+    // Add isFavorite and isPinned flags
+    const foldersWithFlags = folders.map(folder => ({
+      ...folder,
+      isFavorite: folder.favorites.length > 0,
+      isPinned: folder.pinnedBy.length > 0,
+      pinnedOrder: folder.pinnedBy[0]?.order
+    }));
+
+    const documentsWithFlags = unorganizedDocuments.map(doc => ({
+      ...doc,
+      isFavorite: doc.favorites.length > 0
+    }));
+
     return NextResponse.json({
-      folders,
-      unorganizedDocuments,
+      folders: foldersWithFlags,
+      unorganizedDocuments: documentsWithFlags,
     });
   } catch (error) {
     console.error('Error fetching documents:', error);

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Modal, Form, Button, Alert } from 'react-bootstrap';
+import { Modal, Form, Button, Alert, Badge, ListGroup } from 'react-bootstrap';
+import { FaPlus, FaTrash } from 'react-icons/fa';
 
 interface Company {
   id: string;
@@ -40,10 +41,18 @@ export default function EditEmployeeModal({ show, onHide, employee, onSubmit }: 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Cross-company access state
+  const [crossCompanyAccess, setCrossCompanyAccess] = useState<Array<{id: string, companyId: string, company: {id: string, name: string}}>>([]);
+  const [selectedCompanyForAccess, setSelectedCompanyForAccess] = useState<string>('');
+  const [isManagingAccess, setIsManagingAccess] = useState(false);
 
   useEffect(() => {
     fetchCompanies();
-  }, []);
+    if (show && employee.id) {
+      fetchCrossCompanyAccess();
+    }
+  }, [show, employee.id]);
 
   useEffect(() => {
     setFormData({
@@ -65,6 +74,70 @@ export default function EditEmployeeModal({ show, onHide, employee, onSubmit }: 
     } catch (error) {
       console.error('Failed to fetch companies:', error);
       setCompanies([]);
+    }
+  };
+
+  const fetchCrossCompanyAccess = async () => {
+    try {
+      const response = await fetch(`/api/employees/${employee.id}/cross-company-access`);
+      if (!response.ok) {
+        // If user doesn't have permission, just set empty array
+        console.log('Cannot fetch cross-company access - may not have permission');
+        setCrossCompanyAccess([]);
+        return;
+      }
+      const data = await response.json();
+      setCrossCompanyAccess(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Failed to fetch cross-company access:', error);
+      setCrossCompanyAccess([]);
+    }
+  };
+
+  const handleGrantAccess = async () => {
+    if (!selectedCompanyForAccess) return;
+    
+    setIsManagingAccess(true);
+    try {
+      const response = await fetch(`/api/employees/${employee.id}/cross-company-access`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyId: selectedCompanyForAccess }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to grant access');
+      }
+
+      await fetchCrossCompanyAccess();
+      setSelectedCompanyForAccess('');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to grant access');
+    } finally {
+      setIsManagingAccess(false);
+    }
+  };
+
+  const handleRevokeAccess = async (companyId: string) => {
+    if (!confirm('Are you sure you want to revoke access to this company?')) return;
+    
+    setIsManagingAccess(true);
+    try {
+      const response = await fetch(`/api/employees/${employee.id}/cross-company-access?companyId=${companyId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to revoke access');
+      }
+
+      await fetchCrossCompanyAccess();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to revoke access');
+    } finally {
+      setIsManagingAccess(false);
     }
   };
 
@@ -165,6 +238,60 @@ export default function EditEmployeeModal({ show, onHide, employee, onSubmit }: 
               placeholder="Enter new password"
             />
           </Form.Group>
+
+          <hr />
+
+          <div className="mb-3">
+            <h6>Cross-Company Access</h6>
+            <p className="text-muted small">
+              Grant this employee access to additional companies. They can view and manage documents in these companies.
+            </p>
+
+            {crossCompanyAccess.length > 0 && (
+              <ListGroup className="mb-3">
+                {crossCompanyAccess.map((access) => (
+                  <ListGroup.Item key={access.id} className="d-flex justify-content-between align-items-center">
+                    <span>{access.company.name}</span>
+                    <Button
+                      variant="outline-danger"
+                      size="sm"
+                      onClick={() => handleRevokeAccess(access.companyId)}
+                      disabled={isManagingAccess}
+                    >
+                      <FaTrash />
+                    </Button>
+                  </ListGroup.Item>
+                ))}
+              </ListGroup>
+            )}
+
+            <div className="d-flex gap-2">
+              <Form.Select
+                value={selectedCompanyForAccess}
+                onChange={(e) => setSelectedCompanyForAccess(e.target.value)}
+                disabled={isManagingAccess}
+              >
+                <option value="">Select company to grant access...</option>
+                {companies
+                  .filter(c => 
+                    c.id !== formData.companyId && 
+                    !crossCompanyAccess.some(access => access.companyId === c.id)
+                  )
+                  .map((company) => (
+                    <option key={company.id} value={company.id}>
+                      {company.name}
+                    </option>
+                  ))}
+              </Form.Select>
+              <Button
+                variant="primary"
+                onClick={handleGrantAccess}
+                disabled={!selectedCompanyForAccess || isManagingAccess}
+              >
+                <FaPlus /> Grant
+              </Button>
+            </div>
+          </div>
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={onHide}>

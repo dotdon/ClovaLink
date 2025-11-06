@@ -35,6 +35,16 @@ export async function GET(
             id: true,
           },
         },
+        crossCompanyAccess: {
+          include: {
+            company: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -55,7 +65,10 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(employee);
+    const response = NextResponse.json(employee);
+    // Cache for 30 seconds to reduce API calls
+    response.headers.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=60');
+    return response;
   } catch (error) {
     console.error('Error fetching employee:', error);
     return NextResponse.json(
