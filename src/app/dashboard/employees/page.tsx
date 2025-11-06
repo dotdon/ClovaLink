@@ -21,6 +21,7 @@ interface Employee {
   createdAt: string;
   totpEnabled?: boolean;
   passkeys?: Array<{ id: string }>;
+  profilePicture?: string | null;
 }
 
 export default function EmployeesPage() {
@@ -199,6 +200,16 @@ export default function EmployeesPage() {
     <Card className="employee-card mb-3">
       <Card.Body>
         <div className="employee-content">
+          <div className="employee-avatar">
+            {employee.profilePicture ? (
+              <img 
+                src={`/api/employees/profile-picture/${employee.profilePicture}`}
+                alt={employee.name}
+              />
+            ) : (
+              <div className="avatar-placeholder">{employee.name.charAt(0).toUpperCase()}</div>
+            )}
+          </div>
           <div className="employee-info">
             <h3 className="employee-name">{employee.name}</h3>
             <div className="employee-details">
@@ -314,6 +325,7 @@ export default function EmployeesPage() {
                   <Table responsive>
                     <thead>
                       <tr>
+                        <th></th>
                         <th>Name</th>
                         <th>Email</th>
                         <th>Role</th>
@@ -325,15 +337,27 @@ export default function EmployeesPage() {
                     <tbody>
                       {isLoading ? (
                         <tr>
-                          <td colSpan={6} className="text-center">Loading...</td>
+                          <td colSpan={7} className="text-center">Loading...</td>
                         </tr>
                       ) : employees.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="text-center">No employees found</td>
+                          <td colSpan={7} className="text-center">No employees found</td>
                         </tr>
                       ) : (
                         employees.map((employee) => (
                           <tr key={employee.id}>
+                            <td>
+                              <div className="table-avatar">
+                                {employee.profilePicture ? (
+                                  <img 
+                                    src={`/api/employees/profile-picture/${employee.profilePicture}`}
+                                    alt={employee.name}
+                                  />
+                                ) : (
+                                  <div className="avatar-placeholder">{employee.name.charAt(0).toUpperCase()}</div>
+                                )}
+                              </div>
+                            </td>
                             <td>{employee.name}</td>
                             <td>
                               {shouldHideEmail(employee.role) ? (
@@ -758,6 +782,54 @@ export default function EmployeesPage() {
             gap: 0.5rem;
             margin-left: auto;
             align-items: center;
+          }
+
+          /* Avatar Styles */
+          .table-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid #667eea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .table-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          .employee-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid #667eea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+          }
+
+          .employee-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          .avatar-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+            font-size: 1.2rem;
           }
         `}</style>
       </div>

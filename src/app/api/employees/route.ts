@@ -123,6 +123,7 @@ export async function GET() {
         email: true,
         role: true,
         companyId: true,
+        profilePicture: true,
         company: {
           select: {
             name: true,

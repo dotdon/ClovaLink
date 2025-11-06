@@ -35,6 +35,7 @@ model Employee {
   password            String
   role                Role          @default(USER)
   companyId           String
+  profilePicture      String?       // Filename of profile picture
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   company             Company       @relation(fields: [companyId], references: [id])

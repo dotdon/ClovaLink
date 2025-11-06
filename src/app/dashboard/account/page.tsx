@@ -45,6 +45,10 @@ export default function AccountPage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
+  
+  // Profile picture state
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  const [uploadingPicture, setUploadingPicture] = useState(false);
 
   const require2fa = searchParams?.get('require2fa') === 'true';
 
@@ -52,11 +56,26 @@ export default function AccountPage() {
     fetchPasskeys();
     fetchTOTPStatus();
     check2FARequirement();
+    fetchProfilePicture();
     
     if (require2fa) {
       setActiveTab('security');
     }
   }, []);
+
+  const fetchProfilePicture = async () => {
+    if (session?.user?.id) {
+      try {
+        const response = await fetch(`/api/employees/${session.user.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setProfilePicture(data.profilePicture);
+        }
+      } catch (err) {
+        console.error('Error fetching profile picture:', err);
+      }
+    }
+  };
 
   // Client-side protection: Block navigation if 2FA is required and user doesn't have it
   useEffect(() => {
@@ -298,6 +317,83 @@ export default function AccountPage() {
     }
   };
 
+  const handleProfilePictureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image must be less than 5MB');
+      return;
+    }
+
+    try {
+      setUploadingPicture(true);
+      setError('');
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/employees/profile-picture', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to upload profile picture');
+      }
+
+      const data = await response.json();
+      setSuccess('Profile picture updated successfully!');
+      
+      // Update state and force immediate reload to bypass cache
+      setProfilePicture(data.profilePicture);
+      setUploadingPicture(false);
+      
+      // Reload page to show new picture everywhere
+      window.location.reload();
+    } catch (error: any) {
+      setError(error.message || 'Failed to upload profile picture');
+      setUploadingPicture(false);
+    }
+  };
+
+  const handleRemoveProfilePicture = async () => {
+    if (!confirm('Are you sure you want to remove your profile picture?')) {
+      return;
+    }
+
+    try {
+      setUploadingPicture(true);
+      setError('');
+
+      const response = await fetch('/api/employees/profile-picture', {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to remove profile picture');
+      }
+
+      setSuccess('Profile picture removed successfully!');
+      setProfilePicture(null);
+      setUploadingPicture(false);
+      
+      // Reload page to update UI everywhere
+      window.location.reload();
+    } catch (error: any) {
+      setError(error.message || 'Failed to remove profile picture');
+      setUploadingPicture(false);
+    }
+  };
+
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -385,6 +481,72 @@ export default function AccountPage() {
             >
               {/* Profile Tab */}
               <Tab eventKey="profile" title="Profile">
+                <div className="mb-4">
+                  <h5>Profile Picture</h5>
+                  <div className="d-flex align-items-center gap-3 mb-4">
+                    <div 
+                      style={{
+                        width: '120px',
+                        height: '120px',
+                        borderRadius: '50%',
+                        overflow: 'hidden',
+                        border: '3px solid #667eea',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: '#f0f0f0'
+                      }}
+                    >
+                      {profilePicture ? (
+                        <img 
+                          src={`/api/employees/profile-picture/${profilePicture}?t=${Date.now()}`}
+                          alt="Profile"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        <FaUser style={{ fontSize: '3rem', color: '#999' }} />
+                      )}
+                    </div>
+                    <div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleProfilePictureUpload}
+                        disabled={uploadingPicture}
+                        id="profile-picture-upload"
+                        style={{ display: 'none' }}
+                      />
+                      <label htmlFor="profile-picture-upload">
+                        <Button
+                          as="span"
+                          variant="primary"
+                          disabled={uploadingPicture}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {uploadingPicture ? 'Uploading...' : profilePicture ? 'Change Picture' : 'Upload Picture'}
+                        </Button>
+                      </label>
+                      {profilePicture && (
+                        <Button
+                          variant="outline-danger"
+                          onClick={handleRemoveProfilePicture}
+                          disabled={uploadingPicture}
+                          className="ms-2"
+                        >
+                          Remove
+                        </Button>
+                      )}
+                      <Form.Text className="d-block mt-2 text-muted">
+                        Max size: 5MB. Formats: JPEG, PNG, GIF, WebP
+                      </Form.Text>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="mb-4">
                   <h5>Your Information</h5>
                   <ListGroup variant="flush">

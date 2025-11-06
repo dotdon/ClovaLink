@@ -18,6 +18,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [needs2FA, setNeeds2FA] = useState(false);
   const [mustChangePassword, setMustChangePassword] = useState(false);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
 
   // Check password change requirement FIRST (takes precedence over 2FA)
   useEffect(() => {
@@ -45,6 +46,25 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     const interval = setInterval(checkPasswordChange, 2000);
     return () => clearInterval(interval);
   }, [pathname, router]);
+
+  // Fetch profile picture
+  useEffect(() => {
+    const fetchProfilePicture = async () => {
+      if (session?.user?.id) {
+        try {
+          const response = await fetch(`/api/employees/${session.user.id}`);
+          if (response.ok) {
+            const data = await response.json();
+            setProfilePicture(data.profilePicture);
+          }
+        } catch (err) {
+          console.error('Error fetching profile picture:', err);
+        }
+      }
+    };
+    
+    fetchProfilePicture();
+  }, [session?.user?.id]);
 
   // Check if user needs 2FA (only if password change is not required)
   useEffect(() => {
@@ -115,9 +135,28 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 height={200}
                 className="logo-image"
                 style={{ filter: 'brightness(0) invert(1)' }}
+                priority
+                unoptimized
               />
             </div>
           </Link>
+          <div className="user-profile-section">
+            <div className="profile-avatar">
+              {profilePicture ? (
+                <img 
+                  src={`/api/employees/profile-picture/${profilePicture}?v=${Date.now()}`}
+                  alt={session?.user?.name || 'User'}
+                  key={profilePicture}
+                />
+              ) : (
+                <FaUserCircle />
+              )}
+            </div>
+            <div className="profile-info">
+              <div className="profile-name">{session?.user?.name}</div>
+              <div className="profile-role">{session?.user?.role}</div>
+            </div>
+          </div>
         </div>
         <div className="nav-items">
           {visibleItems.map((item) => {
@@ -169,6 +208,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <h1 className="page-title">
             {pathname === '/dashboard' ? 'Dashboard' : navigationItems.find(item => item.path === pathname)?.label || 'ClovaLink'}
           </h1>
+          <Link href="/dashboard/account" className="mobile-profile-avatar">
+            {profilePicture ? (
+              <img 
+                src={`/api/employees/profile-picture/${profilePicture}?v=${Date.now()}`}
+                alt={session?.user?.name || 'User'}
+                key={profilePicture}
+              />
+            ) : (
+              <FaUserCircle />
+            )}
+          </Link>
         </div>
       </header>
 
@@ -188,6 +238,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   transform: 'scale(1.5)',
                   transformOrigin: 'center center'
                 }}
+                priority
+                unoptimized
               />
             </div>
           </Link>
@@ -289,6 +341,88 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           padding: 0.5rem;
           border-bottom: 1px solid rgba(255,255,255,0.15);
           margin-bottom: 1.5rem;
+        }
+
+        .user-profile-section {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          padding: 0.75rem;
+          margin-top: 1rem;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 12px;
+        }
+
+        .profile-avatar {
+          width: 45px;
+          height: 45px;
+          border-radius: 50%;
+          overflow: hidden;
+          border: 2px solid #667eea;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(255, 255, 255, 0.1);
+          flex-shrink: 0;
+        }
+
+        .profile-avatar img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .profile-avatar svg {
+          width: 28px;
+          height: 28px;
+          color: #fff;
+        }
+
+        .profile-info {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .profile-name {
+          color: #fff;
+          font-weight: 600;
+          font-size: 0.9rem;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .profile-role {
+          color: rgba(255, 255, 255, 0.7);
+          font-size: 0.75rem;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .mobile-profile-avatar {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          overflow: hidden;
+          border: 2px solid #667eea;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(255, 255, 255, 0.1);
+          flex-shrink: 0;
+          text-decoration: none;
+        }
+
+        .mobile-profile-avatar img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .mobile-profile-avatar svg {
+          width: 20px;
+          height: 20px;
+          color: #fff;
         }
 
         .brand {

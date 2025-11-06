@@ -5,6 +5,66 @@ import { authOptions } from '@/lib/auth';
 import { hasPermission, Permission, canManageEmployee } from '@/lib/permissions';
 import { prisma } from '@/lib/prisma';
 
+// GET: Get a single employee by ID
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const employee = await prisma.employee.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        companyId: true,
+        profilePicture: true,
+        totpEnabled: true,
+        createdAt: true,
+        updatedAt: true,
+        passkeys: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (!employee) {
+      return NextResponse.json(
+        { error: 'Employee not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check permissions - users can see their own data or employees in their company
+    if (session.user.role !== 'ADMIN' && 
+        session.user.id !== id && 
+        session.user.companyId !== employee.companyId) {
+      return NextResponse.json(
+        { error: 'Permission denied' },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json(employee);
+  } catch (error) {
+    console.error('Error fetching employee:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
