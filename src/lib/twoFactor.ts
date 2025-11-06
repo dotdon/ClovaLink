@@ -7,9 +7,6 @@ export async function userHas2FA(userId: string): Promise<boolean> {
   try {
     const employee = await prisma.employee.findUnique({
       where: { id: userId },
-      include: {
-        passkeys: true,
-      },
       select: {
         totpEnabled: true,
         passkeys: {

@@ -65,13 +65,24 @@ export default function SignIn() {
         }
       } else {
         console.log('✅ Login successful');
+        
+        // Check if user must change password
+        const passwordCheckRes = await fetch('/api/employees/must-change-password');
+        if (passwordCheckRes.ok) {
+          const passwordCheck = await passwordCheckRes.json();
+          if (passwordCheck.mustChange) {
+            router.push('/auth/change-password');
+            return;
+          }
+        }
+        
         // Check if 2FA is required and user doesn't have it
         const check2FA = await fetch('/api/auth/check-2fa-requirement');
         if (check2FA.ok) {
           const needs2FA = await check2FA.json();
           if (needs2FA.required && !needs2FA.has2FA) {
-            // Redirect to 2FA setup page
-            router.push('/dashboard/settings?tab=security&require2fa=true');
+            // Redirect to account page to set up 2FA
+            router.push('/dashboard/account?require2fa=true');
             return;
           }
         }

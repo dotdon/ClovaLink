@@ -2,9 +2,9 @@ import { Container, Nav, Navbar, Dropdown } from 'react-bootstrap';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
-import { FaHome, FaBuilding, FaUsers, FaFolder, FaLink, FaSignOutAlt, FaQuestionCircle, FaBars, FaTimes, FaCog } from 'react-icons/fa';
+import { FaHome, FaBuilding, FaUsers, FaFolder, FaLink, FaSignOutAlt, FaQuestionCircle, FaBars, FaTimes, FaCog, FaUserCircle } from 'react-icons/fa';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -16,6 +16,63 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { data: session } = useSession();
   const isDocumentsPage = pathname === '/dashboard/documents';
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [needs2FA, setNeeds2FA] = useState(false);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
+
+  // Check password change requirement FIRST (takes precedence over 2FA)
+  useEffect(() => {
+    const checkPasswordChange = async () => {
+      try {
+        const response = await fetch('/api/employees/must-change-password');
+        if (response.ok) {
+          const data = await response.json();
+          setMustChangePassword(data.mustChange || false);
+          
+          // If password change required, redirect IMMEDIATELY (blocks everything including account page)
+          if (data.mustChange && pathname !== '/auth/change-password') {
+            console.log('[DashboardLayout] 🔒 Password change required - redirecting to change password page');
+            router.replace('/auth/change-password');
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('Error checking password change requirement in layout:', err);
+      }
+    };
+    
+    checkPasswordChange();
+    // Check periodically
+    const interval = setInterval(checkPasswordChange, 2000);
+    return () => clearInterval(interval);
+  }, [pathname, router]);
+
+  // Check if user needs 2FA (only if password change is not required)
+  useEffect(() => {
+    if (mustChangePassword) return; // Skip 2FA check if password change is needed
+    
+    const check2FA = async () => {
+      try {
+        const response = await fetch('/api/auth/check-2fa-requirement');
+        if (response.ok) {
+          const data = await response.json();
+          setNeeds2FA(data.needs2FA || false);
+          
+          // If user needs 2FA and is not on account page, redirect
+          if (data.needs2FA && !pathname.startsWith('/dashboard/account') && pathname !== '/auth/change-password') {
+            console.log('[DashboardLayout] 🚫 User needs 2FA - redirecting to account page');
+            router.replace('/dashboard/account?require2fa=true');
+          }
+        }
+      } catch (err) {
+        console.error('Error checking 2FA requirement in layout:', err);
+      }
+    };
+    
+    check2FA();
+    // Check periodically
+    const interval = setInterval(check2FA, 3000);
+    return () => clearInterval(interval);
+  }, [pathname, router, mustChangePassword]);
 
   const handleSignOut = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -27,10 +84,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const navigationItems = [
     { path: '/dashboard', label: 'Dashboard', icon: FaHome },
-    { path: '/dashboard/companies', label: 'Companies', icon: FaBuilding },
+    { path: '/dashboard/companies', label: 'Companies', icon: FaBuilding, adminOnly: true },
     { path: '/dashboard/employees', label: 'Employees', icon: FaUsers },
     { path: '/dashboard/documents', label: 'Documents', icon: FaFolder },
     { path: '/dashboard/upload-links', label: 'Upload Links', icon: FaLink },
+    { path: '/dashboard/account', label: 'My Account', icon: FaUserCircle },
     { path: '/dashboard/settings', label: 'Settings', icon: FaCog, adminOnly: true },
     { path: '/dashboard/help', label: 'Help & FAQs', icon: FaQuestionCircle },
   ];
@@ -64,11 +122,27 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="nav-items">
           {visibleItems.map((item) => {
             const Icon = item.icon;
+            // Block navigation if password change required (blocks everything)
+            // OR if user needs 2FA and this isn't the account page
+            const isBlocked = mustChangePassword || (needs2FA && item.path !== '/dashboard/account');
             return (
               <Link 
                 key={item.path} 
-                href={item.path} 
-                className={`nav-item ${pathname === item.path ? 'active' : ''}`}
+                href={item.path}
+                onClick={(e) => {
+                  if (isBlocked) {
+                    e.preventDefault();
+                    if (mustChangePassword) {
+                      console.log('[DashboardLayout] 🔒 Blocked navigation to', item.path, '- password change required');
+                      router.push('/auth/change-password');
+                    } else {
+                      console.log('[DashboardLayout] 🚫 Blocked navigation to', item.path, '- user needs 2FA');
+                      router.push('/dashboard/account?require2fa=true');
+                    }
+                  }
+                }}
+                className={`nav-item ${pathname === item.path ? 'active' : ''} ${isBlocked ? 'disabled' : ''}`}
+                style={isBlocked ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
               >
                 <Icon className="nav-icon" />
                 <span className="nav-label">{item.label}</span>
@@ -128,12 +202,30 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="side-menu-items">
           {visibleItems.map((item) => {
             const Icon = item.icon;
+            // Block navigation if password change required (blocks everything)
+            // OR if user needs 2FA and this isn't the account page
+            const isBlocked = mustChangePassword || (needs2FA && item.path !== '/dashboard/account');
             return (
               <Link 
                 key={item.path} 
-                href={item.path} 
-                className={`side-menu-item ${pathname === item.path ? 'active' : ''}`}
-                onClick={() => setIsMobileMenuOpen(false)}
+                href={item.path}
+                className={`side-menu-item ${pathname === item.path ? 'active' : ''} ${isBlocked ? 'disabled' : ''}`}
+                style={isBlocked ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                onClick={(e) => {
+                  if (isBlocked) {
+                    e.preventDefault();
+                    if (mustChangePassword) {
+                      console.log('[DashboardLayout] 🔒 Blocked mobile navigation to', item.path, '- password change required');
+                      router.push('/auth/change-password');
+                    } else {
+                      console.log('[DashboardLayout] 🚫 Blocked mobile navigation to', item.path, '- user needs 2FA');
+                      router.push('/dashboard/account?require2fa=true');
+                    }
+                    setIsMobileMenuOpen(false);
+                  } else {
+                    setIsMobileMenuOpen(false);
+                  }
+                }}
               >
                 <Icon className="side-menu-icon" />
                 <span className="side-menu-label">{item.label}</span>

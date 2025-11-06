@@ -12,7 +12,9 @@ if (process.env.NODE_ENV !== 'production') {
 
 export default prisma;
 
-// Handle cleanup on application shutdown
-process.on('beforeExit', async () => {
-  await prisma.$disconnect();
-}); 
+// Handle cleanup on application shutdown (only in Node.js runtime, not Edge)
+if (typeof process !== 'undefined' && typeof process.on === 'function') {
+  process.on('beforeExit', async () => {
+    await prisma.$disconnect();
+  });
+} 

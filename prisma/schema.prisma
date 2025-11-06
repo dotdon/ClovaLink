@@ -29,24 +29,25 @@ model Company {
 }
 
 model Employee {
-  id            String         @id @default(cuid())
-  email         String        @unique
-  name          String
-  password      String
-  role          Role          @default(USER)
-  companyId     String
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  company       Company       @relation(fields: [companyId], references: [id])
-  documents     Document[]
-  activities    Activity[]
-  folders       Folder[]
-  downloadLinks DownloadLink[]
-  uploadLinks   UploadLink[]
-  passkeys      Passkey[]
-  totpSecret    String?       // TOTP secret for 2FA
-  totpEnabled   Boolean       @default(false) // Whether 2FA is enabled
-  backupCodes   String[]      @default([]) // Backup codes for 2FA (encrypted)
+  id                  String         @id @default(cuid())
+  email               String        @unique
+  name                String
+  password            String
+  role                Role          @default(USER)
+  companyId           String
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  company             Company       @relation(fields: [companyId], references: [id])
+  documents           Document[]
+  activities          Activity[]
+  folders             Folder[]
+  downloadLinks       DownloadLink[]
+  uploadLinks         UploadLink[]
+  passkeys            Passkey[]
+  totpSecret          String?       // TOTP secret for 2FA
+  totpEnabled         Boolean       @default(false) // Whether 2FA is enabled
+  backupCodes         String[]      @default([]) // Backup codes for 2FA (encrypted)
+  mustChangePassword  Boolean       @default(false) // Force password change on next login
 
   @@index([companyId])
   @@index([role])

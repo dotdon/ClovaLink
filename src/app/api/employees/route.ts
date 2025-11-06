@@ -69,6 +69,7 @@ export async function POST(request: Request) {
         password: hashedPassword,
         role: data.role || 'USER',
         companyId: data.companyId,
+        mustChangePassword: true, // Force password change on first login
       },
       select: {
         id: true,
@@ -128,6 +129,12 @@ export async function GET() {
           },
         },
         createdAt: true,
+        totpEnabled: true,
+        passkeys: {
+          select: {
+            id: true,
+          },
+        },
       },
     });
 

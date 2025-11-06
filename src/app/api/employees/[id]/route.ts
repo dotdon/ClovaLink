@@ -103,6 +103,8 @@ export async function PUT(
     // Only update password if provided
     if (data.password) {
       updateData.password = await bcrypt.hash(data.password, 10);
+      // Force password change when admin sets/resets password
+      updateData.mustChangePassword = true;
     }
 
     const employee = await prisma.employee.update({
@@ -178,7 +180,85 @@ export async function DELETE(
       );
     }
 
-    // Delete the employee
+    // Delete related records first to avoid foreign key constraints
+    // Delete activities (preserve audit trail by keeping them but removing employee reference)
+    // Since employeeId is required, we need to delete activities
+    await prisma.activity.deleteMany({
+      where: { employeeId: id },
+    });
+
+    // Delete passkeys (already has onDelete: Cascade, but doing it explicitly for clarity)
+    await prisma.passkey.deleteMany({
+      where: { employeeId: id },
+    });
+
+    // Delete upload links
+    await prisma.uploadLink.deleteMany({
+      where: { employeeId: id },
+    });
+
+    // Delete download links created by this employee
+    await prisma.downloadLink.deleteMany({
+      where: { createdById: id },
+    });
+
+    // Reassign folders and documents to company admin/manager to preserve them
+    // Try to find an admin or manager in the same company
+    const companyAdmin = await prisma.employee.findFirst({
+      where: {
+        companyId: employee.companyId,
+        role: { in: ['ADMIN', 'MANAGER'] },
+        id: { not: id }, // Don't reassign to the employee being deleted
+      },
+    });
+
+    if (companyAdmin) {
+      // Reassign folders created by this employee to company admin/manager
+      await prisma.folder.updateMany({
+        where: { createdById: id },
+        data: { createdById: companyAdmin.id },
+      });
+
+      // Reassign documents to company admin/manager
+      await prisma.document.updateMany({
+        where: { employeeId: id },
+        data: { employeeId: companyAdmin.id },
+      });
+    } else {
+      // No admin/manager available - this should be rare
+      // For folders: try to find any employee in the company
+      const anyCompanyEmployee = await prisma.employee.findFirst({
+        where: {
+          companyId: employee.companyId,
+          id: { not: id },
+        },
+      });
+
+      if (anyCompanyEmployee) {
+        // Reassign to any company employee as fallback
+        await prisma.folder.updateMany({
+          where: { createdById: id },
+          data: { createdById: anyCompanyEmployee.id },
+        });
+
+        await prisma.document.updateMany({
+          where: { employeeId: id },
+          data: { employeeId: anyCompanyEmployee.id },
+        });
+      } else {
+        // Last resort: delete folders and documents if no one to reassign to
+        // This should only happen if deleting the last employee in a company
+        await prisma.folder.deleteMany({
+          where: { createdById: id },
+        });
+
+        await prisma.document.deleteMany({
+          where: { employeeId: id },
+        });
+      }
+    }
+
+    // Finally, delete the employee
     await prisma.employee.delete({
       where: { id },
     });

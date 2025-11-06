@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Badge, Modal, Alert } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
-import { FaPlus, FaBuilding, FaEnvelope, FaUserTag, FaChevronRight, FaEdit, FaFileDownload } from 'react-icons/fa';
+import { FaPlus, FaBuilding, FaEnvelope, FaUserTag, FaChevronRight, FaEdit, FaFileDownload, FaTrash, FaShieldAlt, FaKey } from 'react-icons/fa';
 import AddEmployeeModal from '@/components/modals/AddEmployeeModal';
 import EditEmployeeModal from '@/components/modals/EditEmployeeModal';
 import { useSession } from 'next-auth/react';
@@ -19,6 +19,8 @@ interface Employee {
     name: string;
   };
   createdAt: string;
+  totpEnabled?: boolean;
+  passkeys?: Array<{ id: string }>;
 }
 
 export default function EmployeesPage() {
@@ -26,6 +28,7 @@ export default function EmployeesPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [show2FAModal, setShow2FAModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,6 +48,26 @@ export default function EmployeesPage() {
     }
     
     return false;
+  };
+
+  // Check if user can delete/manage this employee
+  // Only admins can delete/manage managers
+  const canDeleteEmployee = (employeeRole: string) => {
+    if (!session?.user) return false;
+    
+    // Only admins can delete/manage managers
+    if (employeeRole === 'MANAGER' || employeeRole === 'ADMIN') {
+      return session.user.role === 'ADMIN';
+    }
+    
+    // For regular users, use canEditEmployee logic
+    return true;
+  };
+
+  // Check if email should be hidden (hide admin emails from non-admins)
+  const shouldHideEmail = (employeeRole: string) => {
+    if (!session?.user) return false;
+    return employeeRole === 'ADMIN' && session.user.role !== 'ADMIN';
   };
 
   const fetchEmployees = async () => {
@@ -129,7 +152,7 @@ export default function EmployeesPage() {
   const handleDeleteEmployee = async () => {
     if (!selectedEmployee) return;
 
-    if (!canEditEmployee(selectedEmployee.companyId, selectedEmployee.role)) {
+    if (!canDeleteEmployee(selectedEmployee.role)) {
       throw new Error('You do not have permission to delete this employee');
     }
 
@@ -181,7 +204,13 @@ export default function EmployeesPage() {
             <div className="employee-details">
               <div className="detail">
                 <FaEnvelope className="detail-icon" />
-                <span>{employee.email}</span>
+                <span>
+                  {shouldHideEmail(employee.role) ? (
+                    <span className="text-muted">••••••••</span>
+                  ) : (
+                    employee.email
+                  )}
+                </span>
               </div>
               <div className="detail">
                 <FaBuilding className="detail-icon" />
@@ -202,16 +231,44 @@ export default function EmployeesPage() {
           </div>
           <div className="employee-actions">
             {canEditEmployee(employee.companyId, employee.role) && (
-              <Button
-                variant="link"
-                className="action-btn edit-btn"
-                onClick={() => {
-                  setSelectedEmployee(employee);
-                  setShowEditModal(true);
-                }}
-              >
-                <FaEdit />
-              </Button>
+              <>
+                <Button
+                  variant="link"
+                  className="action-btn edit-btn"
+                  onClick={() => {
+                    setSelectedEmployee(employee);
+                    setShowEditModal(true);
+                  }}
+                >
+                  <FaEdit />
+                </Button>
+                {canDeleteEmployee(employee.role) && (
+                  <>
+                    <Button
+                      variant="link"
+                      className="action-btn"
+                      onClick={() => {
+                        setSelectedEmployee(employee);
+                        setShow2FAModal(true);
+                      }}
+                      title="Manage 2FA"
+                    >
+                      <FaKey />
+                    </Button>
+                    <Button
+                      variant="link"
+                      className="action-btn"
+                      onClick={() => {
+                        setSelectedEmployee(employee);
+                        setShowDeleteModal(true);
+                      }}
+                      title="Delete Employee"
+                    >
+                      <FaTrash />
+                    </Button>
+                  </>
+                )}
+              </>
             )}
             {canExportActivities(employee.id, employee.companyId, employee.role) && (
               <Button
@@ -261,23 +318,30 @@ export default function EmployeesPage() {
                         <th>Email</th>
                         <th>Role</th>
                         <th>Company</th>
+                        <th>2FA Status</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {isLoading ? (
                         <tr>
-                          <td colSpan={5} className="text-center">Loading...</td>
+                          <td colSpan={6} className="text-center">Loading...</td>
                         </tr>
                       ) : employees.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="text-center">No employees found</td>
+                          <td colSpan={6} className="text-center">No employees found</td>
                         </tr>
                       ) : (
                         employees.map((employee) => (
                           <tr key={employee.id}>
                             <td>{employee.name}</td>
-                            <td>{employee.email}</td>
+                            <td>
+                              {shouldHideEmail(employee.role) ? (
+                                <span className="text-muted">••••••••</span>
+                              ) : (
+                                employee.email
+                              )}
+                            </td>
                             <td>
                               <Badge bg={employee.role === 'ADMIN' ? 'primary' : 'secondary'}>
                                 {employee.role}
@@ -285,33 +349,78 @@ export default function EmployeesPage() {
                             </td>
                             <td>{employee.company.name}</td>
                             <td>
-                              {canEditEmployee(employee.companyId, employee.role) && (
-                                <Button
-                                  variant="outline-primary"
-                                  size="sm"
-                                  className="me-2"
-                                  onClick={() => {
-                                    setSelectedEmployee(employee);
-                                    setShowEditModal(true);
-                                  }}
-                                >
-                                  Edit
-                                </Button>
+                              {employee.totpEnabled || (employee.passkeys && employee.passkeys.length > 0) ? (
+                                <Badge bg="success">
+                                  <FaShieldAlt className="me-1" />
+                                  {employee.totpEnabled && employee.passkeys && employee.passkeys.length > 0 
+                                    ? 'TOTP + Passkey'
+                                    : employee.totpEnabled 
+                                    ? 'TOTP'
+                                    : 'Passkey'}
+                                </Badge>
+                              ) : (
+                                <Badge bg="secondary">None</Badge>
                               )}
-                              {canExportActivities(employee.id, employee.companyId, employee.role) && (
-                                <Button
-                                  variant="outline-secondary"
-                                  size="sm"
-                                  onClick={() => handleExportActivities(employee.id)}
-                                >
-                                  Export Activity
-                                </Button>
-                              )}
-                              {session?.user?.role === 'MANAGER' && employee.role === 'ADMIN' && (
-                                <span className="text-muted ms-2 small">
-                                  (Admin user - restricted access)
-                                </span>
-                              )}
+                            </td>
+                            <td>
+                              <div className="d-flex gap-1">
+                                {canEditEmployee(employee.companyId, employee.role) && (
+                                  <>
+                                    <Button
+                                      variant="outline-primary"
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedEmployee(employee);
+                                        setShowEditModal(true);
+                                      }}
+                                      title="Edit Employee"
+                                    >
+                                      <FaEdit />
+                                    </Button>
+                                    {canDeleteEmployee(employee.role) && (
+                                      <>
+                                        <Button
+                                          variant="outline-info"
+                                          size="sm"
+                                          onClick={() => {
+                                            setSelectedEmployee(employee);
+                                            setShow2FAModal(true);
+                                          }}
+                                          title="Manage 2FA"
+                                        >
+                                          <FaKey />
+                                        </Button>
+                                        <Button
+                                          variant="outline-danger"
+                                          size="sm"
+                                          onClick={() => {
+                                            setSelectedEmployee(employee);
+                                            setShowDeleteModal(true);
+                                          }}
+                                          title="Delete Employee"
+                                        >
+                                          <FaTrash />
+                                        </Button>
+                                      </>
+                                    )}
+                                  </>
+                                )}
+                                {canExportActivities(employee.id, employee.companyId, employee.role) && (
+                                  <Button
+                                    variant="outline-secondary"
+                                    size="sm"
+                                    onClick={() => handleExportActivities(employee.id)}
+                                    title="Export Activity"
+                                  >
+                                    <FaFileDownload />
+                                  </Button>
+                                )}
+                                {session?.user?.role === 'MANAGER' && employee.role === 'ADMIN' && (
+                                  <span className="text-muted ms-2 small">
+                                    (Restricted)
+                                  </span>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -338,7 +447,13 @@ export default function EmployeesPage() {
                           <div className="employee-details">
                             <div className="detail">
                               <FaEnvelope className="detail-icon" />
-                              <span>{employee.email}</span>
+                              <span>
+                                {shouldHideEmail(employee.role) ? (
+                                  <span className="text-muted">••••••••</span>
+                                ) : (
+                                  employee.email
+                                )}
+                              </span>
                             </div>
                             <div className="detail">
                               <FaBuilding className="detail-icon" />
@@ -359,16 +474,44 @@ export default function EmployeesPage() {
                         </div>
                         <div className="employee-actions">
                           {canEditEmployee(employee.companyId, employee.role) && (
-                            <Button
-                              variant="link"
-                              className="action-btn edit-btn"
-                              onClick={() => {
-                                setSelectedEmployee(employee);
-                                setShowEditModal(true);
-                              }}
-                            >
-                              <FaEdit />
-                            </Button>
+                            <>
+                              <Button
+                                variant="link"
+                                className="action-btn edit-btn"
+                                onClick={() => {
+                                  setSelectedEmployee(employee);
+                                  setShowEditModal(true);
+                                }}
+                              >
+                                <FaEdit />
+                              </Button>
+                              {canDeleteEmployee(employee.role) && (
+                                <>
+                                  <Button
+                                    variant="link"
+                                    className="action-btn"
+                                    onClick={() => {
+                                      setSelectedEmployee(employee);
+                                      setShow2FAModal(true);
+                                    }}
+                                    title="Manage 2FA"
+                                  >
+                                    <FaKey />
+                                  </Button>
+                                  <Button
+                                    variant="link"
+                                    className="action-btn"
+                                    onClick={() => {
+                                      setSelectedEmployee(employee);
+                                      setShowDeleteModal(true);
+                                    }}
+                                    title="Delete Employee"
+                                  >
+                                    <FaTrash />
+                                  </Button>
+                                </>
+                              )}
+                            </>
                           )}
                           {canExportActivities(employee.id, employee.companyId, employee.role) && (
                             <Button
@@ -414,14 +557,80 @@ export default function EmployeesPage() {
             <Modal.Title>Confirm Delete</Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            Are you sure you want to delete {selectedEmployee?.name}? This action cannot be undone.
+            <Alert variant="danger">
+              <strong>Warning:</strong> This action cannot be undone!
+            </Alert>
+            <p>Are you sure you want to delete <strong>{selectedEmployee?.name}</strong>?</p>
+            <p className="text-muted">This will permanently remove:</p>
+            <ul className="text-muted">
+              <li>Employee account and credentials</li>
+              <li>All associated passkeys and 2FA settings</li>
+              <li>Activity logs will be preserved</li>
+              <li>Documents uploaded by this user will remain</li>
+            </ul>
           </Modal.Body>
           <Modal.Footer>
             <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
               Cancel
             </Button>
             <Button variant="danger" onClick={handleDeleteEmployee}>
+              <FaTrash className="me-2" />
               Delete Employee
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        <Modal show={show2FAModal} onHide={() => setShow2FAModal(false)} size="lg">
+          <Modal.Header closeButton>
+            <Modal.Title>
+              <FaShieldAlt className="me-2" />
+              2FA Management - {selectedEmployee?.name}
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <h6 className="mb-3">Current 2FA Status</h6>
+            <div className="mb-4">
+              {selectedEmployee?.totpEnabled ? (
+                <Alert variant="success">
+                  <strong>✓ TOTP Enabled</strong>
+                  <p className="mb-0 mt-2">This employee has authenticator app 2FA enabled</p>
+                </Alert>
+              ) : (
+                <Alert variant="secondary">
+                  <strong>○ TOTP Not Enabled</strong>
+                  <p className="mb-0 mt-2">This employee has not set up authenticator app 2FA</p>
+                </Alert>
+              )}
+
+              {selectedEmployee?.passkeys && selectedEmployee.passkeys.length > 0 ? (
+                <Alert variant="success">
+                  <strong>✓ Passkeys Enabled</strong>
+                  <p className="mb-0 mt-2">
+                    This employee has {selectedEmployee.passkeys.length} passkey(s) registered
+                  </p>
+                </Alert>
+              ) : (
+                <Alert variant="secondary">
+                  <strong>○ No Passkeys</strong>
+                  <p className="mb-0 mt-2">This employee has not registered any passkeys</p>
+                </Alert>
+              )}
+
+              {!selectedEmployee?.totpEnabled && (!selectedEmployee?.passkeys || selectedEmployee.passkeys.length === 0) && (
+                <Alert variant="warning">
+                  <strong>⚠️ No 2FA Configured</strong>
+                  <p className="mb-0 mt-2">This employee does not have any form of 2FA enabled. They will be prompted to set it up if required by organization policy.</p>
+                </Alert>
+              )}
+            </div>
+
+            <Alert variant="info">
+              <strong>Note:</strong> Employees must enable 2FA themselves through their Account page. Admins cannot force-enable 2FA but can view status and ensure compliance with organization policies.
+            </Alert>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShow2FAModal(false)}>
+              Close
             </Button>
           </Modal.Footer>
         </Modal>
