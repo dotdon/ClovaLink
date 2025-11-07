@@ -677,7 +677,7 @@ export default function DocumentsPage() {
     try {
       const filterParam = itemType === 'document' ? `documentId=${itemId}` : `folderId=${itemId}`;
       console.log('Fetching activities:', { itemId, itemType, filterParam });
-      const response = await fetch(`/api/activities?${filterParam}&limit=50`);
+      const response = await fetch(`/api/activities?${filterParam}&limit=5`);
       console.log('Activity API response:', response.status, response.statusText);
       
       if (!response.ok) {
@@ -695,14 +695,106 @@ export default function DocumentsPage() {
     }
   };
 
+  // Download full activity log as CSV
+  const handleDownloadActivityLog = async () => {
+    if (!activityItemId || !activityItemType) return;
+    
+    try {
+      const filterParam = activityItemType === 'document' ? `documentId=${activityItemId}` : `folderId=${activityItemId}`;
+      const response = await fetch(`/api/activities/export?${filterParam}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to download activity log');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `activity-log-${activityItemName}-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error downloading activity log:', error);
+      alert('Failed to download activity log');
+    }
+  };
+
   // Open activity modal for specific item
   const handleOpenActivityModal = (item: Document | Folder, type: 'document' | 'folder') => {
+    // Close any open dropdowns first
+    const dropdowns = document.querySelectorAll('.dropdown-menu.show');
+    dropdowns.forEach(dropdown => {
+      dropdown.classList.remove('show');
+    });
+    
     setActivityItemId(item.id);
     setActivityItemName(item.name);
     setActivityItemType(type);
-    setShowActivityModal(true);
-    fetchActivityLogs(item.id, type);
+    
+    // Small delay to ensure dropdown closes first
+    setTimeout(() => {
+      setShowActivityModal(true);
+      fetchActivityLogs(item.id, type);
+    }, 50);
   };
+
+  // Prevent modal dragging and repositioning
+  useEffect(() => {
+    if (showActivityModal) {
+      const preventDrag = (e: Event) => {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      };
+
+      const preventMouseEvents = (e: MouseEvent) => {
+        const modal = document.querySelector('.activity-modal-dialog') as HTMLElement;
+        if (modal) {
+          // Lock position using inline styles
+          modal.style.position = 'static';
+          modal.style.transform = 'none';
+          modal.style.top = 'auto';
+          modal.style.left = 'auto';
+          modal.style.right = 'auto';
+          modal.style.bottom = 'auto';
+        }
+      };
+
+      const modalElements = document.querySelectorAll('.activity-modal, .activity-modal *, .activity-modal-dialog');
+      modalElements.forEach(el => {
+        el.addEventListener('dragstart', preventDrag);
+        el.addEventListener('drag', preventDrag);
+        el.addEventListener('mousemove', preventMouseEvents);
+        el.addEventListener('mouseleave', preventMouseEvents);
+        el.addEventListener('mouseenter', preventMouseEvents);
+        (el as HTMLElement).draggable = false;
+      });
+
+      // Lock the modal dialog position
+      const lockPosition = setInterval(() => {
+        const modal = document.querySelector('.activity-modal-dialog') as HTMLElement;
+        if (modal) {
+          modal.style.position = 'static';
+          modal.style.transform = 'none';
+          modal.style.margin = '0';
+        }
+      }, 10);
+
+      return () => {
+        clearInterval(lockPosition);
+        modalElements.forEach(el => {
+          el.removeEventListener('dragstart', preventDrag);
+          el.removeEventListener('drag', preventDrag);
+          el.removeEventListener('mousemove', preventMouseEvents);
+          el.removeEventListener('mouseleave', preventMouseEvents);
+          el.removeEventListener('mouseenter', preventMouseEvents);
+        });
+      };
+    }
+  }, [showActivityModal]);
 
   // Check if document should show password prompt
   const handleDocumentClick = (doc: Document) => {
@@ -2703,10 +2795,30 @@ export default function DocumentsPage() {
           show={showActivityModal}
           onHide={() => setShowActivityModal(false)}
           size="xl"
-          centered
           className="activity-modal"
+          backdrop="static"
+          keyboard={true}
+          enforceFocus={false}
+          dialogClassName="activity-modal-dialog"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+          }}
+          dialogStyle={{
+            position: 'static',
+            transform: 'none',
+            margin: 0,
+            pointerEvents: 'auto',
+          }}
         >
-          <Modal.Header closeButton className="border-0">
+          <Modal.Header closeButton className="border-0" style={{ cursor: 'default', userSelect: 'none' }}>
             <Modal.Title className="d-flex align-items-center">
               <div className="modal-icon-wrapper">
                 <FaClipboardList />
@@ -2722,9 +2834,15 @@ export default function DocumentsPage() {
               {activityLogs.length === 0 ? (
                 <div className="no-activities">
                   <FaClipboardList size={48} />
-                  <p>No activities found</p>
+                  <p>No recent activities</p>
                 </div>
               ) : (
+                <>
+                  <div className="activity-header-text mb-3">
+                    <small style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                      Showing 5 most recent activities. Download full log for complete history.
+                    </small>
+                  </div>
                 <div className="activities-list">
                   {activityLogs.map((activity) => (
                     <div key={activity.id} className="activity-item">
@@ -2760,10 +2878,19 @@ export default function DocumentsPage() {
                     </div>
                   ))}
                 </div>
+                </>
               )}
             </div>
           </Modal.Body>
-          <Modal.Footer className="border-0">
+          <Modal.Footer className="border-0 d-flex justify-content-between">
+            <Button 
+              variant="outline-primary" 
+              onClick={handleDownloadActivityLog}
+              className="download-log-btn"
+            >
+              <FaDownload className="me-2" />
+              Download Full Log
+            </Button>
             <Button variant="secondary" onClick={() => setShowActivityModal(false)}>
               Close
             </Button>
@@ -2896,32 +3023,151 @@ export default function DocumentsPage() {
           }
 
           /* Activity Modal Styles */
-          :global(.activity-modal .modal-content) {
-            background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%);
-            border: 1px solid rgba(102, 126, 234, 0.3);
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            color: #ffffff;
+          :global(.activity-modal) {
+            z-index: 1055 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+          }
+
+          :global(.activity-modal-dialog) {
+            position: static !important;
+            transform: none !important;
+            margin: 0 !important;
+            max-width: 900px !important;
+            width: 90% !important;
+            pointer-events: auto !important;
+            top: auto !important;
+            left: auto !important;
+            right: auto !important;
+            bottom: auto !important;
+          }
+
+          :global(.activity-modal .modal-dialog) {
+            position: static !important;
+            transform: none !important;
+            margin: 0 !important;
+            max-width: 900px !important;
+            width: 90% !important;
+            pointer-events: auto !important;
+            top: auto !important;
+            left: auto !important;
+            right: auto !important;
+            bottom: auto !important;
           }
 
           :global(.activity-modal .modal-header) {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 1.5rem;
+            cursor: default !important;
+            user-select: none !important;
+            -webkit-user-drag: none !important;
+            -moz-user-drag: none !important;
+          }
+
+          :global(.activity-modal .modal-header *) {
+            cursor: default !important;
+            -webkit-user-drag: none !important;
+            -moz-user-drag: none !important;
+          }
+
+          :global(.activity-modal .modal-content) {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f1624 100%) !important;
+            border: 1px solid rgba(102, 126, 234, 0.4) !important;
+            border-radius: 20px !important;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6), 
+                        0 0 1px rgba(102, 126, 234, 0.3) !important;
+            color: #ffffff !important;
+            backdrop-filter: blur(10px);
+          }
+
+          :global(.activity-modal .modal-header) {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.1) 100%) !important;
+            border-bottom: 1px solid rgba(102, 126, 234, 0.3) !important;
+            padding: 2rem 2rem 1.5rem 2rem !important;
+            border-radius: 20px 20px 0 0 !important;
+          }
+
+          :global(.activity-modal .modal-header .btn-close) {
+            filter: brightness(0) invert(1) !important;
+            opacity: 0.7 !important;
+          }
+
+          :global(.activity-modal .modal-header .btn-close:hover) {
+            opacity: 1 !important;
+          }
+
+          :global(.activity-modal .modal-title) {
+            gap: 1rem !important;
+            color: #ffffff !important;
           }
 
           :global(.activity-modal .modal-body) {
-            padding: 1.5rem;
-            max-height: 70vh;
-            overflow-y: auto;
+            padding: 2rem !important;
+            max-height: 65vh !important;
+            overflow-y: auto !important;
+            background: transparent !important;
+          }
+
+          :global(.activity-modal .modal-body::-webkit-scrollbar) {
+            width: 8px;
+          }
+
+          :global(.activity-modal .modal-body::-webkit-scrollbar-track) {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+          }
+
+          :global(.activity-modal .modal-body::-webkit-scrollbar-thumb) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 4px;
+          }
+
+          :global(.activity-modal .modal-body::-webkit-scrollbar-thumb:hover) {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
           }
 
           :global(.activity-modal .modal-footer) {
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 1rem 1.5rem;
+            background: rgba(0, 0, 0, 0.3) !important;
+            border-top: 1px solid rgba(102, 126, 234, 0.2) !important;
+            padding: 1.25rem 2rem !important;
+            border-radius: 0 0 20px 20px !important;
+          }
+
+          :global(.activity-modal .modal-footer .btn-secondary) {
+            background: linear-gradient(135deg, rgba(108, 117, 125, 0.8) 0%, rgba(73, 80, 87, 0.8) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            padding: 0.6rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+          }
+
+          :global(.activity-modal .modal-footer .btn-secondary:hover) {
+            background: linear-gradient(135deg, rgba(108, 117, 125, 1) 0%, rgba(73, 80, 87, 1) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+          }
+
+          :global(.activity-modal .download-log-btn) {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%) !important;
+            border: 1px solid rgba(102, 126, 234, 0.4) !important;
+            color: #8b9cff !important;
+            padding: 0.6rem 1.5rem !important;
+            border-radius: 10px !important;
+            font-weight: 500 !important;
+            transition: all 0.3s ease !important;
+          }
+
+          :global(.activity-modal .download-log-btn:hover) {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4) 0%, rgba(118, 75, 162, 0.4) 100%) !important;
+            border-color: rgba(102, 126, 234, 0.6) !important;
+            color: #ffffff !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3) !important;
           }
 
           .activity-log-content {
-            min-height: 200px;
+            min-height: 250px;
           }
 
           .no-activities {
@@ -2929,51 +3175,89 @@ export default function DocumentsPage() {
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 3rem;
-            color: rgba(255, 255, 255, 0.5);
+            padding: 4rem 2rem;
+            color: rgba(255, 255, 255, 0.4);
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 16px;
+            border: 1px dashed rgba(102, 126, 234, 0.2);
           }
 
           .no-activities svg {
-            margin-bottom: 1rem;
-            opacity: 0.5;
+            margin-bottom: 1.5rem;
+            opacity: 0.4;
+            color: #667eea;
+          }
+
+          .no-activities p {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin: 0;
           }
 
           .activities-list {
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
+            gap: 1rem;
           }
 
           .activity-item {
             display: flex;
             align-items: flex-start;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            transition: all 0.2s ease;
+            padding: 1.25rem;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 14px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+          }
+
+          .activity-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
           }
 
           .activity-item:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(102, 126, 234, 0.3);
-            transform: translateX(4px);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-color: rgba(102, 126, 234, 0.4);
+            transform: translateX(8px) scale(1.01);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.2);
+          }
+
+          .activity-item:hover::before {
+            opacity: 1;
           }
 
           .activity-icon {
-            width: 40px;
-            height: 40px;
+            width: 48px;
+            height: 48px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
-            border-radius: 50%;
-            margin-right: 1rem;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.25) 0%, rgba(118, 75, 162, 0.25) 100%);
+            border-radius: 12px;
+            margin-right: 1.25rem;
             flex-shrink: 0;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
+          }
+
+          .activity-item:hover .activity-icon {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4) 0%, rgba(118, 75, 162, 0.4) 100%);
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
           }
 
           .activity-icon svg {
-            color: #667eea;
+            color: #8b9cff;
+            font-size: 1.25rem;
           }
 
           .activity-details {
@@ -2982,34 +3266,49 @@ export default function DocumentsPage() {
           }
 
           .activity-description {
-            font-size: 0.95rem;
-            font-weight: 500;
-            color: #ffffff;
-            margin-bottom: 0.5rem;
+            font-size: 1rem !important;
+            font-weight: 600 !important;
+            color: #ffffff !important;
+            margin-bottom: 0.6rem !important;
+            line-height: 1.4 !important;
           }
 
           .activity-meta {
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.6);
+            display: flex !important;
+            align-items: center !important;
+            flex-wrap: wrap !important;
+            gap: 0.6rem !important;
+            font-size: 0.875rem !important;
+            color: rgba(255, 255, 255, 0.55) !important;
           }
 
           .activity-separator {
-            color: rgba(255, 255, 255, 0.3);
+            color: rgba(102, 126, 234, 0.4) !important;
+            font-weight: bold !important;
           }
 
           .activity-user {
-            color: #667eea;
-            font-weight: 500;
+            color: #8b9cff !important;
+            font-weight: 600 !important;
+            background: rgba(102, 126, 234, 0.15) !important;
+            padding: 0.2rem 0.6rem !important;
+            border-radius: 6px !important;
+            border: 1px solid rgba(102, 126, 234, 0.2) !important;
+          }
+
+          .activity-time {
+            color: rgba(255, 255, 255, 0.5) !important;
+            font-style: italic !important;
           }
 
           .activity-document,
           .activity-folder {
-            color: rgba(255, 255, 255, 0.8);
-            font-style: italic;
+            color: rgba(255, 255, 255, 0.85) !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+            padding: 0.2rem 0.6rem !important;
+            border-radius: 6px !important;
+            font-style: normal !important;
+            font-weight: 500 !important;
           }
 
           .nav-tab {

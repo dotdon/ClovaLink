@@ -13,6 +13,8 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const employeeId = searchParams.get('employeeId');
+    const documentId = searchParams.get('documentId');
+    const folderId = searchParams.get('folderId');
     
     // If employeeId is provided, check if user has permission to export their activities
     if (employeeId) {
@@ -29,22 +31,35 @@ export async function GET(request: Request) {
       }
     }
 
+    // Get the employee with their company info
+    const employee = await prisma.employee.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true,
+        companyId: true,
+        role: true,
+      },
+    });
+
+    if (!employee) {
+      return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
+    }
+
     // Build the query based on filters
-    const where: any = {};
+    let where: any = session.user.role === 'ADMIN'
+      ? {} // Admins can see all activities
+      : { companyId: employee.companyId }; // Others only see their company's activities
     
     // Apply employee filter if provided
     if (employeeId) {
       where.employeeId = employeeId;
-    } else if (session.user.role !== 'ADMIN') {
-      // Non-admin users can only see activities from their company
-      where.companyId = session.user.companyId;
-      
-      // For managers, exclude admin activities
-      if (session.user.role === 'MANAGER') {
-        where.employee = {
-          role: { not: 'ADMIN' }
-        };
-      }
+    }
+    
+    // Add document or folder filter if provided
+    if (documentId) {
+      where.documentId = documentId;
+    } else if (folderId) {
+      where.folderId = folderId;
     }
 
     const activities = await prisma.activity.findMany({
@@ -61,25 +76,31 @@ export async function GET(request: Request) {
           select: {
             name: true
           }
+        },
+        folder: {
+          select: {
+            name: true
+          }
         }
       },
       orderBy: {
-        timestamp: 'desc'
+        createdAt: 'desc'
       }
     });
 
     // Transform data for CSV
     const csvRows = [
-      ['Timestamp', 'Type', 'Description', 'Employee Name', 'Employee Email', 'Employee Role', 'Document Name', 'Metadata'].join(','),
+      ['Timestamp', 'Type', 'Description', 'Employee Name', 'Employee Email', 'Employee Role', 'Document/Folder Name', 'IP Address', 'User Agent'].join(','),
       ...activities.map(activity => [
-        new Date(activity.timestamp).toISOString(),
+        new Date(activity.createdAt).toLocaleString(),
         activity.type,
         `"${activity.description.replace(/"/g, '""')}"`,
         activity.employee?.name || 'N/A',
         activity.employee?.email || 'N/A',
         activity.employee?.role || 'N/A',
-        activity.document?.name || 'N/A',
-        `"${JSON.stringify(activity.metadata || {}).replace(/"/g, '""')}"`
+        activity.document?.name || activity.folder?.name || 'N/A',
+        activity.ipAddress || 'N/A',
+        `"${(activity.userAgent || 'N/A').replace(/"/g, '""')}"`
       ].join(','))
     ];
 
