@@ -19,12 +19,39 @@ export async function GET(request: Request) {
     }
 
     const url = new URL(request.url);
-    const companyId = url.searchParams.get('companyId');
+    const requestedCompanyId = url.searchParams.get('companyId');
 
-    // Build where clause based on user role and company
-    const where = session.user.role === 'ADMIN'
-      ? {} // Admins can see all documents
-      : { companyId: session.user.companyId }; // Others can only see their company's documents
+    // Fetch the employee to check cross-company access
+    const employee = await prisma.employee.findFirst({
+      where: { id: session.user.id },
+      include: {
+        crossCompanyAccess: true,
+      },
+    });
+
+    if (!employee) {
+      return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
+    }
+
+    // Determine which company to filter by
+    let targetCompanyId = session.user.companyId;
+    
+    if (requestedCompanyId) {
+      // Check if user has access to the requested company
+      const hasAccess = 
+        requestedCompanyId === session.user.companyId || // Primary company
+        employee.crossCompanyAccess.some(access => access.companyId === requestedCompanyId) || // Cross-company access
+        session.user.role === 'ADMIN'; // Admins have access to all
+
+      if (!hasAccess) {
+        return NextResponse.json({ error: 'Access denied to this company' }, { status: 403 });
+      }
+
+      targetCompanyId = requestedCompanyId;
+    }
+
+    // Build where clause based on target company
+    const where = { companyId: targetCompanyId };
 
     // Fetch folders with their documents - recursively include all levels
     const folders = await prisma.folder.findMany({
@@ -94,6 +121,8 @@ export async function GET(request: Request) {
       isFavorite: folder.favorites?.length > 0 || false,
       isPinned: folder.pinnedBy?.length > 0 || false,
       pinnedOrder: folder.pinnedBy?.[0]?.order,
+      hasPassword: !!folder.password, // Add flag indicating if folder is password protected
+      password: undefined, // Don't send the actual password hash to frontend
       children: folder.children?.map(addFlagsToFolder) || [],
       documents: folder.documents || []
     });

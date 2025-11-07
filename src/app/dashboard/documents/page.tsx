@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Form, Modal, Alert, Dropdown, ButtonGroup } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
-import { FaDownload, FaTrash, FaFolder, FaEye, FaUpload, FaFolderPlus, FaFile, FaEdit, FaArrowLeft, FaEllipsisV, FaSearch, FaCheckCircle, FaShare, FaFilePdf, FaFileWord, FaFileImage, FaInfo, FaTh, FaList, FaSortAlphaDown, FaSortAmountDown, FaCalendarAlt, FaStar, FaRegStar, FaThumbtack, FaBuilding } from 'react-icons/fa';
+import { FaDownload, FaTrash, FaFolder, FaEye, FaUpload, FaFolderPlus, FaFile, FaEdit, FaArrowLeft, FaEllipsisV, FaSearch, FaCheckCircle, FaShare, FaFilePdf, FaFileWord, FaFileImage, FaInfo, FaTh, FaList, FaSortAlphaDown, FaSortAmountDown, FaCalendarAlt, FaStar, FaRegStar, FaThumbtack, FaBuilding, FaLock, FaClipboardList } from 'react-icons/fa';
 import { useSession } from 'next-auth/react';
 import { hasPermission, Permission, canAccessFolder, canManageFolder, canManageDocument } from '@/lib/permissions';
 import DocumentViewerModal from '@/components/viewers/DocumentViewerModal';
@@ -274,10 +274,36 @@ export default function DocumentsPage() {
   const [accessibleCompanies, setAccessibleCompanies] = useState<Company[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [showQuickAccess, setShowQuickAccess] = useState(true);
+  const [activeTab, setActiveTab] = useState<'browse' | 'starred'>('browse');
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [selectedFolderForPassword, setSelectedFolderForPassword] = useState<Folder | null>(null);
+  const [folderPassword, setFolderPassword] = useState('');
+  const [showPasswordVerifyModal, setShowPasswordVerifyModal] = useState(false);
+  const [folderToVerify, setFolderToVerify] = useState<Folder | null>(null);
+  const [verifyPassword, setVerifyPassword] = useState('');
+  const [unlockedFolders, setUnlockedFolders] = useState<Set<string>>(new Set());
+  
+  // Document password states
+  const [showDocPasswordModal, setShowDocPasswordModal] = useState(false);
+  const [selectedDocForPassword, setSelectedDocForPassword] = useState<Document | null>(null);
+  const [docPassword, setDocPassword] = useState('');
+  const [showDocPasswordVerifyModal, setShowDocPasswordVerifyModal] = useState(false);
+  const [docToVerify, setDocToVerify] = useState<Document | null>(null);
+  const [verifyDocPassword, setVerifyDocPassword] = useState('');
+  const [unlockedDocuments, setUnlockedDocuments] = useState<Set<string>>(new Set());
+  
+  // Activity log modal (per-item)
+  const [showActivityModal, setShowActivityModal] = useState(false);
+  const [activityLogs, setActivityLogs] = useState<any[]>([]);
+  const [activityItemId, setActivityItemId] = useState<string | null>(null);
+  const [activityItemName, setActivityItemName] = useState<string>('');
+  const [activityItemType, setActivityItemType] = useState<'document' | 'folder'>('document');
 
   // Permission checks
   const canDeleteDocuments = hasPermission(session, Permission.DELETE_DOCUMENTS);
   const canRenameDocuments = hasPermission(session, Permission.RENAME_DOCUMENTS);
+  const isAdmin = session?.user?.role === 'ADMIN';
+  const isManager = session?.user?.role === 'MANAGER' || isAdmin;
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -341,13 +367,24 @@ export default function DocumentsPage() {
   };
 
   const fetchFavorites = async () => {
+    if (!selectedCompanyId) return;
+    
     try {
-      const response = await fetch('/api/documents/favorites');
+      const companyFilter = `?companyId=${selectedCompanyId}`;
+      const response = await fetch(`/api/documents/favorites${companyFilter}`);
       if (!response.ok) {
         console.warn('Failed to fetch favorites:', response.status);
         return;
       }
       const data = await response.json();
+      console.log('Fetched favorites:', {
+        folders: data.folders?.map((f: any) => ({
+          id: f.id,
+          name: f.folder?.name,
+          hasPassword: f.folder?.hasPassword,
+          password: f.folder?.password
+        }))
+      });
       setFavoriteDocuments(data.documents || []);
       setFavoriteFolders(data.folders || []);
     } catch (error) {
@@ -358,8 +395,11 @@ export default function DocumentsPage() {
   };
 
   const fetchPinnedFolders = async () => {
+    if (!selectedCompanyId) return;
+    
     try {
-      const response = await fetch('/api/documents/folders/pinned');
+      const companyFilter = `?companyId=${selectedCompanyId}`;
+      const response = await fetch(`/api/documents/folders/pinned${companyFilter}`);
       if (!response.ok) {
         console.warn('Failed to fetch pinned folders:', response.status);
         return;
@@ -448,6 +488,288 @@ export default function DocumentsPage() {
   const handleDelete = async (item: Document | Folder) => {
     setItemToDelete(item);
     setShowDeleteModal(true);
+  };
+
+  const handleSetPassword = async () => {
+    if (!selectedFolderForPassword || !folderPassword.trim()) {
+      alert('Please enter a password');
+      return;
+    }
+
+    console.log('Setting password for folder:', {
+      folderId: selectedFolderForPassword.id,
+      folderName: selectedFolderForPassword.name,
+      passwordLength: folderPassword.length,
+      password: folderPassword // TEMPORARY - remove after debugging
+    });
+
+    try {
+      const response = await fetch(`/api/documents/folders/${selectedFolderForPassword.id}/password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          password: folderPassword,
+        }),
+      });
+
+      const data = await response.json();
+      console.log('Set password response:', {
+        ok: response.ok,
+        status: response.status,
+        data
+      });
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || 'Failed to set password');
+      }
+
+      setShowPasswordModal(false);
+      setSelectedFolderForPassword(null);
+      setFolderPassword('');
+      setSuccessMessage('Password protection added successfully');
+      setShowSuccessModal(true);
+      await fetchDocuments();
+      await fetchFavorites();
+      await fetchPinnedFolders();
+    } catch (error) {
+      console.error('Error setting password:', error);
+      alert(error instanceof Error ? error.message : 'Failed to set password');
+    }
+  };
+
+  const handleRemovePassword = async (folder: Folder) => {
+    try {
+      const response = await fetch(`/api/documents/folders/${folder.id}/password`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to remove password');
+      }
+
+      setSuccessMessage('Password protection removed successfully');
+      setShowSuccessModal(true);
+      
+      // Remove from unlocked folders
+      setUnlockedFolders(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(folder.id);
+        return newSet;
+      });
+      
+      await fetchDocuments();
+    } catch (error) {
+      console.error('Error removing password:', error);
+      alert(error instanceof Error ? error.message : 'Failed to remove password');
+    }
+  };
+
+  // Document password handlers
+  const handleSetDocPassword = async () => {
+    if (!selectedDocForPassword || !docPassword.trim()) {
+      alert('Please enter a password');
+      return;
+    }
+
+    console.log('Setting password for document:', selectedDocForPassword.name);
+
+    try {
+      const response = await fetch(`/api/documents/${selectedDocForPassword.id}/password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          password: docPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to set password');
+      }
+
+      setShowDocPasswordModal(false);
+      setSelectedDocForPassword(null);
+      setDocPassword('');
+      setSuccessMessage('Document password protection added successfully');
+      setShowSuccessModal(true);
+      await fetchDocuments();
+    } catch (error) {
+      console.error('Error setting document password:', error);
+      alert(error instanceof Error ? error.message : 'Failed to set password');
+    }
+  };
+
+  const handleRemoveDocPassword = async (doc: Document) => {
+    try {
+      const response = await fetch(`/api/documents/${doc.id}/password`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to remove password');
+      }
+
+      setSuccessMessage('Document password protection removed successfully');
+      setShowSuccessModal(true);
+      
+      // Remove from unlocked documents
+      setUnlockedDocuments(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(doc.id);
+        return newSet;
+      });
+      
+      await fetchDocuments();
+    } catch (error) {
+      console.error('Error removing document password:', error);
+      alert(error instanceof Error ? error.message : 'Failed to remove password');
+    }
+  };
+
+  const handleVerifyDocPassword = async () => {
+    if (!docToVerify || !verifyDocPassword.trim()) {
+      alert('Please enter a password');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/documents/${docToVerify.id}/verify-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          password: verifyDocPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        alert('Incorrect password');
+        return;
+      }
+
+      // Password correct, add to unlocked documents
+      setUnlockedDocuments(prev => new Set(prev).add(docToVerify.id));
+      setShowDocPasswordVerifyModal(false);
+      setVerifyDocPassword('');
+      
+      // Now open the document
+      setSelectedDocument(docToVerify);
+      setShowPreview(true);
+      setDocToVerify(null);
+    } catch (error) {
+      console.error('Error verifying document password:', error);
+      alert('Failed to verify password');
+    }
+  };
+
+  // Fetch activity logs for specific item
+  const fetchActivityLogs = async (itemId: string, itemType: 'document' | 'folder') => {
+    try {
+      const filterParam = itemType === 'document' ? `documentId=${itemId}` : `folderId=${itemId}`;
+      console.log('Fetching activities:', { itemId, itemType, filterParam });
+      const response = await fetch(`/api/activities?${filterParam}&limit=50`);
+      console.log('Activity API response:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Activity API error:', errorData);
+        throw new Error(errorData.error || 'Failed to fetch activity logs');
+      }
+      
+      const data = await response.json();
+      console.log('Activity logs data:', data);
+      setActivityLogs(data.activities || []);
+    } catch (error) {
+      console.error('Error fetching activity logs:', error);
+      alert(`Failed to load activity logs: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // Open activity modal for specific item
+  const handleOpenActivityModal = (item: Document | Folder, type: 'document' | 'folder') => {
+    setActivityItemId(item.id);
+    setActivityItemName(item.name);
+    setActivityItemType(type);
+    setShowActivityModal(true);
+    fetchActivityLogs(item.id, type);
+  };
+
+  // Check if document should show password prompt
+  const handleDocumentClick = (doc: Document) => {
+    const isPasswordProtected = (doc as any).password || (doc as any).hasPassword;
+    
+    if (isPasswordProtected && !unlockedDocuments.has(doc.id)) {
+      setDocToVerify(doc);
+      setShowDocPasswordVerifyModal(true);
+      return;
+    }
+    
+    setSelectedDocument(doc);
+    setShowPreview(true);
+  };
+
+  const handleVerifyPassword = async () => {
+    if (!folderToVerify || !verifyPassword.trim()) {
+      alert('Please enter a password');
+      return;
+    }
+
+    console.log('Verifying password for folder:', {
+      folderId: folderToVerify.id,
+      folderName: folderToVerify.name,
+      passwordLength: verifyPassword.length,
+      password: verifyPassword // TEMPORARY - remove after debugging
+    });
+
+    try {
+      const response = await fetch(`/api/documents/folders/${folderToVerify.id}/verify-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          password: verifyPassword,
+        }),
+      });
+
+      const data = await response.json();
+      
+      console.log('Verify password response:', {
+        ok: response.ok,
+        status: response.status,
+        data
+      });
+
+      if (!response.ok || !data.success) {
+        console.error('Password verification failed:', data);
+        alert('Incorrect password');
+        return;
+      }
+
+      console.log('Password verified successfully, unlocking folder:', folderToVerify.id);
+      
+      // Password correct, add to unlocked folders
+      setUnlockedFolders(prev => new Set(prev).add(folderToVerify.id));
+      setShowPasswordVerifyModal(false);
+      setVerifyPassword('');
+      
+      // Now navigate to the folder
+      performFolderNavigation(folderToVerify, false);
+      setFolderToVerify(null);
+    } catch (error) {
+      console.error('Error verifying password:', error);
+      alert('Failed to verify password: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
   };
 
   const confirmDelete = async () => {
@@ -599,6 +921,27 @@ export default function DocumentsPage() {
     return null;
   };
 
+  // Build the full path from root to a given folder
+  const buildPathToFolder = (folderId: string, folderList: Folder[], currentPath: { id: string; name: string }[] = []): { id: string; name: string }[] | null => {
+    if (!folderList || !Array.isArray(folderList)) return null;
+    
+    for (const folder of folderList) {
+      if (!folder) continue;
+      
+      const newPath = [...currentPath, { id: folder.id, name: folder.name }];
+      
+      if (folder.id === folderId) {
+        return newPath;
+      }
+      
+      if (folder.children && folder.children.length > 0) {
+        const found = buildPathToFolder(folderId, folder.children, newPath);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
   const getCurrentFolderContents = () => {
     if (!currentFolderId) {
       // Show only root-level folders (parentId is null)
@@ -617,6 +960,17 @@ export default function DocumentsPage() {
       return { folders: [], documents: [] };
     }
 
+    // Check if current folder is password protected and not unlocked
+    const isPasswordProtected = (currentFolder as any).password || (currentFolder as any).hasPassword;
+    if (isPasswordProtected && !unlockedFolders.has(currentFolderId)) {
+      console.log('Folder is locked, showing empty contents:', currentFolder.name);
+      // Return empty contents if folder is locked
+      return {
+        folders: [],
+        documents: []
+      };
+    }
+
     return {
       folders: (currentFolder.children || []).filter((folder: Folder) => 
         folder && canAccessFolder(session, folder)
@@ -625,11 +979,65 @@ export default function DocumentsPage() {
     };
   };
 
-  const handleNavigateToFolder = (folder: Folder) => {
-    setCurrentFolderId(folder.id);
-    setCurrentPath([...currentPath, { id: folder.id, name: folder.name }]);
+  const handleNavigateToFolder = (folder: Folder, fromBrowseTab = false) => {
+    // Check if folder is password protected and not unlocked
+    // Check both 'password' field and 'hasPassword' flag (from API)
+    const isPasswordProtected = !!(((folder as any).password) || ((folder as any).hasPassword));
+    
+    console.log('Navigate to folder:', {
+      name: folder.name,
+      id: folder.id,
+      password: (folder as any).password ? '[REDACTED]' : undefined,
+      hasPassword: (folder as any).hasPassword,
+      isPasswordProtected,
+      isUnlocked: unlockedFolders.has(folder.id),
+      unlockedFolders: Array.from(unlockedFolders)
+    });
+    
+    if (isPasswordProtected && !unlockedFolders.has(folder.id)) {
+      console.log('🔒 Showing password modal for folder:', folder.name);
+      setFolderToVerify(folder);
+      setShowPasswordVerifyModal(true);
+      return;
+    }
+
+    // Proceed with navigation
+    console.log('✅ Proceeding with navigation to:', folder.name);
+    performFolderNavigation(folder, fromBrowseTab);
+  };
+
+  const performFolderNavigation = (folder: Folder, fromBrowseTab = false) => {
+    // Check if the folder is already in the current path to avoid duplicates
+    const existingIndex = currentPath.findIndex(p => p.id === folder.id);
+    
+    if (existingIndex !== -1) {
+      // If folder is already in path, navigate to it (slice the path)
+      const newPath = currentPath.slice(0, existingIndex + 1);
+      setCurrentPath(newPath);
+      setCurrentFolderId(folder.id);
+    } else if (activeTab === 'starred' || !fromBrowseTab) {
+      // When navigating from starred tab or quick access, build the full path to the folder
+      setActiveTab('browse');
+      setCurrentFolderId(folder.id);
+      
+      // Try to build the full path from root to this folder
+      const fullPath = buildPathToFolder(folder.id, folders);
+      if (fullPath) {
+        setCurrentPath(fullPath);
+      } else {
+        // If we can't build the full path, just navigate directly to the folder
+        setCurrentPath([{ id: folder.id, name: folder.name }]);
+      }
+    } else {
+      // Normal navigation - append to current path
+      setCurrentFolderId(folder.id);
+      setCurrentPath([...currentPath, { id: folder.id, name: folder.name }]);
+    }
     setSearchQuery('');
   };
+
+  // Starred files should always be accessible, even if parent folder is locked
+  // Password protection only applies to browsing folder contents
 
   const handleNavigateBack = () => {
     if (currentPath.length === 0) return;
@@ -644,9 +1052,26 @@ export default function DocumentsPage() {
       setCurrentPath([]);
       setCurrentFolderId(null);
     } else {
+      const targetFolderId = currentPath[index].id;
+      
+      // Check if the target folder is password protected
+      const targetFolder = findFolder(targetFolderId, folders);
+      
+      if (targetFolder) {
+        const isPasswordProtected = (targetFolder as any).password || (targetFolder as any).hasPassword;
+        
+        if (isPasswordProtected && !unlockedFolders.has(targetFolderId)) {
+          // Folder is locked, show password modal
+          console.log('Breadcrumb navigation blocked - folder is locked:', targetFolder.name);
+          setFolderToVerify(targetFolder);
+          setShowPasswordVerifyModal(true);
+          return;
+        }
+      }
+      
       const newPath = currentPath.slice(0, index + 1);
       setCurrentPath(newPath);
-      setCurrentFolderId(newPath[index].id);
+      setCurrentFolderId(targetFolderId);
     }
   };
 
@@ -857,113 +1282,112 @@ export default function DocumentsPage() {
           </div>
         </div>
 
-        {/* Company Switcher */}
-        {accessibleCompanies.length > 1 && (
-          <div className="company-switcher">
-            <FaBuilding className="me-2" />
-            <Dropdown>
-              <Dropdown.Toggle variant="light" id="company-dropdown">
-                {accessibleCompanies.find(c => c.id === selectedCompanyId)?.name || 'Select Company'}
-              </Dropdown.Toggle>
-              <Dropdown.Menu>
-                {accessibleCompanies.map(company => (
-                  <Dropdown.Item
-                    key={company.id}
-                    active={company.id === selectedCompanyId}
-                    onClick={() => setSelectedCompanyId(company.id)}
-                  >
-                    {company.name}
-                  </Dropdown.Item>
-                ))}
-              </Dropdown.Menu>
-            </Dropdown>
-          </div>
-        )}
 
-        {/* Quick Access Section */}
-        {showQuickAccess && (pinnedFolders.length > 0 || favoriteFolders.length > 0 || favoriteDocuments.length > 0) && (
+        {/* Quick Access Section - Pinned Folders Only */}
+        {showQuickAccess && pinnedFolders.length > 0 && (
           <div className="quick-access-section">
             <div className="section-header">
-              <h3>Quick Access</h3>
+              <h3><FaThumbtack className="me-2 text-info" />Quick Access - Pinned Folders</h3>
               <button className="collapse-button" onClick={() => setShowQuickAccess(false)}>
                 Hide
               </button>
             </div>
-
-            {/* Pinned Folders */}
-            {pinnedFolders.length > 0 && (
-              <div className="pinned-folders mb-4">
-                <h4><FaThumbtack className="me-2" />Pinned</h4>
+            <p className="text-muted small mb-3">Folders pinned to the top for instant access</p>
                 <div className="quick-access-grid">
-                  {pinnedFolders.map(item => (
-                    <div
-                      key={item.id}
-                      className="quick-access-item"
-                      onClick={() => handleNavigateToFolder(item.folder)}
-                    >
-                      <div className="item-icon">
-                        <FaFolder className="folder-icon" style={{ color: '#ffffff' }} />
-                      </div>
-                      <div className="item-name">{item.folder.name}</div>
-                      <div className="item-company">{item.folder.company?.name}</div>
-                    </div>
-                  ))}
+                  {pinnedFolders.map(item => {
+                    const folder = {
+                      ...item.folder,
+                      hasPassword: item.folder.hasPassword || !!item.folder.password,
+                      password: item.folder.password // Keep password info for verification
+                    };
+                    
+                    console.log('Quick Access Folder:', {
+                      name: folder.name,
+                      hasPassword: folder.hasPassword,
+                      password: folder.password
+                    });
+                    
+                    return (
+                      <div
+                        key={item.id}
+                        className="quick-access-item pinned-item"
+                        onClick={() => {
+                          console.log('Quick access clicked:', folder.name, 'hasPassword:', folder.hasPassword);
+                          handleNavigateToFolder(folder);
+                        }}
+                      >
+                  <div className="item-icon">
+                    <FaFolder className="folder-icon" size={32} style={{ color: '#ffffff' }} />
+                    <FaThumbtack className="pin-badge" style={{ color: '#ffffff' }} />
+                    {(folder.hasPassword || (folder as any).password) && (
+                      <FaLock className="lock-badge-small" style={{ color: '#ffffff' }} />
+                    )}
+                  </div>
+                  <div className="item-name">{folder.name}</div>
+                  <div className="item-company">{folder.company?.name}</div>
                 </div>
-              </div>
-            )}
-
-            {/* Favorite Items */}
-            {(favoriteFolders.length > 0 || favoriteDocuments.length > 0) && (
-              <div className="favorite-items">
-                <h4><FaStar className="me-2 text-warning" />Starred</h4>
-                <div className="quick-access-grid">
-                  {favoriteFolders.map(item => (
-                    <div
-                      key={item.id}
-                      className="quick-access-item"
-                      onClick={() => handleNavigateToFolder(item.folder)}
-                    >
-                      <div className="item-icon">
-                        <FaFolder className="folder-icon" style={{ color: '#ffffff' }} />
-                        <FaStar className="star-badge" />
-                      </div>
-                      <div className="item-name">{item.folder.name}</div>
-                      <div className="item-company">{item.folder.company?.name}</div>
-                    </div>
-                  ))}
-                  {favoriteDocuments.map(item => (
-                    <div
-                      key={item.id}
-                      className="quick-access-item"
-                      onClick={() => {
-                        setSelectedDocument(item.document);
-                        setShowPreview(true);
-                      }}
-                    >
-                      <div className="item-icon">
-                        {item.document?.mimeType === 'application/pdf' && <FaFilePdf className="pdf-icon" style={{ color: '#ffffff' }} />}
-                        {item.document?.mimeType?.startsWith('image/') && <FaFileImage className="image-icon" style={{ color: '#ffffff' }} />}
-                        {(item.document?.mimeType?.includes('word') || item.document?.name?.endsWith('.docx')) && <FaFileWord className="word-icon" style={{ color: '#ffffff' }} />}
-                        {!(item.document?.mimeType?.includes('pdf') || item.document?.mimeType?.startsWith('image/') || item.document?.mimeType?.includes('word')) && item.document?.mimeType && <FaFile className="file-icon" style={{ color: '#ffffff' }} />}
-                        <FaStar className="star-badge" />
-                      </div>
-                      <div className="item-name">{item.document.name}</div>
-                      <div className="item-company">{item.document.company?.name}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                    );
+                  })}
+            </div>
           </div>
         )}
 
-        {!showQuickAccess && (pinnedFolders.length > 0 || favoriteFolders.length > 0 || favoriteDocuments.length > 0) && (
+        {!showQuickAccess && pinnedFolders.length > 0 && (
           <div className="quick-access-collapsed">
             <button onClick={() => setShowQuickAccess(true)}>
+              <FaThumbtack className="me-2" />
               Show Quick Access
             </button>
           </div>
         )}
+
+        {/* Navigation Tabs with Company Switcher */}
+        <div className="navigation-tabs">
+          <div className="tabs-left">
+            <button
+              className={`nav-tab ${activeTab === 'browse' ? 'active' : ''}`}
+              onClick={() => setActiveTab('browse')}
+            >
+              <FaFolder className="me-2" />
+              My Drive
+            </button>
+            <button
+              className={`nav-tab ${activeTab === 'starred' ? 'active' : ''}`}
+              onClick={() => setActiveTab('starred')}
+            >
+              <FaStar className="me-2" />
+              Starred
+            </button>
+          </div>
+          {accessibleCompanies.length > 0 && (
+            <div className="tabs-right">
+              {accessibleCompanies.length > 1 ? (
+                <Dropdown>
+                  <Dropdown.Toggle variant="outline-light" className="company-switcher-btn" id="company-dropdown">
+                    <FaBuilding className="me-2" />
+                    {accessibleCompanies.find(c => c.id === selectedCompanyId)?.name || 'Select Company'}
+                  </Dropdown.Toggle>
+                  <Dropdown.Menu align="end">
+                    {accessibleCompanies.map(company => (
+                      <Dropdown.Item
+                        key={company.id}
+                        active={company.id === selectedCompanyId}
+                        onClick={() => setSelectedCompanyId(company.id)}
+                      >
+                        {company.name}
+                      </Dropdown.Item>
+                    ))}
+                  </Dropdown.Menu>
+                </Dropdown>
+              ) : (
+                <div className="company-display">
+                  <FaBuilding className="me-2" />
+                  {accessibleCompanies[0]?.name}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Search and Controls */}
         <div className="search-section">
@@ -1057,7 +1481,250 @@ export default function DocumentsPage() {
 
         {/* Main Content Area */}
         <div className="documents-content">
-          {isLoading ? (
+          {activeTab === 'starred' ? (
+            // Starred Tab Content
+            <div className="starred-content">
+              {(favoriteFolders.length === 0 && favoriteDocuments.length === 0) ? (
+                <div className="empty-state">
+                  <FaStar size={64} className="empty-icon text-warning" />
+                  <h3>No starred items yet</h3>
+                  <p>Star files and folders to find them quickly here</p>
+                </div>
+              ) : (
+                <>
+                  {favoriteFolders.length > 0 && (
+                    <div className="starred-section mb-4">
+                      <h4 className="mb-3">Starred Folders</h4>
+                      <div className={viewMode === 'grid' ? 'items-grid' : 'items-list'}>
+                        {favoriteFolders.map(item => {
+                          const folder = { 
+                            ...item.folder, 
+                            isFavorite: true,
+                            hasPassword: item.folder.hasPassword || !!item.folder.password
+                          };
+                          return viewMode === 'grid' ? (
+                            <div 
+                              key={item.id} 
+                              className="grid-item"
+                            >
+                              <div 
+                                className="item-preview"
+                                onClick={() => handleNavigateToFolder(folder)}
+                              >
+                                <div className="item-icon-wrapper">
+                                <FaFolder className="folder-icon" size={64} style={{ color: '#ffffff' }} />
+                                {(folder.hasPassword || (folder as any).password) && (
+                                  <FaLock className="lock-badge" style={{ color: '#ffffff' }} />
+                                )}
+                              </div>
+                            </div>
+                              <div className="item-info">
+                                <div className="item-name-row">
+                                  <div className="item-name" title={folder.name}>{folder.name}</div>
+                                  <div className="item-actions-inline">
+                                    {renderStarButton(folder)}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="item-dropdown">
+                                <Dropdown onClick={(e) => e.stopPropagation()}>
+                                  <Dropdown.Toggle 
+                                    variant="link" 
+                                    className="three-dot-menu"
+                                    id={`dropdown-starred-folder-${item.id}`}
+                                  >
+                                    <FaEllipsisV />
+                                  </Dropdown.Toggle>
+                                  <Dropdown.Menu align="end">
+                                    <Dropdown.Item onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleToggleFavorite(folder, e);
+                                    }}>
+                                      <FaStar className="me-2 text-warning" /> Remove from Starred
+                                    </Dropdown.Item>
+                                    <Dropdown.Divider />
+                                    <Dropdown.Item onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleNavigateToFolder(folder);
+                                    }}>
+                                      <FaFolder className="me-2" /> Open Folder
+                                    </Dropdown.Item>
+                                  </Dropdown.Menu>
+                                </Dropdown>
+                              </div>
+                            </div>
+                          ) : (
+                            <div key={item.id} className="list-item">
+                              <div className="item-main" onClick={() => handleNavigateToFolder(folder)}>
+                                <FaFolder className="folder-icon" style={{ color: '#ffffff' }} />
+                                <div className="item-details">
+                                  <div className="item-name">{folder.name}</div>
+                                  <div className="item-meta">Folder</div>
+                                </div>
+                              </div>
+                              <div className="item-actions">
+                                {renderStarButton(folder)}
+                                <Dropdown onClick={(e) => e.stopPropagation()}>
+                                  <Dropdown.Toggle 
+                                    variant="link" 
+                                    className="three-dot-menu"
+                                    id={`dropdown-starred-folder-list-${item.id}`}
+                                  >
+                                    <FaEllipsisV />
+                                  </Dropdown.Toggle>
+                                  <Dropdown.Menu align="end">
+                                    <Dropdown.Item onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleToggleFavorite(folder, e);
+                                    }}>
+                                      <FaStar className="me-2 text-warning" /> Remove from Starred
+                                    </Dropdown.Item>
+                                    <Dropdown.Divider />
+                                    <Dropdown.Item onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleNavigateToFolder(folder);
+                                    }}>
+                                      <FaFolder className="me-2" /> Open Folder
+                                    </Dropdown.Item>
+                                  </Dropdown.Menu>
+                                </Dropdown>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {favoriteDocuments.length > 0 && (
+                    <div className="starred-section">
+                      <h4 className="mb-3">Starred Documents</h4>
+                      <div className={viewMode === 'grid' ? 'items-grid' : 'items-list'}>
+                        {favoriteDocuments.map(item => {
+                          const doc = { ...item.document, isFavorite: true };
+                          return viewMode === 'grid' ? (
+                            <div key={item.id} className="grid-item">
+                              <div 
+                                className="item-preview"
+                                onClick={() => {
+                                  // Starred files are always accessible
+                                  setSelectedDocument(doc);
+                                  setShowPreview(true);
+                                }}
+                              >
+                                <div className="item-icon-wrapper">
+                                  <div style={{ position: 'relative' }}>
+                                    {doc?.mimeType === 'application/pdf' && <FaFilePdf className="file-icon pdf-icon" size={64} style={{ color: '#ffffff' }} />}
+                                    {doc?.mimeType?.startsWith('image/') && <FaFileImage className="file-icon image-icon" size={64} style={{ color: '#ffffff' }} />}
+                                    {((doc?.mimeType?.includes('word') || doc?.name?.endsWith('.docx'))) && <FaFileWord className="file-icon word-icon" size={64} style={{ color: '#ffffff' }} />}
+                                    {!((doc?.mimeType?.includes('pdf') || doc?.mimeType?.startsWith('image/') || doc?.mimeType?.includes('word'))) && doc?.mimeType && <FaFile className="file-icon" size={64} style={{ color: '#ffffff' }} />}
+                                    {((doc as any).password || (doc as any).hasPassword) && (
+                                      <FaLock className="lock-badge" style={{ color: '#ffffff' }} />
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="item-info">
+                                <div className="item-name-row">
+                                  <div className="item-name" title={doc.name}>{doc.name}</div>
+                                  <div className="item-actions-inline">
+                                    {renderStarButton(doc)}
+                                  </div>
+                                </div>
+                                <div className="item-meta">
+                                  {formatFileSize(doc.size)}
+                                </div>
+                              </div>
+                              <div className="item-dropdown">
+                                <Dropdown onClick={(e) => e.stopPropagation()}>
+                                  <Dropdown.Toggle 
+                                    variant="link" 
+                                    className="three-dot-menu"
+                                    id={`dropdown-starred-doc-${item.id}`}
+                                  >
+                                    <FaEllipsisV />
+                                  </Dropdown.Toggle>
+                                  <Dropdown.Menu align="end">
+                                    <Dropdown.Item onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleToggleFavorite(doc, e);
+                                    }}>
+                                      <FaStar className="me-2 text-warning" /> Remove from Starred
+                                    </Dropdown.Item>
+                                    <Dropdown.Divider />
+                                    <Dropdown.Item onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedDocument(doc);
+                                      setShowPreview(true);
+                                    }}>
+                                      <FaEye className="me-2" /> Preview
+                                    </Dropdown.Item>
+                                    <Dropdown.Item onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDownload(doc);
+                                    }}>
+                                      <FaDownload className="me-2" /> Download
+                                    </Dropdown.Item>
+                                  </Dropdown.Menu>
+                                </Dropdown>
+                              </div>
+                            </div>
+                          ) : (
+                            <div key={item.id} className="list-item">
+                              <div className="item-main" onClick={() => {
+                                // Starred files are always accessible
+                                setSelectedDocument(doc);
+                                setShowPreview(true);
+                              }}>
+                                <FaFile className="file-icon" style={{ color: '#ffffff' }} />
+                                <div className="item-details">
+                                  <div className="item-name">{doc.name}</div>
+                                  <div className="item-meta">{doc.size ? formatFileSize(doc.size) : ''}</div>
+                                </div>
+                              </div>
+                              <div className="item-actions">
+                                {renderStarButton(doc)}
+                                <Dropdown onClick={(e) => e.stopPropagation()}>
+                                  <Dropdown.Toggle 
+                                    variant="link" 
+                                    className="three-dot-menu"
+                                    id={`dropdown-starred-doc-list-${item.id}`}
+                                  >
+                                    <FaEllipsisV />
+                                  </Dropdown.Toggle>
+                                  <Dropdown.Menu align="end">
+                                    <Dropdown.Item onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleToggleFavorite(doc, e);
+                                    }}>
+                                      <FaStar className="me-2 text-warning" /> Remove from Starred
+                                    </Dropdown.Item>
+                                    <Dropdown.Divider />
+                                    <Dropdown.Item onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedDocument(doc);
+                                      setShowPreview(true);
+                                    }}>
+                                      <FaEye className="me-2" /> Preview
+                                    </Dropdown.Item>
+                                    <Dropdown.Item onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDownload(doc);
+                                    }}>
+                                      <FaDownload className="me-2" /> Download
+                                    </Dropdown.Item>
+                                  </Dropdown.Menu>
+                                </Dropdown>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          ) : isLoading ? (
             <div className="loading-state">
               <div className="spinner-border text-primary" role="status">
                 <span className="visually-hidden">Loading...</span>
@@ -1098,7 +1765,7 @@ export default function DocumentsPage() {
                       className="item-preview"
                       onClick={() => {
                         if (isFolder) {
-                          handleNavigateToFolder(item as Folder);
+                          handleNavigateToFolder(item as Folder, true);
                         } else {
                           setSelectedDocument(item as Document);
                           setShowPreview(true);
@@ -1106,21 +1773,27 @@ export default function DocumentsPage() {
                       }}
                     >
                       <div className="item-icon-wrapper">
-                        {isFolder ? (
-                          <>
-                            <FaFolder className="folder-icon" size={64} style={{ color: '#ffffff' }} />
-                            {(item as Folder).isPinned && (
-                              <FaThumbtack className="pinned-badge" />
+                            {isFolder ? (
+                              <>
+                                <FaFolder className="folder-icon" size={64} style={{ color: '#ffffff' }} />
+                                {(item as Folder).isPinned && (
+                                  <FaThumbtack className="pinned-badge" style={{ color: '#ffffff' }} />
+                                )}
+                                {((item as any).password || (item as any).hasPassword) && (
+                                  <FaLock className="lock-badge" style={{ color: '#ffffff' }} />
+                                )}
+                              </>
+                            ) : (
+                              <div style={{ position: 'relative' }}>
+                                {(item as Document).mimeType === 'application/pdf' && <FaFilePdf className="file-icon pdf-icon" size={64} style={{ color: '#ffffff' }} />}
+                                {(item as Document).mimeType?.startsWith('image/') && <FaFileImage className="file-icon image-icon" size={64} style={{ color: '#ffffff' }} />}
+                                {((item as Document).mimeType?.includes('word') || (item as Document).name?.endsWith('.docx')) && <FaFileWord className="file-icon word-icon" size={64} style={{ color: '#ffffff' }} />}
+                                {!((item as Document).mimeType?.includes('pdf') || (item as Document).mimeType?.startsWith('image/') || (item as Document).mimeType?.includes('word')) && (item as Document).mimeType && <FaFile className="file-icon" size={64} style={{ color: '#ffffff' }} />}
+                                {((item as any).password || (item as any).hasPassword) && (
+                                  <FaLock className="lock-badge" style={{ color: '#ffffff' }} />
+                                )}
+                              </div>
                             )}
-                          </>
-                        ) : (
-                          <>
-                            {(item as Document).mimeType === 'application/pdf' && <FaFilePdf className="file-icon pdf-icon" size={64} style={{ color: '#ffffff' }} />}
-                            {(item as Document).mimeType?.startsWith('image/') && <FaFileImage className="file-icon image-icon" size={64} style={{ color: '#ffffff' }} />}
-                            {((item as Document).mimeType?.includes('word') || (item as Document).name?.endsWith('.docx')) && <FaFileWord className="file-icon word-icon" size={64} style={{ color: '#ffffff' }} />}
-                            {!((item as Document).mimeType?.includes('pdf') || (item as Document).mimeType?.startsWith('image/') || (item as Document).mimeType?.includes('word')) && (item as Document).mimeType && <FaFile className="file-icon" size={64} style={{ color: '#ffffff' }} />}
-                          </>
-                        )}
                       </div>
                     </div>
                     <div className="item-info">
@@ -1151,13 +1824,97 @@ export default function DocumentsPage() {
                           <Dropdown.Item 
                             onClick={(e) => {
                               e.stopPropagation();
+                              handleToggleFavorite(item, e);
+                            }}
+                          >
+                            {item.isFavorite ? (
+                              <><FaStar className="me-2 text-warning" /> Remove from Starred</>
+                            ) : (
+                              <><FaRegStar className="me-2" /> Add to Starred</>
+                            )}
+                          </Dropdown.Item>
+                          {isFolder && (
+                            <Dropdown.Item 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleTogglePin(item as Folder, e);
+                              }}
+                            >
+                              {(item as Folder).isPinned ? (
+                                <><FaThumbtack className="me-2 text-info" /> Unpin from Quick Access</>
+                              ) : (
+                                <><FaThumbtack className="me-2" /> Pin to Quick Access</>
+                              )}
+                            </Dropdown.Item>
+                          )}
+                          <Dropdown.Divider />
+                          {isFolder && isManager && (
+                            <Dropdown.Item 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedFolderForPassword(item as Folder);
+                                setShowPasswordModal(true);
+                              }}
+                            >
+                              <FaLock className="me-2" /> {(item as any).password ? 'Change Password' : 'Set Password'}
+                            </Dropdown.Item>
+                          )}
+                          {isFolder && isAdmin && (item as any).password && (
+                            <Dropdown.Item 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm('Remove password protection from this folder?')) {
+                                  handleRemovePassword(item as Folder);
+                                }
+                              }}
+                              className="text-warning"
+                            >
+                              <FaLock className="me-2" /> Remove Password
+                            </Dropdown.Item>
+                          )}
+                          {(isFolder && (isManager || (isAdmin && (item as any).password))) && <Dropdown.Divider />}
+                          {!isFolder && isManager && (
+                            <Dropdown.Item 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedDocForPassword(item as Document);
+                                setShowDocPasswordModal(true);
+                              }}
+                            >
+                              <FaLock className="me-2" /> {(item as any).password ? 'Change Password' : 'Set Password'}
+                            </Dropdown.Item>
+                          )}
+                          {!isFolder && isAdmin && (item as any).password && (
+                            <Dropdown.Item 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm('Remove password protection from this document?')) {
+                                  handleRemoveDocPassword(item as Document);
+                                }
+                              }}
+                              className="text-warning"
+                            >
+                              <FaLock className="me-2" /> Remove Password
+                            </Dropdown.Item>
+                          )}
+                          {(!isFolder && (isManager || (isAdmin && (item as any).password))) && <Dropdown.Divider />}
+                          <Dropdown.Item 
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setSelectedInfo(item);
                               setShowInfoModal(true);
                             }}
                           >
                             <FaInfo className="me-2" /> Get Info
                           </Dropdown.Item>
-                          <Dropdown.Divider />
+                          <Dropdown.Item 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenActivityModal(item, isFolder ? 'folder' : 'document');
+                            }}
+                          >
+                            <FaClipboardList className="me-2" /> Activity Log
+                          </Dropdown.Item>
                           {canRenameDocuments && (
                             <Dropdown.Item 
                               onClick={(e) => {
@@ -1175,7 +1932,7 @@ export default function DocumentsPage() {
                               setShowShareModal(true);
                             }}
                           >
-                            <FaShare className="me-2" /> Share
+                            <FaShare className="me-2" /> Share Link
                           </Dropdown.Item>
                           <Dropdown.Item 
                             onClick={(e) => {
@@ -1231,7 +1988,7 @@ export default function DocumentsPage() {
                       className="item-main"
                       onClick={() => {
                         if (isFolder) {
-                          handleNavigateToFolder(item as Folder);
+                          handleNavigateToFolder(item as Folder, true);
                         } else {
                           setSelectedDocument(item as Document);
                           setShowPreview(true);
@@ -1289,13 +2046,97 @@ export default function DocumentsPage() {
                           <Dropdown.Item 
                             onClick={(e) => {
                               e.stopPropagation();
+                              handleToggleFavorite(item, e);
+                            }}
+                          >
+                            {item.isFavorite ? (
+                              <><FaStar className="me-2 text-warning" /> Remove from Starred</>
+                            ) : (
+                              <><FaRegStar className="me-2" /> Add to Starred</>
+                            )}
+                          </Dropdown.Item>
+                          {isFolder && (
+                            <Dropdown.Item 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleTogglePin(item as Folder, e);
+                              }}
+                            >
+                              {(item as Folder).isPinned ? (
+                                <><FaThumbtack className="me-2 text-info" /> Unpin from Quick Access</>
+                              ) : (
+                                <><FaThumbtack className="me-2" /> Pin to Quick Access</>
+                              )}
+                            </Dropdown.Item>
+                          )}
+                          <Dropdown.Divider />
+                          {isFolder && isManager && (
+                            <Dropdown.Item 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedFolderForPassword(item as Folder);
+                                setShowPasswordModal(true);
+                              }}
+                            >
+                              <FaLock className="me-2" /> {(item as any).password ? 'Change Password' : 'Set Password'}
+                            </Dropdown.Item>
+                          )}
+                          {isFolder && isAdmin && (item as any).password && (
+                            <Dropdown.Item 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm('Remove password protection from this folder?')) {
+                                  handleRemovePassword(item as Folder);
+                                }
+                              }}
+                              className="text-warning"
+                            >
+                              <FaLock className="me-2" /> Remove Password
+                            </Dropdown.Item>
+                          )}
+                          {(isFolder && (isManager || (isAdmin && (item as any).password))) && <Dropdown.Divider />}
+                          {!isFolder && isManager && (
+                            <Dropdown.Item 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedDocForPassword(item as Document);
+                                setShowDocPasswordModal(true);
+                              }}
+                            >
+                              <FaLock className="me-2" /> {(item as any).password ? 'Change Password' : 'Set Password'}
+                            </Dropdown.Item>
+                          )}
+                          {!isFolder && isAdmin && (item as any).password && (
+                            <Dropdown.Item 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm('Remove password protection from this document?')) {
+                                  handleRemoveDocPassword(item as Document);
+                                }
+                              }}
+                              className="text-warning"
+                            >
+                              <FaLock className="me-2" /> Remove Password
+                            </Dropdown.Item>
+                          )}
+                          {(!isFolder && (isManager || (isAdmin && (item as any).password))) && <Dropdown.Divider />}
+                          <Dropdown.Item 
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setSelectedInfo(item);
                               setShowInfoModal(true);
                             }}
                           >
                             <FaInfo className="me-2" /> Get Info
                           </Dropdown.Item>
-                          <Dropdown.Divider />
+                          <Dropdown.Item 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenActivityModal(item, isFolder ? 'folder' : 'document');
+                            }}
+                          >
+                            <FaClipboardList className="me-2" /> Activity Log
+                          </Dropdown.Item>
                           {canRenameDocuments && (
                             <Dropdown.Item 
                               onClick={(e) => {
@@ -1313,7 +2154,7 @@ export default function DocumentsPage() {
                               setShowShareModal(true);
                             }}
                           >
-                            <FaShare className="me-2" /> Share
+                            <FaShare className="me-2" /> Share Link
                           </Dropdown.Item>
                           <Dropdown.Item 
                             onClick={(e) => {
@@ -1462,38 +2303,54 @@ export default function DocumentsPage() {
               <div className="info-content">
                 <div className="info-row">
                   <strong>Name:</strong>
-                  <span>{selectedInfo.name}</span>
+                  <span>{selectedInfo.name || 'N/A'}</span>
                 </div>
                 <div className="info-row">
                   <strong>Type:</strong>
-                  <span>{'children' in selectedInfo ? 'Folder' : (selectedInfo as Document).mimeType}</span>
+                  <span>{'children' in selectedInfo ? 'Folder' : ((selectedInfo as Document).mimeType || 'Unknown')}</span>
                 </div>
-                {!('children' in selectedInfo) && (
+                {!('children' in selectedInfo) && (selectedInfo as Document).size && (
+                  <div className="info-row">
+                    <strong>Size:</strong>
+                    <span>{formatFileSize((selectedInfo as Document).size)}</span>
+                  </div>
+                )}
+                {!('children' in selectedInfo) && (selectedInfo as Document).path && (
+                  <div className="info-row">
+                    <strong>Path:</strong>
+                    <span>{(selectedInfo as Document).path}</span>
+                  </div>
+                )}
+                {selectedInfo.createdAt && (
+                  <div className="info-row">
+                    <strong>Created:</strong>
+                    <span>{new Date(selectedInfo.createdAt).toLocaleString()}</span>
+                  </div>
+                )}
+                {selectedInfo.updatedAt && (
+                  <div className="info-row">
+                    <strong>Modified:</strong>
+                    <span>{new Date(selectedInfo.updatedAt).toLocaleString()}</span>
+                  </div>
+                )}
+                {'children' in selectedInfo && (
                   <>
                     <div className="info-row">
-                      <strong>Size:</strong>
-                      <span>{formatFileSize((selectedInfo as Document).size)}</span>
+                      <strong>Items:</strong>
+                      <span>
+                        {((selectedInfo as Folder).documents || []).length} document(s), {((selectedInfo as Folder).children || []).length} folder(s)
+                      </span>
                     </div>
                     <div className="info-row">
-                      <strong>Path:</strong>
-                      <span>{(selectedInfo as Document).path}</span>
+                      <strong>Protected:</strong>
+                      <span>{(selectedInfo as any).password ? 'Yes' : 'No'}</span>
                     </div>
                   </>
                 )}
-                <div className="info-row">
-                  <strong>Created:</strong>
-                  <span>{new Date(selectedInfo.createdAt).toLocaleString()}</span>
-                </div>
-                <div className="info-row">
-                  <strong>Modified:</strong>
-                  <span>{new Date(selectedInfo.updatedAt).toLocaleString()}</span>
-                </div>
-                {'children' in selectedInfo && (
+                {selectedInfo.id && (
                   <div className="info-row">
-                    <strong>Items:</strong>
-                    <span>
-                      {(selectedInfo as Folder).documents.length} document(s), {(selectedInfo as Folder).children.length} folder(s)
-                    </span>
+                    <strong>ID:</strong>
+                    <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{selectedInfo.id}</span>
                   </div>
                 )}
               </div>
@@ -1535,6 +2392,380 @@ export default function DocumentsPage() {
               disabled={isDeleting === itemToDelete?.id}
             >
               {isDeleting === itemToDelete?.id ? 'Deleting...' : 'Delete'}
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Password Protection Modal */}
+        <Modal 
+          show={showPasswordModal} 
+          onHide={() => {
+            setShowPasswordModal(false);
+            setSelectedFolderForPassword(null);
+            setFolderPassword('');
+          }}
+          centered
+          className="password-modal"
+        >
+          <Modal.Header closeButton className="border-0">
+            <Modal.Title className="d-flex align-items-center">
+              <div className="modal-icon-wrapper">
+                <FaLock />
+              </div>
+              <div>
+                <div className="modal-title-text">
+                  {(selectedFolderForPassword as any)?.password ? 'Change Folder Password' : 'Set Folder Password'}
+                </div>
+                <div className="modal-subtitle">
+                  {selectedFolderForPassword?.name}
+                </div>
+              </div>
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <div className="password-modal-content">
+              <p className="modal-description">
+                <FaLock className="me-2" />
+                Only users with the password will be able to browse the contents of this folder.
+              </p>
+              <div className="alert alert-warning mb-3" style={{
+                background: 'rgba(255, 193, 7, 0.15)',
+                border: '1px solid rgba(255, 193, 7, 0.3)',
+                borderRadius: '8px',
+                padding: '0.75rem',
+                fontSize: '0.85rem',
+                color: 'rgba(255, 255, 255, 0.9)'
+              }}>
+                <strong>⚠️ Important:</strong> Starred files from this folder can be opened directly by users who starred them, even without the folder password. The password only protects browsing the folder contents.
+              </div>
+              <Form.Group className="mb-0">
+                <Form.Label>Password</Form.Label>
+                <Form.Control
+                  type="password"
+                  placeholder="Enter a secure password"
+                  value={folderPassword}
+                  onChange={(e) => setFolderPassword(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSetPassword();
+                    }
+                  }}
+                  autoFocus
+                  className="password-input"
+                />
+              </Form.Group>
+            </div>
+          </Modal.Body>
+          <Modal.Footer className="border-0">
+            <Button 
+              variant="secondary" 
+              onClick={() => {
+                setShowPasswordModal(false);
+                setSelectedFolderForPassword(null);
+                setFolderPassword('');
+              }}
+              className="cancel-btn"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="primary" 
+              onClick={handleSetPassword}
+              className="submit-btn"
+            >
+              <FaLock className="me-2" />
+              {(selectedFolderForPassword as any)?.password ? 'Change Password' : 'Set Password'}
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Folder Password Verify Modal */}
+        <Modal 
+          show={showPasswordVerifyModal} 
+          onHide={() => {
+            setShowPasswordVerifyModal(false);
+            setFolderToVerify(null);
+            setVerifyPassword('');
+          }}
+          centered
+          className="password-modal"
+        >
+          <Modal.Header closeButton className="border-0">
+            <Modal.Title className="d-flex align-items-center">
+              <div className="modal-icon-wrapper locked">
+                <FaLock />
+              </div>
+              <div>
+                <div className="modal-title-text">
+                  Password Protected Folder
+                </div>
+                <div className="modal-subtitle">
+                  {folderToVerify?.name}
+                </div>
+              </div>
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <div className="password-modal-content">
+              <p className="modal-description">
+                <FaLock className="me-2 text-warning" />
+                This folder is password protected. Enter the password to access its contents.
+              </p>
+              <Form.Group className="mb-0">
+                <Form.Label>Password</Form.Label>
+                <Form.Control
+                  type="password"
+                  placeholder="Enter folder password"
+                  value={verifyPassword}
+                  onChange={(e) => setVerifyPassword(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleVerifyPassword();
+                    }
+                  }}
+                  autoFocus
+                  className="password-input"
+                />
+              </Form.Group>
+            </div>
+          </Modal.Body>
+          <Modal.Footer className="border-0">
+            <Button 
+              variant="secondary" 
+              onClick={() => {
+                setShowPasswordVerifyModal(false);
+                setFolderToVerify(null);
+                setVerifyPassword('');
+              }}
+              className="cancel-btn"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="primary" 
+              onClick={handleVerifyPassword}
+              className="submit-btn"
+            >
+              <FaLock className="me-2" />
+              Unlock Folder
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Document Password Set Modal */}
+        <Modal 
+          show={showDocPasswordModal} 
+          onHide={() => {
+            setShowDocPasswordModal(false);
+            setSelectedDocForPassword(null);
+            setDocPassword('');
+          }}
+          centered
+          className="password-modal"
+        >
+          <Modal.Header closeButton className="border-0">
+            <Modal.Title className="d-flex align-items-center">
+              <div className="modal-icon-wrapper">
+                <FaLock />
+              </div>
+              <div>
+                <div className="modal-title-text">
+                  {(selectedDocForPassword as any)?.password ? 'Change Document Password' : 'Set Document Password'}
+                </div>
+                <div className="modal-subtitle">
+                  {selectedDocForPassword?.name}
+                </div>
+              </div>
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <div className="password-modal-content">
+              <p className="modal-description">
+                <FaLock className="me-2" />
+                Only users with the password will be able to view or download this document.
+              </p>
+              <Form.Group className="mb-0">
+                <Form.Label>Password</Form.Label>
+                <Form.Control
+                  type="password"
+                  placeholder="Enter a secure password"
+                  value={docPassword}
+                  onChange={(e) => setDocPassword(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSetDocPassword();
+                    }
+                  }}
+                  autoFocus
+                  className="password-input"
+                />
+              </Form.Group>
+            </div>
+          </Modal.Body>
+          <Modal.Footer className="border-0">
+            <Button 
+              variant="secondary" 
+              onClick={() => {
+                setShowDocPasswordModal(false);
+                setSelectedDocForPassword(null);
+                setDocPassword('');
+              }}
+              className="cancel-btn"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="primary" 
+              onClick={handleSetDocPassword}
+              className="submit-btn"
+            >
+              <FaLock className="me-2" />
+              {(selectedDocForPassword as any)?.password ? 'Change Password' : 'Set Password'}
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Document Password Verify Modal */}
+        <Modal 
+          show={showDocPasswordVerifyModal} 
+          onHide={() => {
+            setShowDocPasswordVerifyModal(false);
+            setDocToVerify(null);
+            setVerifyDocPassword('');
+          }}
+          centered
+          className="password-modal"
+        >
+          <Modal.Header closeButton className="border-0">
+            <Modal.Title className="d-flex align-items-center">
+              <div className="modal-icon-wrapper locked">
+                <FaLock />
+              </div>
+              <div>
+                <div className="modal-title-text">
+                  Password Protected Document
+                </div>
+                <div className="modal-subtitle">
+                  {docToVerify?.name}
+                </div>
+              </div>
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <div className="password-modal-content">
+              <p className="modal-description">
+                <FaLock className="me-2 text-warning" />
+                This document is password protected. Enter the password to view or download it.
+              </p>
+              <Form.Group className="mb-0">
+                <Form.Label>Password</Form.Label>
+                <Form.Control
+                  type="password"
+                  placeholder="Enter document password"
+                  value={verifyDocPassword}
+                  onChange={(e) => setVerifyDocPassword(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleVerifyDocPassword();
+                    }
+                  }}
+                  autoFocus
+                  className="password-input"
+                />
+              </Form.Group>
+            </div>
+          </Modal.Body>
+          <Modal.Footer className="border-0">
+            <Button 
+              variant="secondary" 
+              onClick={() => {
+                setShowDocPasswordVerifyModal(false);
+                setDocToVerify(null);
+                setVerifyDocPassword('');
+              }}
+              className="cancel-btn"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="primary" 
+              onClick={handleVerifyDocPassword}
+              className="submit-btn"
+            >
+              <FaLock className="me-2" />
+              Unlock Document
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Activity Log Modal */}
+        <Modal
+          show={showActivityModal}
+          onHide={() => setShowActivityModal(false)}
+          size="xl"
+          centered
+          className="activity-modal"
+        >
+          <Modal.Header closeButton className="border-0">
+            <Modal.Title className="d-flex align-items-center">
+              <div className="modal-icon-wrapper">
+                <FaClipboardList />
+              </div>
+              <div>
+                <div className="modal-title-text">Activity Log</div>
+                <div className="modal-subtitle">{activityItemName}</div>
+              </div>
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <div className="activity-log-content">
+              {activityLogs.length === 0 ? (
+                <div className="no-activities">
+                  <FaClipboardList size={48} />
+                  <p>No activities found</p>
+                </div>
+              ) : (
+                <div className="activities-list">
+                  {activityLogs.map((activity) => (
+                    <div key={activity.id} className="activity-item">
+                      <div className="activity-icon">
+                        {activity.type === 'VIEW' && <FaEye />}
+                        {activity.type === 'DOWNLOAD' && <FaDownload />}
+                        {activity.type === 'CREATE' && <FaUpload />}
+                        {activity.type === 'UPDATE' && <FaEdit />}
+                        {activity.type === 'DELETE' && <FaTrash />}
+                      </div>
+                      <div className="activity-details">
+                        <div className="activity-description">{activity.description}</div>
+                        <div className="activity-meta">
+                          <span className="activity-user">{activity.employee?.name || 'Unknown User'}</span>
+                          <span className="activity-separator">•</span>
+                          <span className="activity-time">
+                            {new Date(activity.createdAt).toLocaleString()}
+                          </span>
+                          {activity.document && (
+                            <>
+                              <span className="activity-separator">•</span>
+                              <span className="activity-document">{activity.document.name}</span>
+                            </>
+                          )}
+                          {activity.folder && (
+                            <>
+                              <span className="activity-separator">•</span>
+                              <span className="activity-folder">{activity.folder.name}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Modal.Body>
+          <Modal.Footer className="border-0">
+            <Button variant="secondary" onClick={() => setShowActivityModal(false)}>
+              Close
             </Button>
           </Modal.Footer>
         </Modal>
@@ -1593,6 +2824,228 @@ export default function DocumentsPage() {
             display: flex;
             align-items: center;
             gap: 1rem;
+          }
+
+          .navigation-tabs {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            padding: 0 2rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+          }
+
+          .tabs-left {
+            display: flex;
+            gap: 0;
+          }
+
+          .tabs-right {
+            display: flex;
+            align-items: center;
+          }
+
+          .company-switcher-btn {
+            background: rgba(102, 126, 234, 0.15) !important;
+            border: 1px solid rgba(102, 126, 234, 0.3) !important;
+            color: rgba(255, 255, 255, 0.9) !important;
+            padding: 0.5rem 1rem !important;
+            border-radius: 8px !important;
+            display: flex !important;
+            align-items: center !important;
+            font-size: 0.9rem !important;
+            transition: all 0.2s ease !important;
+          }
+
+          .company-switcher-btn:hover {
+            background: rgba(102, 126, 234, 0.25) !important;
+            border-color: rgba(102, 126, 234, 0.5) !important;
+            color: #ffffff !important;
+          }
+
+          .company-display {
+            background: rgba(102, 126, 234, 0.15);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            color: rgba(255, 255, 255, 0.9);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+          }
+
+          .activity-log-btn {
+            background: rgba(40, 167, 69, 0.15) !important;
+            border: 1px solid rgba(40, 167, 69, 0.3) !important;
+            color: rgba(255, 255, 255, 0.9) !important;
+            padding: 0.5rem 1rem !important;
+            border-radius: 8px !important;
+            display: flex !important;
+            align-items: center !important;
+            font-size: 0.9rem !important;
+            transition: all 0.2s ease !important;
+            margin-right: 0.75rem !important;
+          }
+
+          .activity-log-btn:hover {
+            background: rgba(40, 167, 69, 0.25) !important;
+            border-color: rgba(40, 167, 69, 0.5) !important;
+            color: #ffffff !important;
+          }
+
+          /* Activity Modal Styles */
+          :global(.activity-modal .modal-content) {
+            background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            color: #ffffff;
+          }
+
+          :global(.activity-modal .modal-header) {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+          }
+
+          :global(.activity-modal .modal-body) {
+            padding: 1.5rem;
+            max-height: 70vh;
+            overflow-y: auto;
+          }
+
+          :global(.activity-modal .modal-footer) {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 1.5rem;
+          }
+
+          .activity-log-content {
+            min-height: 200px;
+          }
+
+          .no-activities {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            color: rgba(255, 255, 255, 0.5);
+          }
+
+          .no-activities svg {
+            margin-bottom: 1rem;
+            opacity: 0.5;
+          }
+
+          .activities-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+          }
+
+          .activity-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            transition: all 0.2s ease;
+          }
+
+          .activity-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(102, 126, 234, 0.3);
+            transform: translateX(4px);
+          }
+
+          .activity-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+            border-radius: 50%;
+            margin-right: 1rem;
+            flex-shrink: 0;
+          }
+
+          .activity-icon svg {
+            color: #667eea;
+          }
+
+          .activity-details {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .activity-description {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+          }
+
+          .activity-meta {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6);
+          }
+
+          .activity-separator {
+            color: rgba(255, 255, 255, 0.3);
+          }
+
+          .activity-user {
+            color: #667eea;
+            font-weight: 500;
+          }
+
+          .activity-document,
+          .activity-folder {
+            color: rgba(255, 255, 255, 0.8);
+            font-style: italic;
+          }
+
+          .nav-tab {
+            background: none;
+            border: none;
+            padding: 1rem 1.5rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 500;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: all 0.2s ease;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+          }
+
+          .nav-tab:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.05);
+          }
+
+          .nav-tab.active {
+            color: #ffffff;
+            border-bottom-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+          }
+
+          .starred-content {
+            padding: 2rem;
+          }
+
+          .starred-section h4 {
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 600;
+            margin-bottom: 1rem;
           }
 
           .quick-access-section {
@@ -1702,6 +3155,27 @@ export default function DocumentsPage() {
             color: #ffc107;
           }
 
+          .quick-access-item .pin-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            font-size: 0.9rem;
+            color: #17a2b8;
+            background: white;
+            border-radius: 50%;
+            padding: 0.15rem;
+          }
+
+          .quick-access-item.pinned-item {
+            border: 2px solid rgba(23, 162, 184, 0.3);
+            background: rgba(23, 162, 184, 0.08);
+          }
+
+          .quick-access-item.pinned-item:hover {
+            border-color: rgba(23, 162, 184, 0.5);
+            background: rgba(23, 162, 184, 0.15);
+          }
+
           .quick-access-item .item-name {
             font-weight: 500;
             color: #ffffff;
@@ -1745,14 +3219,13 @@ export default function DocumentsPage() {
             background: rgba(255, 255, 255, 0.02);
             border-bottom: none;
             flex-shrink: 0;
+            width: 100%;
           }
           
           .search-controls {
             display: flex;
             align-items: center;
             gap: 1rem;
-            max-width: 1400px;
-            margin: 0 auto;
           }
           
           .view-controls {
@@ -1833,8 +3306,6 @@ export default function DocumentsPage() {
             background: rgba(255, 255, 255, 0.02);
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             flex-shrink: 0;
-            max-width: 1400px;
-            margin: 0 auto;
             width: 100%;
           }
 
@@ -1886,6 +3357,7 @@ export default function DocumentsPage() {
           .documents-content {
             flex: 1;
             overflow-y: auto;
+            overflow-x: visible;
             padding: 2rem;
             max-width: 100%;
           }
@@ -1911,13 +3383,14 @@ export default function DocumentsPage() {
             gap: 1.5rem;
             max-width: 1400px;
             margin: 0 auto;
+            overflow: visible;
           }
 
           .grid-item {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
-            overflow: hidden;
+            overflow: visible;
             cursor: pointer;
             transition: all 0.2s ease;
             position: relative;
@@ -2007,10 +3480,40 @@ export default function DocumentsPage() {
             top: -8px;
             right: -8px;
             font-size: 1rem;
-            color: #667eea;
-            background: white;
+            color: #ffffff !important;
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
             border-radius: 50%;
-            padding: 0.2rem;
+            padding: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+          }
+
+          .lock-badge {
+            position: absolute;
+            top: -8px;
+            left: -8px;
+            background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+            padding: 6px;
+            border-radius: 50%;
+            font-size: 0.75rem;
+            color: #ffffff !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            z-index: 1;
+          }
+
+          .lock-badge-small {
+            position: absolute;
+            bottom: -4px;
+            left: -4px;
+            background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+            padding: 4px;
+            border-radius: 50%;
+            font-size: 0.5rem;
+            color: #ffffff !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+          }
+
+          .pin-badge {
+            color: #ffffff !important;
           }
 
           .item-info {
@@ -2039,6 +3542,13 @@ export default function DocumentsPage() {
             display: flex;
             gap: 0.25rem;
             flex-shrink: 0;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+          }
+
+          .grid-item:hover .item-actions-inline,
+          .list-item:hover .item-actions-inline {
+            opacity: 1;
           }
 
           .star-button, .pin-button {
@@ -2047,6 +3557,9 @@ export default function DocumentsPage() {
             color: rgba(255, 255, 255, 0.5);
             cursor: pointer;
             padding: 0.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 0.9rem;
             transition: all 0.2s ease;
           }
@@ -2054,6 +3567,21 @@ export default function DocumentsPage() {
           .star-button:hover, .pin-button:hover {
             color: #ffffff;
             transform: scale(1.1);
+          }
+
+          .star-button .text-warning {
+            color: #ffc107 !important;
+            opacity: 1 !important;
+          }
+
+          .item-actions-inline .text-warning {
+            opacity: 1 !important;
+          }
+
+          .grid-item:hover .item-actions-inline,
+          .list-item:hover .item-actions-inline,
+          .item-actions-inline:has(.text-warning) {
+            opacity: 1;
           }
 
           .pin-button .pinned {
@@ -2066,12 +3594,37 @@ export default function DocumentsPage() {
             margin-top: 0.25rem;
           }
 
-          .item-dropdown {
-            position: absolute;
-            top: 0.5rem;
-            right: 0.5rem;
-            z-index: 10;
-          }
+              .item-dropdown {
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                z-index: 100;
+              }
+
+              .item-dropdown :global(.dropdown-toggle) {
+                background: none !important;
+                border: none !important;
+                padding: 0.5rem !important;
+                color: rgba(255, 255, 255, 0.7) !important;
+              }
+
+              .item-dropdown :global(.dropdown-toggle:hover) {
+                color: #ffffff !important;
+                background: rgba(255, 255, 255, 0.1) !important;
+                border-radius: 4px !important;
+              }
+
+              .item-dropdown :global(.dropdown-toggle::after) {
+                display: none !important;
+              }
+
+              .item-dropdown :global(.dropdown-menu) {
+                position: fixed !important;
+                transform: none !important;
+                will-change: transform !important;
+                z-index: 9999 !important;
+                margin: 0 !important;
+              }
 
           .three-dot-menu {
             padding: 0.25rem 0.5rem;
@@ -2083,9 +3636,60 @@ export default function DocumentsPage() {
             color: #ffffff;
           }
 
+          :global(.dropdown-menu) {
+            min-width: 220px !important;
+            max-height: 500px !important;
+            overflow-y: auto !important;
+            background-color: rgba(30, 30, 40, 0.98) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            border-radius: 12px !important;
+            padding: 0.5rem !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+          }
+
+          :global(.dropdown-item) {
+            color: rgba(255, 255, 255, 0.9) !important;
+            padding: 0.65rem 1rem !important;
+            border-radius: 8px !important;
+            margin-bottom: 0.25rem !important;
+            font-size: 0.95rem !important;
+            display: flex !important;
+            align-items: center !important;
+            transition: all 0.2s ease !important;
+          }
+
+          :global(.dropdown-item:hover) {
+            background-color: rgba(102, 126, 234, 0.2) !important;
+            color: #ffffff !important;
+          }
+
+          :global(.dropdown-item.text-danger) {
+            color: #ff6b6b !important;
+          }
+
+          :global(.dropdown-item.text-danger:hover) {
+            background-color: rgba(255, 107, 107, 0.2) !important;
+            color: #ff6b6b !important;
+          }
+
+          :global(.dropdown-item.text-warning) {
+            color: #ffc107 !important;
+          }
+
+          :global(.dropdown-item.text-warning:hover) {
+            background-color: rgba(255, 193, 7, 0.2) !important;
+            color: #ffc107 !important;
+          }
+
+          :global(.dropdown-divider) {
+            border-color: rgba(255, 255, 255, 0.1) !important;
+            margin: 0.5rem 0 !important;
+          }
+
           .items-list {
             max-width: 1200px;
             margin: 0 auto;
+            overflow: visible;
           }
 
           .list-item {
@@ -2099,6 +3703,8 @@ export default function DocumentsPage() {
             justify-content: space-between;
             cursor: pointer;
             transition: all 0.2s ease;
+            position: relative;
+            overflow: visible;
           }
 
           .list-item:hover {
@@ -2140,6 +3746,13 @@ export default function DocumentsPage() {
           .item-details {
             flex: 1;
             min-width: 0;
+          }
+
+          .item-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-shrink: 0;
           }
 
           .item-name-container {
@@ -2214,6 +3827,156 @@ export default function DocumentsPage() {
             .mobile-doc-header {
               display: none;
             }
+          }
+
+          /* Password Modal Styles */
+          :global(.password-modal .modal-content) {
+            background: #1e1e28 !important;
+            border: 1px solid rgba(102, 126, 234, 0.3) !important;
+            border-radius: 16px !important;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5) !important;
+          }
+
+          :global(.password-modal .modal-header) {
+            padding: 2rem 2rem 1rem !important;
+            background: transparent !important;
+            border-bottom: none !important;
+          }
+
+          :global(.password-modal .modal-title) {
+            gap: 1rem !important;
+            width: 100% !important;
+            color: #ffffff !important;
+          }
+
+          :global(.password-modal .modal-icon-wrapper) {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white !important;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+          }
+
+          :global(.password-modal .modal-icon-wrapper.locked) {
+            background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%) !important;
+          }
+
+          :global(.password-modal .modal-title-text) {
+            font-size: 1.25rem !important;
+            font-weight: 600 !important;
+            color: #ffffff !important;
+            margin-bottom: 0.25rem !important;
+          }
+
+          :global(.password-modal .modal-subtitle) {
+            font-size: 0.875rem !important;
+            color: rgba(255, 255, 255, 0.7) !important;
+            font-weight: 400 !important;
+          }
+
+          :global(.password-modal .modal-body) {
+            padding: 1rem 2rem 2rem !important;
+            background: transparent !important;
+          }
+
+          :global(.password-modal .password-modal-content) {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border-radius: 12px !important;
+            padding: 1.5rem !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          }
+
+          :global(.password-modal .modal-description) {
+            color: rgba(255, 255, 255, 0.9) !important;
+            margin-bottom: 1.5rem !important;
+            display: flex !important;
+            align-items: center !important;
+            font-size: 0.9rem !important;
+          }
+
+          :global(.password-modal .form-label) {
+            color: rgba(255, 255, 255, 0.95) !important;
+            font-weight: 500 !important;
+            margin-bottom: 0.5rem !important;
+            font-size: 0.9rem !important;
+            display: block !important;
+          }
+
+          :global(.password-modal .password-input) {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            color: #ffffff !important;
+            padding: 0.75rem 1rem !important;
+            border-radius: 8px !important;
+            font-size: 1rem !important;
+            transition: all 0.2s ease !important;
+            width: 100% !important;
+          }
+
+          :global(.password-modal .password-input:focus) {
+            background: rgba(255, 255, 255, 0.15) !important;
+            border-color: #667eea !important;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3) !important;
+            color: #ffffff !important;
+            outline: none !important;
+          }
+
+          :global(.password-modal .password-input::placeholder) {
+            color: rgba(255, 255, 255, 0.5) !important;
+          }
+
+          :global(.password-modal .modal-footer) {
+            padding: 1rem 2rem 2rem !important;
+            background: transparent !important;
+            border-top: none !important;
+          }
+
+          :global(.password-modal .cancel-btn) {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            color: rgba(255, 255, 255, 0.95) !important;
+            padding: 0.65rem 1.5rem !important;
+            border-radius: 8px !important;
+            font-weight: 500 !important;
+            transition: all 0.2s ease !important;
+          }
+
+          :global(.password-modal .cancel-btn:hover) {
+            background: rgba(255, 255, 255, 0.2) !important;
+            border-color: rgba(255, 255, 255, 0.3) !important;
+            color: #ffffff !important;
+          }
+
+          :global(.password-modal .submit-btn) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border: none !important;
+            color: #ffffff !important;
+            padding: 0.65rem 1.5rem !important;
+            border-radius: 8px !important;
+            font-weight: 500 !important;
+            transition: all 0.2s ease !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+          }
+
+          :global(.password-modal .submit-btn:hover) {
+            transform: translateY(-1px) !important;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4) !important;
+          }
+
+          :global(.password-modal .btn-close) {
+            filter: brightness(0) invert(1) !important;
+            opacity: 0.7 !important;
+          }
+
+          :global(.password-modal .btn-close:hover) {
+            opacity: 1 !important;
           }
         `}</style>
       </div>

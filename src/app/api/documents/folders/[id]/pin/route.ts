@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -14,7 +14,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const folderId = params.id;
+    const { id: folderId } = await params;
 
     // Check if folder exists
     const folder = await prisma.folder.findUnique({
@@ -60,7 +60,7 @@ export async function POST(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -69,7 +69,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const folderId = params.id;
+    const { id: folderId } = await params;
 
     // Remove pinned folder
     await prisma.pinnedFolder.deleteMany({

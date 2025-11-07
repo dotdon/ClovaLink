@@ -12,11 +12,6 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user has permission to view activities
-    if (!hasPermission(session, Permission.VIEW_ACTIVITIES)) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
-    }
-
     // Get the employee with their company info
     const employee = await prisma.employee.findUnique({
       where: { id: session.user.id },
@@ -36,11 +31,20 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
+    const documentId = searchParams.get('documentId');
+    const folderId = searchParams.get('folderId');
 
-    // Build where clause based on role
-    const where = session.user.role === 'ADMIN'
+    // Build where clause based on role and filters
+    let where: any = session.user.role === 'ADMIN'
       ? {} // Admins can see all activities
       : { companyId: employee.companyId }; // Others only see their company's activities
+
+    // Add document or folder filter if provided
+    if (documentId) {
+      where.documentId = documentId;
+    } else if (folderId) {
+      where.folderId = folderId;
+    }
 
     // Fetch activities with pagination and total count
     const [activities, total] = await Promise.all([
@@ -49,7 +53,7 @@ export async function GET(request: Request) {
         take: limit,
         skip: skip,
         orderBy: {
-          timestamp: 'desc',
+          createdAt: 'desc',
         },
         include: {
           employee: {
@@ -58,6 +62,11 @@ export async function GET(request: Request) {
             },
           },
           document: {
+            select: {
+              name: true,
+            },
+          },
+          folder: {
             select: {
               name: true,
             },

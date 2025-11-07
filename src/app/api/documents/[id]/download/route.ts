@@ -49,6 +49,24 @@ export async function GET(
     }
 
     const fileContent = await readFile(filePath);
+    
+    // Log activity for document access
+    try {
+      await prisma.activity.create({
+        data: {
+          type: 'VIEW',
+          description: `Downloaded/viewed document: ${document.name}`,
+          employeeId: employee.id,
+          documentId: document.id,
+          companyId: document.companyId,
+        },
+      });
+      console.log(`Activity logged: ${employee.email} accessed ${document.name}`);
+    } catch (activityError) {
+      console.error('Failed to log activity:', activityError);
+      // Don't fail the request if activity logging fails
+    }
+    
     const response = new NextResponse(fileContent);
     response.headers.set('Content-Type', document.mimeType);
     response.headers.set('Content-Disposition', `inline; filename="${document.name}"`);

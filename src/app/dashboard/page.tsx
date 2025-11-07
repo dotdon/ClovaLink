@@ -53,8 +53,8 @@ export default function DashboardPage() {
       const [statsResponse, activitiesResponse] = await Promise.all([
         // Only fetch stats if user is admin
         session?.user?.role === 'ADMIN' ? fetch('/api/admin/stats') : null,
-        // Only fetch activities if user has permission
-        hasPermission(session, Permission.VIEW_ACTIVITIES) ? fetch(`/api/activities?page=${page}&limit=10`) : null
+        // Fetch activities for all logged-in users (API filters by company)
+        fetch(`/api/activities?page=${page}&limit=10`)
       ]);
 
       if (statsResponse && !statsResponse.ok) {

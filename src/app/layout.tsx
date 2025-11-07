@@ -1,3 +1,4 @@
+import '../lib/polyfills'; // Load polyfills first
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './globals.css';
 import type { Metadata } from 'next';

@@ -87,6 +87,7 @@ model Document {
   employeeId    String
   companyId     String
   folderId      String?
+  password      String?        // Encrypted password for document access
   expiresAt     DateTime?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -113,6 +114,7 @@ model Folder {
   companyId     String
   createdById   String
   color         String?       // Optional color for folder (Google Drive style)
+  password      String?       // Encrypted password for folder access
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   
@@ -124,6 +126,7 @@ model Folder {
   downloadLinks DownloadLink[]
   favorites     FavoriteFolder[] // Users who favorited this folder
   pinnedBy      PinnedFolder[]   // Users who pinned this folder
+  activities    Activity[]
 
   @@unique([name, companyId])
   @@index([companyId])
@@ -139,18 +142,22 @@ model Activity {
   metadata    Json?
   employeeId  String
   documentId  String?
+  folderId    String?
   companyId   String
+  createdAt   DateTime      @default(now())
   timestamp   DateTime      @default(now())
   ipAddress   String?
   userAgent   String?
   
   employee    Employee      @relation(fields: [employeeId], references: [id])
   document    Document?     @relation(fields: [documentId], references: [id])
+  folder      Folder?       @relation(fields: [folderId], references: [id])
   company     Company       @relation(fields: [companyId], references: [id])
 
   @@index([companyId])
   @@index([employeeId])
   @@index([documentId])
+  @@index([folderId])
   @@index([timestamp])
   @@index([type])
   @@map("activities")

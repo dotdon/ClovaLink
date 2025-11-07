@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -14,7 +14,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const documentId = params.id;
+    const { id: documentId } = await params;
 
     // Check if document exists
     const document = await prisma.document.findUnique({
@@ -52,7 +52,7 @@ export async function POST(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -61,7 +61,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const documentId = params.id;
+    const { id: documentId } = await params;
 
     // Remove favorite
     await prisma.favoriteDocument.deleteMany({
