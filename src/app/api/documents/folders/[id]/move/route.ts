@@ -38,36 +38,56 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { parentId } = await request.json();
+    const { parentId, targetCompanyId } = await request.json();
 
     const employee = await prisma.employee.findUnique({
       where: { email: session.user.email },
-      include: { company: true }
+      include: { 
+        company: true,
+        crossCompanyAccess: {
+          include: {
+            company: true
+          }
+        }
+      }
     });
 
     if (!employee?.company) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 });
     }
 
-    // Find source folder with its parent info
+    // Build list of accessible company IDs
+    const accessibleCompanyIds = [
+      employee.company.id,
+      ...employee.crossCompanyAccess.map(access => access.company.id)
+    ];
+
+    // Find source folder - check if user has access to source company
     const sourceFolder = await prisma.folder.findFirst({
-      where: { 
-        id: folderId,
-        companyId: employee.company.id
-      }
+      where: { id: folderId }
     });
 
     if (!sourceFolder) {
       return NextResponse.json({ error: 'Source folder not found' }, { status: 404 });
     }
 
+    if (!accessibleCompanyIds.includes(sourceFolder.companyId)) {
+      return NextResponse.json({ error: 'No access to source folder' }, { status: 403 });
+    }
+
+    // Determine target company
+    const finalTargetCompanyId = targetCompanyId || sourceFolder.companyId;
+    if (!accessibleCompanyIds.includes(finalTargetCompanyId)) {
+      return NextResponse.json({ error: 'No access to target company' }, { status: 403 });
+    }
+
     let targetFolder = null;
-    // If moving to another folder, verify target folder exists and belongs to same company
+    // If moving to another folder, verify target folder exists and belongs to target company
     if (parentId) {
       targetFolder = await prisma.folder.findFirst({
         where: { 
           id: parentId,
-          companyId: employee.company.id
+          companyId: finalTargetCompanyId
         }
       });
 
@@ -83,19 +103,35 @@ export async function PATCH(
         );
       }
 
-      // Check for circular dependency with improved visited tracking
-      const isChildFolder = await checkIsChildFolder(folderId, parentId);
-      if (isChildFolder) {
-        return NextResponse.json(
-          { error: 'Cannot move a folder into one of its subfolders' },
-          { status: 400 }
-        );
+      // Check for circular dependency with improved visited tracking (only if same company)
+      if (sourceFolder.companyId === finalTargetCompanyId) {
+        const isChildFolder = await checkIsChildFolder(folderId, parentId);
+        if (isChildFolder) {
+          return NextResponse.json(
+            { error: 'Cannot move a folder into one of its subfolders' },
+            { status: 400 }
+          );
+        }
       }
     }
 
+    // Get company info for physical paths
+    const sourceCompany = await prisma.company.findUnique({
+      where: { id: sourceFolder.companyId }
+    });
+    const targetCompany = await prisma.company.findUnique({
+      where: { id: finalTargetCompanyId }
+    });
+
+    if (!sourceCompany || !targetCompany) {
+      return NextResponse.json({ error: 'Company not found' }, { status: 404 });
+    }
+
     // Build the old and new physical paths
-    const companyFolder = sanitizeCompanyName(employee.company.name);
-    const companyDir = join(UPLOAD_DIR, companyFolder);
+    const sourceCompanyFolder = sanitizeCompanyName(sourceCompany.name);
+    const targetCompanyFolder = sanitizeCompanyName(targetCompany.name);
+    const sourceCompanyDir = join(UPLOAD_DIR, sourceCompanyFolder);
+    const companyDir = join(UPLOAD_DIR, targetCompanyFolder);
     
     // Build old path using folder ID
     const oldPath = join(companyDir, sourceFolder.id);
@@ -115,10 +151,13 @@ export async function PATCH(
       }
     }
 
-    // Update the folder in the database
+    // Update the folder in the database (including companyId if cross-company move)
     const updatedFolder = await prisma.folder.update({
       where: { id: folderId },
-      data: { parentId: parentId || null }
+      data: { 
+        parentId: parentId || null,
+        companyId: finalTargetCompanyId
+      }
     });
 
     // Create activity log

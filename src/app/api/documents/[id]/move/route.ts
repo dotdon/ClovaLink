@@ -26,6 +26,7 @@ export async function POST(
 
     // Validate request body
     let targetFolderId: string | null = null;
+    let targetCompanyId: string | null = null;
     try {
       const contentType = request.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
@@ -36,6 +37,7 @@ export async function POST(
 
       const body = await request.json();
       targetFolderId = body.targetFolderId || null;
+      targetCompanyId = body.targetCompanyId || null;
     } catch (error) {
       console.error('Error parsing request body:', error);
       return NextResponse.json({ 
@@ -44,36 +46,56 @@ export async function POST(
       }, { status: 400 });
     }
 
-    // Get the employee and their company
+    // Get the employee and their accessible companies
     const employee = await prisma.employee.findUnique({
       where: { email: session.user.email },
-      include: { company: true }
+      include: { 
+        company: true,
+        crossCompanyAccess: {
+          include: {
+            company: true
+          }
+        }
+      }
     });
 
     if (!employee?.company) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 });
     }
 
-    // Get the document to move
+    // Build list of accessible company IDs
+    const accessibleCompanyIds = [
+      employee.company.id,
+      ...employee.crossCompanyAccess.map(access => access.company.id)
+    ];
+
+    // Get the document to move - check if user has access to source company
     const document = await prisma.document.findUnique({
-      where: {
-        id,
-        companyId: employee.company.id,
-      }
+      where: { id }
     });
 
     if (!document) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
 
+    if (!accessibleCompanyIds.includes(document.companyId)) {
+      return NextResponse.json({ error: 'No access to source document' }, { status: 403 });
+    }
+
+    // If targetCompanyId is specified, validate access to target company
+    const finalTargetCompanyId = targetCompanyId || document.companyId;
+    if (!accessibleCompanyIds.includes(finalTargetCompanyId)) {
+      return NextResponse.json({ error: 'No access to target company' }, { status: 403 });
+    }
+
     let targetFolderRecord = null;
     
-    // If moving to a specific folder, find it by ID
+    // If moving to a specific folder, find it by ID and validate it belongs to target company
     if (targetFolderId) {
       targetFolderRecord = await prisma.folder.findFirst({
         where: {
           id: targetFolderId,
-          companyId: employee.company.id,
+          companyId: finalTargetCompanyId,
         },
       });
 
@@ -85,11 +107,12 @@ export async function POST(
       }
     }
 
-    // Update the document in database
+    // Update the document in database (including company if cross-company move)
     const updatedDocument = await prisma.document.update({
       where: { id },
       data: {
         folderId: targetFolderId,
+        companyId: finalTargetCompanyId,
       },
     });
 

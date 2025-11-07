@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Form, Modal, Alert, Dropdown, ButtonGroup } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
-import { FaDownload, FaTrash, FaFolder, FaEye, FaUpload, FaFolderPlus, FaFile, FaEdit, FaArrowLeft, FaEllipsisV, FaSearch, FaCheckCircle, FaShare, FaFilePdf, FaFileWord, FaFileImage, FaInfo, FaTh, FaList, FaSortAlphaDown, FaSortAmountDown, FaCalendarAlt, FaStar, FaRegStar, FaThumbtack, FaBuilding, FaLock, FaClipboardList } from 'react-icons/fa';
+import { FaDownload, FaTrash, FaFolder, FaEye, FaUpload, FaFolderPlus, FaFile, FaEdit, FaArrowLeft, FaEllipsisV, FaSearch, FaCheckCircle, FaShare, FaFilePdf, FaFileWord, FaFileImage, FaInfo, FaTh, FaList, FaSortAlphaDown, FaSortAmountDown, FaCalendarAlt, FaStar, FaRegStar, FaThumbtack, FaBuilding, FaLock, FaClipboardList, FaArrowsAlt } from 'react-icons/fa';
 import { useSession } from 'next-auth/react';
 import { hasPermission, Permission, canAccessFolder, canManageFolder, canManageDocument } from '@/lib/permissions';
 import DocumentViewerModal from '@/components/viewers/DocumentViewerModal';
@@ -287,6 +287,13 @@ export default function DocumentsPage() {
   const [showDocPasswordModal, setShowDocPasswordModal] = useState(false);
   const [selectedDocForPassword, setSelectedDocForPassword] = useState<Document | null>(null);
   const [docPassword, setDocPassword] = useState('');
+  
+  // Move modal states
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [itemToMove, setItemToMove] = useState<Document | Folder | null>(null);
+  const [moveTargetCompanyId, setMoveTargetCompanyId] = useState<string | null>(null);
+  const [moveTargetFolderId, setMoveTargetFolderId] = useState<string | null>(null);
+  const [availableFolders, setAvailableFolders] = useState<Folder[]>([]);
   const [showDocPasswordVerifyModal, setShowDocPasswordVerifyModal] = useState(false);
   const [docToVerify, setDocToVerify] = useState<Document | null>(null);
   const [verifyDocPassword, setVerifyDocPassword] = useState('');
@@ -1288,6 +1295,117 @@ export default function DocumentsPage() {
     }
   };
 
+  // Move modal functions
+  const handleOpenMoveModal = (item: Document | Folder) => {
+    setItemToMove(item);
+    setMoveTargetCompanyId(selectedCompanyId);
+    setShowMoveModal(true);
+    // Fetch folders for the currently selected company and filter out the item being moved if it's a folder
+    if (selectedCompanyId) {
+      fetchFoldersForCompany(selectedCompanyId, 'children' in item ? item.id : null);
+    }
+  };
+
+  const fetchFoldersForCompany = async (companyId: string, excludeFolderId: string | null = null) => {
+    try {
+      const response = await fetch(`/api/companies/${companyId}/documents`);
+      if (!response.ok) throw new Error('Failed to fetch folders');
+      const data = await response.json();
+      
+      // Flatten all folders and filter out the one being moved and its children
+      const flattenFolders = (folderList: Folder[], parentPath = ''): Folder[] => {
+        let result: Folder[] = [];
+        for (const folder of folderList) {
+          // Skip the folder being moved and its children
+          if (excludeFolderId && (folder.id === excludeFolderId || isChildOfFolder(folder.id, excludeFolderId, folderList))) {
+            continue;
+          }
+          const folderWithPath = { 
+            ...folder, 
+            name: parentPath ? `${parentPath} / ${folder.name}` : folder.name 
+          };
+          result.push(folderWithPath);
+          if (folder.children && folder.children.length > 0) {
+            result = result.concat(flattenFolders(folder.children, folderWithPath.name));
+          }
+        }
+        return result;
+      };
+      
+      setAvailableFolders(flattenFolders(data.folders || []));
+    } catch (error) {
+      console.error('Error fetching folders:', error);
+      setAvailableFolders([]);
+    }
+  };
+
+  // Helper to check if a folder is a child of another folder
+  const isChildOfFolder = (childId: string, parentId: string, folderList: Folder[]): boolean => {
+    for (const folder of folderList) {
+      if (folder.id === parentId) {
+        // Check if childId is in this folder's children
+        if (folder.children) {
+          for (const child of folder.children) {
+            if (child.id === childId) return true;
+            if (isChildOfFolder(childId, child.id, folder.children)) return true;
+          }
+        }
+      }
+      // Recursively check children
+      if (folder.children && isChildOfFolder(childId, parentId, folder.children)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const handleMoveSubmit = async () => {
+    if (!itemToMove || !moveTargetCompanyId) return;
+
+    const isFolder = 'children' in itemToMove;
+    const endpoint = isFolder 
+      ? `/api/documents/folders/${itemToMove.id}/move`
+      : `/api/documents/${itemToMove.id}/move`;
+
+    try {
+      const bodyParam = isFolder 
+        ? { parentId: moveTargetFolderId, targetCompanyId: moveTargetCompanyId }
+        : { targetFolderId: moveTargetFolderId, targetCompanyId: moveTargetCompanyId };
+
+      const method = isFolder ? 'PATCH' : 'POST';
+      
+      const response = await fetch(endpoint, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bodyParam)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.message || 'Failed to move item');
+      }
+
+      const result = await response.json();
+      
+      setSuccessMessage(result.message || `${isFolder ? 'Folder' : 'Document'} moved successfully`);
+      setShowSuccessModal(true);
+      setShowMoveModal(false);
+      
+      // Refresh the documents list
+      await fetchDocuments();
+      
+      // If we moved a folder that we're currently inside, navigate back
+      if (isFolder && currentFolderId === itemToMove.id) {
+        handleNavigateBack();
+      }
+    } catch (error) {
+      console.error('Error moving item:', error);
+      alert(error instanceof Error ? error.message : 'Failed to move item');
+    }
+  };
+
   const sortItems = (items: (Document | Folder)[]) => {
     return [...items].sort((a, b) => {
       switch (sortBy) {
@@ -1410,7 +1528,7 @@ export default function DocumentsPage() {
                       >
                   <div className="item-icon">
                     <FaFolder className="folder-icon" size={32} style={{ color: '#ffffff' }} />
-                    <FaThumbtack className="pin-badge" style={{ color: '#ffffff' }} />
+                    <FaThumbtack className="pin-badge" size={12} style={{ color: '#ffffff' }} />
                     {(folder.hasPassword || (folder as any).password) && (
                       <FaLock className="lock-badge-small" style={{ color: '#ffffff' }} />
                     )}
@@ -2020,6 +2138,14 @@ export default function DocumentsPage() {
                           <Dropdown.Item 
                             onClick={(e) => {
                               e.stopPropagation();
+                              handleOpenMoveModal(item);
+                            }}
+                          >
+                            <FaArrowsAlt className="me-2" /> Move to...
+                          </Dropdown.Item>
+                          <Dropdown.Item 
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setSelectedShareItem(item);
                               setShowShareModal(true);
                             }}
@@ -2242,6 +2368,14 @@ export default function DocumentsPage() {
                           <Dropdown.Item 
                             onClick={(e) => {
                               e.stopPropagation();
+                              handleOpenMoveModal(item);
+                            }}
+                          >
+                            <FaArrowsAlt className="me-2" /> Move to...
+                          </Dropdown.Item>
+                          <Dropdown.Item 
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setSelectedShareItem(item);
                               setShowShareModal(true);
                             }}
@@ -2364,6 +2498,121 @@ export default function DocumentsPage() {
           item={selectedItem}
           onRename={handleRenameSubmit}
         />
+
+        {/* Move Modal */}
+        <Modal 
+          show={showMoveModal} 
+          onHide={() => {
+            setShowMoveModal(false);
+            setItemToMove(null);
+            setMoveTargetCompanyId(null);
+            setMoveTargetFolderId(null);
+            setAvailableFolders([]);
+          }} 
+          centered
+          className="move-modal"
+        >
+          <Modal.Header closeButton className="border-0">
+            <Modal.Title className="d-flex align-items-center w-100">
+              <div className="modal-icon-wrapper">
+                <FaArrowsAlt />
+              </div>
+              <div className="flex-grow-1">
+                <div className="modal-title-text">
+                  Move {itemToMove && ('children' in itemToMove ? 'Folder' : 'Document')}
+                </div>
+                <div className="modal-subtitle">
+                  {itemToMove?.name}
+                </div>
+              </div>
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {itemToMove && (
+              <div className="move-modal-content">
+                <Form.Group className="mb-3">
+                  <Form.Label className="form-label">
+                    <FaFolder className="me-2" />
+                    Destination Folder
+                  </Form.Label>
+                  <Form.Select
+                    value={moveTargetFolderId || ''}
+                    onChange={(e) => setMoveTargetFolderId(e.target.value || null)}
+                    className="move-select"
+                  >
+                    <option value="">📁 Root (Top level - no folder)</option>
+                    {availableFolders.map(folder => (
+                      <option key={folder.id} value={folder.id}>
+                        📁 {folder.name}
+                      </option>
+                    ))}
+                  </Form.Select>
+                  <Form.Text className="help-text">
+                    {availableFolders.length === 0 
+                      ? 'No folders available. Select "Root" to move to the top level.' 
+                      : 'Choose a folder or select "Root" to move to the top level'}
+                  </Form.Text>
+                </Form.Group>
+
+                {accessibleCompanies.length > 1 && (
+                  <>
+                    <div className="section-divider"></div>
+                    <Form.Group className="mb-0">
+                      <Form.Label className="form-label">
+                        <FaBuilding className="me-2" />
+                        Move to Different Company
+                      </Form.Label>
+                      <Form.Select
+                        value={moveTargetCompanyId || ''}
+                        onChange={(e) => {
+                          const companyId = e.target.value;
+                          setMoveTargetCompanyId(companyId);
+                          setMoveTargetFolderId(null);
+                          if (companyId) {
+                            fetchFoldersForCompany(companyId, 'children' in itemToMove ? itemToMove.id : null);
+                          }
+                        }}
+                        className="move-select"
+                      >
+                        {accessibleCompanies.map(company => (
+                          <option key={company.id} value={company.id}>
+                            {company.name} {company.isPrimary ? '(Primary)' : ''} {company.id === selectedCompanyId ? '(Current)' : ''}
+                          </option>
+                        ))}
+                      </Form.Select>
+                      <Form.Text className="help-text">
+                        Currently: <strong>{accessibleCompanies.find(c => c.id === moveTargetCompanyId)?.name}</strong>
+                      </Form.Text>
+                    </Form.Group>
+                  </>
+                )}
+              </div>
+            )}
+          </Modal.Body>
+          <Modal.Footer className="border-0">
+            <Button 
+              variant="secondary" 
+              onClick={() => {
+                setShowMoveModal(false);
+                setItemToMove(null);
+                setMoveTargetCompanyId(null);
+                setMoveTargetFolderId(null);
+              }}
+              className="cancel-btn"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="primary" 
+              onClick={handleMoveSubmit}
+              disabled={!moveTargetCompanyId}
+              className="submit-btn"
+            >
+              <FaArrowsAlt className="me-2" />
+              Move {moveTargetFolderId ? 'to Folder' : 'to Root'}
+            </Button>
+          </Modal.Footer>
+        </Modal>
 
         <SuccessModal
           show={showSuccessModal}
@@ -3028,25 +3277,18 @@ export default function DocumentsPage() {
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
           }
 
-          :global(.activity-modal-dialog) {
-            position: static !important;
-            transform: none !important;
-            margin: 0 !important;
-            max-width: 900px !important;
-            width: 90% !important;
-            pointer-events: auto !important;
-            top: auto !important;
-            left: auto !important;
-            right: auto !important;
-            bottom: auto !important;
-          }
-
+          :global(.activity-modal-dialog),
           :global(.activity-modal .modal-dialog) {
             position: static !important;
             transform: none !important;
-            margin: 0 !important;
+            margin: 0 auto !important;
             max-width: 900px !important;
             width: 90% !important;
             pointer-events: auto !important;
@@ -3452,6 +3694,9 @@ export default function DocumentsPage() {
             right: -5px;
             font-size: 1rem;
             color: #ffc107;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
           }
 
           .quick-access-item .pin-badge {
@@ -3460,7 +3705,9 @@ export default function DocumentsPage() {
             right: -8px;
             font-size: 0.9rem;
             color: #17a2b8;
-            background: white;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
             border-radius: 50%;
             padding: 0.15rem;
           }
@@ -3657,8 +3904,15 @@ export default function DocumentsPage() {
             flex: 1;
             overflow-y: auto;
             overflow-x: visible;
-            padding: 2rem;
+            padding: 2rem 3rem;
             max-width: 100%;
+            width: 100%;
+          }
+
+          @media (min-width: 1920px) {
+            .documents-content {
+              padding: 2.5rem 4rem;
+            }
           }
 
           .loading-state, .empty-state {
@@ -3678,11 +3932,32 @@ export default function DocumentsPage() {
 
           .items-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 1.5rem;
-            max-width: 1400px;
-            margin: 0 auto;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 2rem 1.5rem;
+            max-width: 100%;
+            margin: 0;
             overflow: visible;
+            width: 100%;
+          }
+
+          @media (min-width: 1920px) {
+            .items-grid {
+              grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+              gap: 2.5rem 2rem;
+            }
+          }
+
+          @media (max-width: 1400px) {
+            .items-grid {
+              grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            }
+          }
+
+          @media (max-width: 1024px) {
+            .items-grid {
+              grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+              gap: 1.5rem 1rem;
+            }
           }
 
           .grid-item {
@@ -3693,6 +3968,11 @@ export default function DocumentsPage() {
             cursor: pointer;
             transition: all 0.2s ease;
             position: relative;
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 280px;
+            justify-self: start;
           }
 
           .grid-item:hover {
@@ -3779,40 +4059,93 @@ export default function DocumentsPage() {
             top: -8px;
             right: -8px;
             font-size: 1rem;
-            color: #ffffff !important;
-            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: #17a2b8 !important;
+            background: transparent !important;
             border-radius: 50%;
             padding: 6px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            box-shadow: none;
+            opacity: 0.7;
+            transition: opacity 0.2s ease;
+          }
+
+          .pinned-badge:hover,
+          .grid-item:hover .pinned-badge,
+          .list-item:hover .pinned-badge {
+            opacity: 1;
           }
 
           .lock-badge {
             position: absolute;
             top: -8px;
             left: -8px;
-            background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+            background: transparent !important;
             padding: 6px;
             border-radius: 50%;
             font-size: 0.75rem;
-            color: #ffffff !important;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            color: #ffc107 !important;
+            box-shadow: none;
             z-index: 1;
+            opacity: 0.7;
+            transition: opacity 0.2s ease;
+          }
+
+          .grid-item:hover .lock-badge,
+          .list-item:hover .lock-badge {
+            opacity: 1;
           }
 
           .lock-badge-small {
             position: absolute;
             bottom: -4px;
             left: -4px;
-            background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+            background: transparent !important;
             padding: 4px;
             border-radius: 50%;
             font-size: 0.5rem;
-            color: #ffffff !important;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            color: #ffc107 !important;
+            box-shadow: none;
+            opacity: 0.7;
+            transition: opacity 0.2s ease;
+          }
+
+          .grid-item:hover .lock-badge-small,
+          .list-item:hover .lock-badge-small {
+            opacity: 1;
           }
 
           .pin-badge {
             color: #ffffff !important;
+            opacity: 0.9;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+          }
+
+          /* Star buttons transparent like search bar */
+          .item-actions-inline button,
+          button[aria-label*="star" i],
+          button[aria-label*="favorite" i] {
+            background: transparent !important;
+            border: none !important;
+            padding: 0.5rem !important;
+            opacity: 0.7 !important;
+            transition: opacity 0.2s ease !important;
+          }
+
+          .item-actions-inline button:hover,
+          button[aria-label*="star" i]:hover,
+          button[aria-label*="favorite" i]:hover {
+            opacity: 1 !important;
+            background: transparent !important;
+          }
+
+          .item-actions-inline button svg {
+            opacity: 0.7;
+            transition: opacity 0.2s ease;
+          }
+
+          .item-actions-inline button:hover svg {
+            opacity: 1;
           }
 
           .item-info {
@@ -3851,8 +4184,8 @@ export default function DocumentsPage() {
           }
 
           .star-button, .pin-button {
-            background: none;
-            border: none;
+            background: transparent !important;
+            border: none !important;
             color: rgba(255, 255, 255, 0.5);
             cursor: pointer;
             padding: 0.25rem;
@@ -3861,11 +4194,13 @@ export default function DocumentsPage() {
             justify-content: center;
             font-size: 0.9rem;
             transition: all 0.2s ease;
+            box-shadow: none !important;
           }
 
           .star-button:hover, .pin-button:hover {
             color: #ffffff;
             transform: scale(1.1);
+            background: transparent !important;
           }
 
           .star-button .text-warning {
@@ -3917,13 +4252,10 @@ export default function DocumentsPage() {
                 display: none !important;
               }
 
-              .item-dropdown :global(.dropdown-menu) {
-                position: fixed !important;
-                transform: none !important;
-                will-change: transform !important;
-                z-index: 9999 !important;
-                margin: 0 !important;
-              }
+          .item-dropdown :global(.dropdown-menu) {
+            position: absolute !important;
+            z-index: 9999 !important;
+          }
 
           .three-dot-menu {
             padding: 0.25rem 0.5rem;
@@ -3986,9 +4318,10 @@ export default function DocumentsPage() {
           }
 
           .items-list {
-            max-width: 1200px;
-            margin: 0 auto;
+            max-width: 100%;
+            margin: 0;
             overflow: visible;
+            width: 100%;
           }
 
           .list-item {
@@ -4004,6 +4337,13 @@ export default function DocumentsPage() {
             transition: all 0.2s ease;
             position: relative;
             overflow: visible;
+            max-width: 100%;
+          }
+
+          @media (min-width: 1920px) {
+            .list-item {
+              padding: 1.25rem 2rem;
+            }
           }
 
           .list-item:hover {
@@ -4275,6 +4615,171 @@ export default function DocumentsPage() {
           }
 
           :global(.password-modal .btn-close:hover) {
+            opacity: 1 !important;
+          }
+
+          /* Move Modal Styles */
+          :global(.move-modal .modal-content) {
+            background: #1e1e28 !important;
+            border: 1px solid rgba(102, 126, 234, 0.3) !important;
+            border-radius: 16px !important;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5) !important;
+          }
+
+          :global(.move-modal .modal-header) {
+            padding: 2rem 2rem 1rem !important;
+            background: transparent !important;
+            border-bottom: none !important;
+          }
+
+          :global(.move-modal .modal-title) {
+            gap: 1rem !important;
+            width: 100% !important;
+            color: #ffffff !important;
+          }
+
+          :global(.move-modal .modal-icon-wrapper) {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white !important;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+          }
+
+          :global(.move-modal .modal-title-text) {
+            font-size: 1.25rem !important;
+            font-weight: 600 !important;
+            color: #ffffff !important;
+            margin-bottom: 0.25rem !important;
+          }
+
+          :global(.move-modal .modal-subtitle) {
+            font-size: 0.875rem !important;
+            color: rgba(255, 255, 255, 0.7) !important;
+            font-weight: 400 !important;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          :global(.move-modal .modal-body) {
+            padding: 1rem 2rem 2rem !important;
+            background: transparent !important;
+          }
+
+          :global(.move-modal .move-modal-content) {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border-radius: 12px !important;
+            padding: 1.5rem !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          }
+
+          :global(.move-modal .form-label) {
+            color: rgba(255, 255, 255, 0.95) !important;
+            font-weight: 500 !important;
+            margin-bottom: 0.75rem !important;
+            font-size: 0.95rem !important;
+            display: flex !important;
+            align-items: center !important;
+          }
+
+          :global(.move-modal .move-select) {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            color: #ffffff !important;
+            padding: 0.75rem 1rem !important;
+            border-radius: 8px !important;
+            font-size: 1rem !important;
+            transition: all 0.2s ease !important;
+            width: 100% !important;
+          }
+
+          :global(.move-modal .move-select:focus) {
+            background: rgba(255, 255, 255, 0.15) !important;
+            border-color: #667eea !important;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3) !important;
+            color: #ffffff !important;
+            outline: none !important;
+          }
+
+          :global(.move-modal .move-select option) {
+            background: #1e1e28 !important;
+            color: #ffffff !important;
+            padding: 0.5rem !important;
+          }
+
+          :global(.move-modal .help-text) {
+            color: rgba(255, 255, 255, 0.6) !important;
+            font-size: 0.85rem !important;
+            margin-top: 0.5rem !important;
+            display: block !important;
+          }
+
+          :global(.move-modal .section-divider) {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+            margin: 1.5rem 0;
+          }
+
+          :global(.move-modal .modal-footer) {
+            padding: 1rem 2rem 2rem !important;
+            background: transparent !important;
+            border-top: none !important;
+          }
+
+          :global(.move-modal .cancel-btn) {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            color: rgba(255, 255, 255, 0.95) !important;
+            padding: 0.65rem 1.5rem !important;
+            border-radius: 8px !important;
+            font-weight: 500 !important;
+            transition: all 0.2s ease !important;
+          }
+
+          :global(.move-modal .cancel-btn:hover) {
+            background: rgba(255, 255, 255, 0.2) !important;
+            border-color: rgba(255, 255, 255, 0.3) !important;
+            color: #ffffff !important;
+          }
+
+          :global(.move-modal .submit-btn) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border: none !important;
+            color: #ffffff !important;
+            padding: 0.65rem 1.5rem !important;
+            border-radius: 8px !important;
+            font-weight: 500 !important;
+            transition: all 0.2s ease !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+          }
+
+          :global(.move-modal .submit-btn:hover) {
+            transform: translateY(-1px) !important;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4) !important;
+          }
+
+          :global(.move-modal .submit-btn:disabled) {
+            background: rgba(255, 255, 255, 0.1) !important;
+            color: rgba(255, 255, 255, 0.4) !important;
+            cursor: not-allowed !important;
+            transform: none !important;
+            box-shadow: none !important;
+          }
+
+          :global(.move-modal .btn-close) {
+            filter: brightness(0) invert(1) !important;
+            opacity: 0.7 !important;
+          }
+
+          :global(.move-modal .btn-close:hover) {
             opacity: 1 !important;
           }
         `}</style>
