@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Badge, Modal, Alert } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
-import { FaPlus, FaBuilding, FaEnvelope, FaUserTag, FaChevronRight, FaEdit, FaFileDownload, FaTrash, FaShieldAlt, FaKey, FaUser, FaUserShield, FaExclamationTriangle, FaUserSlash, FaHistory, FaFileAlt, FaCheckCircle, FaTimesCircle, FaInfoCircle } from 'react-icons/fa';
+import { FaPlus, FaBuilding, FaEnvelope, FaUserTag, FaChevronRight, FaEdit, FaFileDownload, FaTrash, FaShieldAlt, FaKey, FaUser, FaUserShield, FaExclamationTriangle, FaUserSlash, FaHistory, FaFileAlt, FaCheckCircle, FaTimesCircle, FaInfoCircle, FaTh, FaThList, FaFilter, FaSearch } from 'react-icons/fa';
 import AddEmployeeModal from '@/components/modals/AddEmployeeModal';
 import EditEmployeeModal from '@/components/modals/EditEmployeeModal';
 import { useSession } from 'next-auth/react';
@@ -24,6 +24,11 @@ interface Employee {
   profilePicture?: string | null;
 }
 
+interface Company {
+  id: string;
+  name: string;
+}
+
 export default function EmployeesPage() {
   const { data: session } = useSession();
   const [showAddModal, setShowAddModal] = useState(false);
@@ -32,9 +37,13 @@ export default function EmployeesPage() {
   const [show2FAModal, setShow2FAModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(12);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [selectedCompany, setSelectedCompany] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Permission checks
   const canViewEmployees = hasPermission(session, Permission.VIEW_EMPLOYEES);
@@ -86,8 +95,23 @@ export default function EmployeesPage() {
     }
   };
 
+  const fetchCompanies = async () => {
+    try {
+      const response = await fetch('/api/companies');
+      if (!response.ok) throw new Error('Failed to fetch companies');
+      const data = await response.json();
+      // API returns { companies: [...] }
+      const companiesList = data.companies || data;
+      setCompanies(Array.isArray(companiesList) ? companiesList : []);
+    } catch (error) {
+      console.error('Error fetching companies:', error);
+      setCompanies([]); // Ensure it's always an array
+    }
+  };
+
   useEffect(() => {
     fetchEmployees();
+    fetchCompanies();
   }, []);
 
   const handleAddEmployee = async (data: { name: string; email: string; role: string; password: string; companyId: string }) => {
@@ -320,11 +344,26 @@ export default function EmployeesPage() {
     }
   };
 
+  // Filter employees by company and search query
+  const filteredEmployees = employees.filter(emp => {
+    // Company filter
+    const matchesCompany = selectedCompany === 'all' || emp.companyId === selectedCompany;
+    
+    // Search filter
+    const matchesSearch = searchQuery === '' || 
+      emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      emp.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      emp.company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      emp.role.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    return matchesCompany && matchesSearch;
+  });
+
   // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentEmployees = employees.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(employees.length / itemsPerPage);
+  const currentEmployees = filteredEmployees.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
 
   const handlePageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber);
@@ -360,22 +399,79 @@ export default function EmployeesPage() {
           </Alert>
         ) : (
           <>
+            {/* Filters and View Toggle */}
+            <div className="controls-bar">
+              <div className="left-controls">
+                <div className="search-bar">
+                  <FaSearch className="search-icon" style={{ color: '#ffffff' }} />
+                  <input
+                    type="text"
+                    placeholder="Search employees..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentPage(1); // Reset to first page when searching
+                    }}
+                    className="search-input"
+                  />
+                </div>
+                <div className="company-filter">
+                  <FaFilter className="filter-icon" style={{ color: '#ffffff' }} />
+                  <select
+                    value={selectedCompany}
+                    onChange={(e) => {
+                      setSelectedCompany(e.target.value);
+                      setCurrentPage(1); // Reset to first page when filtering
+                    }}
+                    className="company-select"
+                  >
+                    <option value="all">All Companies</option>
+                    {Array.isArray(companies) && companies.map((company) => (
+                      <option key={company.id} value={company.id}>
+                        {company.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="results-count">
+                  {filteredEmployees.length} employee{filteredEmployees.length !== 1 ? 's' : ''}
+                </div>
+              </div>
+              <div className="view-toggle">
+                <button
+                  className={`view-btn ${viewMode === 'cards' ? 'active' : ''}`}
+                  onClick={() => setViewMode('cards')}
+                  title="Card View"
+                >
+                  <FaTh />
+                </button>
+                <button
+                  className={`view-btn ${viewMode === 'table' ? 'active' : ''}`}
+                  onClick={() => setViewMode('table')}
+                  title="Table View"
+                >
+                  <FaThList />
+                </button>
+              </div>
+            </div>
+
             {/* Desktop View */}
             <div className="desktop-view">
-              <div className="employees-grid">
-                {isLoading ? (
-                  <div className="loading-state">
-                    <div className="spinner"></div>
-                    <p>Loading employees...</p>
-                  </div>
-                ) : employees.length === 0 ? (
-                  <div className="empty-state">
-                    <FaUserShield className="empty-icon" />
-                    <h3>No Employees Found</h3>
-                    <p>Start by adding your first team member</p>
-                  </div>
-                ) : (
-                  currentEmployees.map((employee) => (
+              {viewMode === 'cards' ? (
+                <div className="employees-grid">
+                  {isLoading ? (
+                    <div className="loading-state">
+                      <div className="spinner"></div>
+                      <p>Loading employees...</p>
+                    </div>
+                  ) : filteredEmployees.length === 0 ? (
+                    <div className="empty-state">
+                      <FaUserShield className="empty-icon" />
+                      <h3>No Employees Found</h3>
+                      <p>{selectedCompany === 'all' ? 'Start by adding your first team member' : 'No employees in this company'}</p>
+                    </div>
+                  ) : (
+                    currentEmployees.map((employee) => (
                     <Card key={employee.id} className="employee-card-desktop">
                       <Card.Body>
                         <div className="employee-card-header">
@@ -514,12 +610,153 @@ export default function EmployeesPage() {
                         )}
                       </Card.Body>
                     </Card>
-                  ))
-                )}
-              </div>
+                    ))
+                  )}
+                </div>
+              ) : (
+                /* Table View */
+                <div className="employees-table-container">
+                  {isLoading ? (
+                    <div className="loading-state">
+                      <div className="spinner"></div>
+                      <p>Loading employees...</p>
+                    </div>
+                  ) : filteredEmployees.length === 0 ? (
+                    <div className="empty-state">
+                      <FaUserShield className="empty-icon" />
+                      <h3>No Employees Found</h3>
+                      <p>{selectedCompany === 'all' ? 'Start by adding your first team member' : 'No employees in this company'}</p>
+                    </div>
+                  ) : (
+                    <table className="employees-table">
+                      <thead>
+                        <tr>
+                          <th>Employee</th>
+                          <th>Email</th>
+                          <th>Company</th>
+                          <th>Role</th>
+                          <th>2FA Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {currentEmployees.map((employee) => (
+                          <tr key={employee.id}>
+                            <td className="employee-cell">
+                              <div className="employee-info-row">
+                                <div className="employee-avatar-small">
+                                  {employee.profilePicture ? (
+                                    <img 
+                                      src={`/api/employees/profile-picture/${employee.profilePicture}`}
+                                      alt={employee.name}
+                                    />
+                                  ) : (
+                                    <div className="avatar-placeholder-small">
+                                      {employee.name.charAt(0).toUpperCase()}
+                                    </div>
+                                  )}
+                                </div>
+                                <span className="employee-name-table">{employee.name}</span>
+                              </div>
+                            </td>
+                            <td>
+                              {shouldHideEmail(employee.role) ? (
+                                <span className="text-muted">••••••••</span>
+                              ) : (
+                                <span className="employee-email-table">{employee.email}</span>
+                              )}
+                            </td>
+                            <td>
+                              <div className="company-badge">
+                                <FaBuilding className="company-icon-small" />
+                                {employee.company.name}
+                              </div>
+                            </td>
+                            <td>
+                              <Badge bg={employee.role === 'ADMIN' ? 'primary' : employee.role === 'MANAGER' ? 'info' : 'secondary'}>
+                                {employee.role}
+                              </Badge>
+                            </td>
+                            <td>
+                              {employee.totpEnabled || (employee.passkeys && employee.passkeys.length > 0) ? (
+                                <span className="status-badge enabled">
+                                  <FaCheckCircle /> Enabled
+                                </span>
+                              ) : (
+                                <span className="status-badge disabled">
+                                  <FaTimesCircle /> Disabled
+                                </span>
+                              )}
+                            </td>
+                            <td>
+                              <div className="table-actions">
+                                {canEditEmployee(employee.companyId, employee.role) && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      variant="link"
+                                      className="action-btn-table edit"
+                                      onClick={() => {
+                                        setSelectedEmployee(employee);
+                                        setShowEditModal(true);
+                                      }}
+                                      title="Edit"
+                                    >
+                                      <FaEdit />
+                                    </Button>
+                                    {canDeleteEmployee(employee.role) && (
+                                      <>
+                                        <Button
+                                          size="sm"
+                                          variant="link"
+                                          className="action-btn-table security"
+                                          onClick={() => {
+                                            setSelectedEmployee(employee);
+                                            setShow2FAModal(true);
+                                          }}
+                                          title="Manage 2FA"
+                                        >
+                                          <FaKey />
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="link"
+                                          className="action-btn-table delete"
+                                          onClick={() => {
+                                            setSelectedEmployee(employee);
+                                            setShowDeleteModal(true);
+                                          }}
+                                          title="Delete"
+                                        >
+                                          <FaTrash />
+                                        </Button>
+                                      </>
+                                    )}
+                                  </>
+                                )}
+                                {canExportActivities(employee.id, employee.companyId, employee.role) && (
+                                  <Button
+                                    size="sm"
+                                    variant="link"
+                                    className="action-btn-table export"
+                                    onClick={() => handleExportActivities(employee.id)}
+                                    title="Export"
+                                  >
+                                    <FaFileDownload />
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
 
               {/* Pagination */}
-              {!isLoading && employees.length > itemsPerPage && (
+              {!isLoading && filteredEmployees.length > itemsPerPage && (
                 <div className="pagination-container">
                   <Button
                     variant="outline-light"
@@ -531,7 +768,7 @@ export default function EmployeesPage() {
                   </Button>
                   <div className="pagination-info">
                     Page {currentPage} of {totalPages}
-                    <span className="text-muted ms-2">({employees.length} total employees)</span>
+                    <span className="text-muted ms-2">({filteredEmployees.length} employee{filteredEmployees.length !== 1 ? 's' : ''})</span>
                   </div>
                   <Button
                     variant="outline-light"
@@ -807,6 +1044,160 @@ export default function EmployeesPage() {
             max-width: 100%;
           }
 
+          /* Controls Bar */
+          .controls-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 12px;
+            flex-wrap: wrap;
+            gap: 1rem;
+          }
+
+          .left-controls {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            flex: 1;
+          }
+
+          .search-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            flex: 1;
+            min-width: 200px;
+            max-width: 400px;
+            transition: all 0.3s ease;
+          }
+
+          .search-bar:focus-within {
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+          }
+
+          .search-icon {
+            color: #ffffff !important;
+            font-size: 0.95rem;
+            flex-shrink: 0;
+          }
+
+          :global(.search-icon) {
+            color: #ffffff !important;
+          }
+
+          .search-input {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 0.9rem;
+            outline: none;
+            width: 100%;
+          }
+
+          .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+          }
+
+          .search-input::-webkit-search-cancel-button {
+            display: none;
+          }
+
+          .search-input::-webkit-search-decoration {
+            display: none;
+          }
+
+          .company-filter {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+          }
+
+          .filter-icon {
+            color: #ffffff !important;
+            font-size: 1rem;
+            flex-shrink: 0;
+          }
+
+          :global(.filter-icon) {
+            color: #ffffff !important;
+          }
+
+          .company-select {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+          }
+
+          .company-select:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #667eea;
+          }
+
+          .company-select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+          }
+
+          .company-select option {
+            background: #1a0033;
+            color: white;
+          }
+
+          .results-count {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            font-weight: 500;
+          }
+
+          .view-toggle {
+            display: flex;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.25rem;
+            border-radius: 8px;
+          }
+
+          .view-btn {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+          }
+
+          .view-btn:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+          }
+
+          .view-btn.active {
+            color: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+          }
+
           /* Page Header */
           .page-header {
             display: flex;
@@ -966,6 +1357,173 @@ export default function EmployeesPage() {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
             gap: 1rem;
+          }
+
+          /* Table View */
+          .employees-table-container {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 16px;
+            padding: 1.5rem;
+            overflow-x: auto;
+          }
+
+          .employees-table {
+            width: 100%;
+            border-collapse: collapse;
+            color: white;
+          }
+
+          .employees-table thead {
+            background: rgba(102, 126, 234, 0.15);
+          }
+
+          .employees-table th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #ffffff;
+            border-bottom: 2px solid rgba(102, 126, 234, 0.3);
+            white-space: nowrap;
+          }
+
+          .employees-table tbody tr {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+          }
+
+          .employees-table tbody tr:hover {
+            background: rgba(102, 126, 234, 0.1);
+          }
+
+          .employees-table td {
+            padding: 1rem;
+            vertical-align: middle;
+          }
+
+          .employee-cell {
+            min-width: 200px;
+          }
+
+          .employee-info-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+          }
+
+          .employee-avatar-small {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex-shrink: 0;
+            border: 2px solid #667eea;
+          }
+
+          .employee-avatar-small img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          .avatar-placeholder-small {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+          }
+
+          .employee-name-table {
+            font-weight: 600;
+            color: #ffffff;
+            font-size: 0.95rem;
+          }
+
+          .employee-email-table {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+          }
+
+          .company-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.85rem;
+            white-space: nowrap;
+          }
+
+          .company-icon-small {
+            font-size: 0.85rem;
+            color: #667eea;
+          }
+
+          .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            white-space: nowrap;
+          }
+
+          .status-badge.enabled {
+            background: rgba(40, 167, 69, 0.15);
+            color: #28a745;
+            border: 1px solid rgba(40, 167, 69, 0.3);
+          }
+
+          .status-badge.disabled {
+            background: rgba(220, 53, 69, 0.15);
+            color: #dc3545;
+            border: 1px solid rgba(220, 53, 69, 0.3);
+          }
+
+          .table-actions {
+            display: flex;
+            gap: 0.25rem;
+            align-items: center;
+          }
+
+          :global(.action-btn-table) {
+            background: transparent !important;
+            border: none !important;
+            color: rgba(255, 255, 255, 0.7) !important;
+            padding: 0.5rem !important;
+            transition: all 0.3s ease !important;
+            font-size: 1rem !important;
+          }
+
+          :global(.action-btn-table:hover) {
+            transform: scale(1.1) !important;
+          }
+
+          :global(.action-btn-table.edit:hover) {
+            color: #17a2b8 !important;
+          }
+
+          :global(.action-btn-table.security:hover) {
+            color: #ffc107 !important;
+          }
+
+          :global(.action-btn-table.delete:hover) {
+            color: #dc3545 !important;
+          }
+
+          :global(.action-btn-table.export:hover) {
+            color: #28a745 !important;
           }
 
           /* Employee Cards */
@@ -1264,6 +1822,64 @@ export default function EmployeesPage() {
           @media (max-width: 1023px) {
             .employees-container {
               padding: 0.75rem;
+            }
+
+            .controls-bar {
+              flex-direction: column;
+              align-items: stretch;
+              gap: 1rem;
+              padding: 0.75rem;
+            }
+
+            .left-controls {
+              flex-direction: column;
+              align-items: stretch;
+              gap: 0.75rem;
+            }
+
+            .search-bar {
+              max-width: 100%;
+              width: 100%;
+            }
+
+            .company-filter {
+              width: 100%;
+            }
+
+            .company-select {
+              width: 100%;
+            }
+
+            .results-count {
+              text-align: center;
+            }
+
+            .view-toggle {
+              width: 100%;
+              justify-content: center;
+            }
+
+            .employees-table-container {
+              padding: 0.75rem;
+              overflow-x: scroll;
+            }
+
+            .employees-table {
+              font-size: 0.85rem;
+            }
+
+            .employees-table th,
+            .employees-table td {
+              padding: 0.75rem 0.5rem;
+            }
+
+            .employee-avatar-small {
+              width: 32px;
+              height: 32px;
+            }
+
+            .avatar-placeholder-small {
+              font-size: 0.85rem;
             }
 
             .page-header {
