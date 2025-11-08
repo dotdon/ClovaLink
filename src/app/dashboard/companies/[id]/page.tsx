@@ -1,14 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, Badge, Spinner, Button } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
 import { useParams, useRouter } from 'next/navigation';
-import { FaUsers, FaFileAlt, FaCalendar, FaBuilding, FaArrowLeft, FaEnvelope, FaShieldAlt } from 'react-icons/fa';
+import { useSession } from 'next-auth/react';
+import { hasPermission, Permission } from '@/lib/permissions';
+import { FaUsers, FaFileAlt, FaCalendar, FaBuilding, FaArrowLeft, FaEnvelope, FaShieldAlt, FaCamera, FaTrash } from 'react-icons/fa';
 
 interface Company {
   id: string;
   name: string;
+  logo?: string | null;
   createdAt: string;
   _count: {
     employees: number;
@@ -34,14 +37,23 @@ interface Company {
 export default function CompanyDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const { data: session } = useSession();
   const [company, setCompany] = useState<Company | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalEmployees, setTotalEmployees] = useState(0);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const employeesPerPage = 10;
+
+  const canEditCompany = hasPermission(session, Permission.EDIT_COMPANIES);
 
   useEffect(() => {
     const fetchCompanyData = async () => {
       try {
-        const response = await fetch(`/api/companies/${params.id}`);
+        const response = await fetch(`/api/companies/${params.id}?employeePage=${currentPage}&employeesPerPage=${employeesPerPage}`);
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || 'Failed to fetch company details');
@@ -49,6 +61,10 @@ export default function CompanyDetailsPage() {
 
         const companyData = await response.json();
         setCompany(companyData);
+        if (companyData.pagination) {
+          setTotalPages(companyData.pagination.totalPages);
+          setTotalEmployees(companyData.pagination.totalEmployees);
+        }
       } catch (error) {
         console.error('Error fetching company data:', error);
         setError(error instanceof Error ? error.message : 'Failed to load company data');
@@ -60,7 +76,67 @@ export default function CompanyDetailsPage() {
     if (params.id) {
       fetchCompanyData();
     }
-  }, [params.id]);
+  }, [params.id, currentPage]);
+
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append('logo', file);
+
+      const response = await fetch(`/api/companies/${params.id}/logo`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload logo');
+      }
+
+      const data = await response.json();
+      
+      // Update company state with new logo
+      if (company) {
+        setCompany({ ...company, logo: data.logo });
+      }
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      alert('Failed to upload logo. Please try again.');
+    } finally {
+      setIsUploadingLogo(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleDeleteLogo = async () => {
+    if (!company || !confirm('Are you sure you want to remove the company logo?')) return;
+
+    try {
+      const response = await fetch(`/api/companies/${params.id}/logo`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete logo');
+      }
+
+      // Update company state
+      setCompany({ ...company, logo: null });
+    } catch (error) {
+      console.error('Error deleting logo:', error);
+      alert('Failed to delete logo. Please try again.');
+    }
+  };
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
@@ -166,8 +242,52 @@ export default function CompanyDetailsPage() {
             <FaArrowLeft />
           </Button>
           <div className="header-content">
-            <div className="header-icon">
-              <FaBuilding />
+            <div className="header-icon-wrapper">
+              <div className="header-icon">
+                {company.logo ? (
+                  <img 
+                    src={`/api/companies/logo/${company.logo}`} 
+                    alt={company.name}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
+                    }}
+                  />
+                ) : (
+                  <FaBuilding />
+                )}
+              </div>
+              {canEditCompany && (
+                <div className="logo-actions">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={handleLogoUpload}
+                  />
+                  <Button
+                    variant="link"
+                    className="logo-btn upload"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingLogo}
+                    title={company.logo ? 'Change Logo' : 'Upload Logo'}
+                  >
+                    <FaCamera />
+                  </Button>
+                  {company.logo && (
+                    <Button
+                      variant="link"
+                      className="logo-btn delete"
+                      onClick={handleDeleteLogo}
+                      title="Remove Logo"
+                    >
+                      <FaTrash />
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
             <div>
               <h1 style={{ color: '#ffffff' }}>{company.name}</h1>
@@ -263,6 +383,46 @@ export default function CompanyDetailsPage() {
                 ))}
               </div>
             )}
+
+            {/* Pagination */}
+            {!isLoading && company.employees.length > 0 && totalPages > 1 && (
+              <div className="pagination-container" style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '1.5rem',
+                marginTop: '1.5rem',
+                paddingTop: '1.5rem',
+                borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+              }}>
+                <Button
+                  variant="outline-light"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="pagination-btn"
+                >
+                  Previous
+                </Button>
+                <div style={{
+                  color: '#ffffff',
+                  fontWeight: 500,
+                  fontSize: '0.95rem'
+                }}>
+                  Page {currentPage} of {totalPages}
+                  <span style={{ color: 'rgba(255, 255, 255, 0.6)', marginLeft: '0.5rem' }}>
+                    ({totalEmployees} total employees)
+                  </span>
+                </div>
+                <Button
+                  variant="outline-light"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="pagination-btn"
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </Card.Body>
         </Card>
 
@@ -347,6 +507,11 @@ export default function CompanyDetailsPage() {
           flex: 1;
         }
 
+        .header-icon-wrapper {
+          position: relative;
+          display: inline-block;
+        }
+
         .header-icon {
           width: 50px;
           height: 50px;
@@ -358,6 +523,48 @@ export default function CompanyDetailsPage() {
           font-size: 1.5rem;
           color: white;
           flex-shrink: 0;
+          overflow: hidden;
+        }
+
+        .logo-actions {
+          position: absolute;
+          bottom: -8px;
+          right: -8px;
+          display: flex;
+          gap: 0.25rem;
+        }
+
+        :global(.logo-btn) {
+          width: 28px !important;
+          height: 28px !important;
+          border-radius: 50% !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          padding: 0 !important;
+          background: rgba(255, 255, 255, 0.95) !important;
+          border: 2px solid #667eea !important;
+          transition: all 0.2s ease !important;
+          font-size: 0.75rem !important;
+        }
+
+        :global(.logo-btn.upload) {
+          color: #667eea !important;
+        }
+
+        :global(.logo-btn.delete) {
+          color: #dc3545 !important;
+          border-color: #dc3545 !important;
+        }
+
+        :global(.logo-btn:hover:not(:disabled)) {
+          transform: scale(1.1) !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+        }
+
+        :global(.logo-btn:disabled) {
+          opacity: 0.5 !important;
+          cursor: not-allowed !important;
         }
 
         .page-header h1 {
@@ -661,6 +868,28 @@ export default function CompanyDetailsPage() {
         .document-meta {
           font-size: 0.8rem;
           color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Pagination */
+        :global(.pagination-btn) {
+          background: rgba(255, 255, 255, 0.05) !important;
+          border: 1px solid rgba(255, 255, 255, 0.2) !important;
+          color: #ffffff !important;
+          padding: 0.6rem 1.25rem !important;
+          border-radius: 8px !important;
+          font-weight: 500 !important;
+          transition: all 0.2s ease !important;
+        }
+
+        :global(.pagination-btn:hover:not(:disabled)) {
+          background: rgba(102, 126, 234, 0.2) !important;
+          border-color: #667eea !important;
+          transform: translateY(-1px) !important;
+        }
+
+        :global(.pagination-btn:disabled) {
+          opacity: 0.4 !important;
+          cursor: not-allowed !important;
         }
 
         /* Responsive */

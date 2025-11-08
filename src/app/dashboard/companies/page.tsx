@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Alert, Spinner } from 'react-bootstrap';
+import { Card, Button, Alert, Spinner, Modal } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
-import { FaPlus, FaBuilding, FaUsers, FaFileAlt, FaChevronRight, FaFileDownload, FaCalendar } from 'react-icons/fa';
+import { FaPlus, FaBuilding, FaUsers, FaFileAlt, FaChevronRight, FaFileDownload, FaCalendar, FaEdit, FaHdd } from 'react-icons/fa';
 import AddCompanyModal from '@/components/modals/AddCompanyModal';
+import EditCompanyModal from '@/components/modals/EditCompanyModal';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { hasPermission, Permission, canAccessCompany } from '@/lib/permissions';
@@ -13,6 +14,8 @@ interface Company {
   id: string;
   name: string;
   createdAt: string;
+  logo?: string | null;
+  storageUsed: number;
   _count: {
     employees: number;
     documents: number;
@@ -23,6 +26,8 @@ export default function CompaniesPage() {
   const { data: session } = useSession();
   const router = useRouter();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +35,7 @@ export default function CompaniesPage() {
   // Check permissions
   const canViewCompanies = hasPermission(session, Permission.VIEW_COMPANIES);
   const canCreateCompany = hasPermission(session, Permission.CREATE_COMPANIES);
+  const canEditCompany = hasPermission(session, Permission.EDIT_COMPANIES);
 
   const fetchCompanies = async () => {
     try {
@@ -94,6 +100,90 @@ export default function CompaniesPage() {
     return session.user.role === 'ADMIN';
   };
 
+  const formatStorageSize = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  const handleEditClick = (company: Company, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedCompany(company);
+    setShowEditModal(true);
+  };
+
+  const handleEditCompany = async (data: { id: string; name: string }) => {
+    try {
+      const response = await fetch(`/api/companies/${data.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: data.name }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update company');
+      }
+
+      // Update local state
+      setCompanies(companies.map(c => 
+        c.id === data.id ? { ...c, name: data.name } : c
+      ));
+      
+      fetchCompanies(); // Refresh to get updated data
+    } catch (error) {
+      console.error('Error updating company:', error);
+      throw error;
+    }
+  };
+
+  const handleLogoUpload = async (companyId: string, file: File) => {
+    const formData = new FormData();
+    formData.append('logo', file);
+
+    const response = await fetch(`/api/companies/${companyId}/logo`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to upload logo');
+    }
+
+    const data = await response.json();
+    
+    // Update local state
+    setCompanies(companies.map(c => 
+      c.id === companyId ? { ...c, logo: data.logo } : c
+    ));
+    
+    if (selectedCompany && selectedCompany.id === companyId) {
+      setSelectedCompany({ ...selectedCompany, logo: data.logo });
+    }
+  };
+
+  const handleLogoDelete = async (companyId: string) => {
+    const response = await fetch(`/api/companies/${companyId}/logo`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete logo');
+    }
+
+    // Update local state
+    setCompanies(companies.map(c => 
+      c.id === companyId ? { ...c, logo: null } : c
+    ));
+    
+    if (selectedCompany && selectedCompany.id === companyId) {
+      setSelectedCompany({ ...selectedCompany, logo: null });
+    }
+  };
+
   // Company card component
   const CompanyCard = ({ company }: { company: Company }) => (
     <Card 
@@ -120,19 +210,31 @@ export default function CompaniesPage() {
               flexShrink: 0,
               boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)'
             }}>
-              <div style={{
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
-                fontWeight: 700,
-                fontSize: '1.1rem'
-              }}>
-                <FaBuilding />
-              </div>
+              {company.logo ? (
+                <img 
+                  src={`/api/companies/logo/${company.logo}`} 
+                  alt={company.name}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+                  }}
+                />
+              ) : (
+                <div style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  fontWeight: 700,
+                  fontSize: '1.1rem'
+                }}>
+                  <FaBuilding />
+                </div>
+              )}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{
@@ -156,6 +258,16 @@ export default function CompaniesPage() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0 }}>
+            {canEditCompany && (
+              <Button
+                variant="link"
+                className="action-btn-desktop edit"
+                onClick={(e) => handleEditClick(company, e)}
+                title="Edit Company"
+              >
+                <FaEdit />
+              </Button>
+            )}
             {canExportCompanyActivities(company.id) && (
               <Button
                 variant="link"
@@ -227,6 +339,33 @@ export default function CompaniesPage() {
                 fontSize: '0.85rem'
               }}>{company._count.documents}</div>
             </div>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '0.6rem',
+              background: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: '8px',
+              border: '1px solid rgba(255, 255, 255, 0.05)'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                color: 'rgba(255, 255, 255, 0.6)',
+                fontSize: '0.8rem',
+                fontWeight: 500
+              }}>
+                <FaHdd style={{ fontSize: '0.85rem', color: '#52c41a' }} />
+                <span>Storage</span>
+              </div>
+              <div style={{
+                color: '#ffffff',
+                fontWeight: 500,
+                fontSize: '0.85rem'
+              }}>{formatStorageSize(company.storageUsed)}</div>
+            </div>
           </div>
         </div>
       </Card.Body>
@@ -292,6 +431,20 @@ export default function CompaniesPage() {
             show={showAddModal}
             onHide={() => setShowAddModal(false)}
             onSubmit={handleAddCompany}
+          />
+        )}
+
+        {selectedCompany && canEditCompany && (
+          <EditCompanyModal
+            show={showEditModal}
+            onHide={() => {
+              setShowEditModal(false);
+              setSelectedCompany(null);
+            }}
+            company={selectedCompany}
+            onSubmit={handleEditCompany}
+            onLogoUpload={handleLogoUpload}
+            onLogoDelete={handleLogoDelete}
           />
         )}
 
@@ -517,6 +670,10 @@ export default function CompaniesPage() {
           }
 
           :global(.action-btn-desktop.view) {
+            color: #667eea !important;
+          }
+
+          :global(.action-btn-desktop.edit) {
             color: #667eea !important;
           }
 

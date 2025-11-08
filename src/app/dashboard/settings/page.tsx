@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, Form, Button, Alert, Tabs, Tab, Spinner, ListGroup, Badge } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
 import ThemedModal from '@/components/ui/ThemedModal';
-import { FaSave, FaSync, FaCog, FaKey, FaTrash, FaPlus, FaShieldAlt, FaQrcode, FaCheck, FaTimes } from 'react-icons/fa';
+import { FaSave, FaSync, FaCog, FaKey, FaTrash, FaPlus, FaShieldAlt, FaQrcode, FaCheck, FaTimes, FaBuilding, FaExclamationTriangle, FaUsers, FaFileAlt, FaHdd } from 'react-icons/fa';
 import { startAttestation } from '@simplewebauthn/browser';
 
 interface Setting {
@@ -53,6 +53,13 @@ export default function SettingsPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [savedCategory, setSavedCategory] = useState('');
 
+  // Company management state
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [showDeleteCompanyModal, setShowDeleteCompanyModal] = useState(false);
+  const [companyToDelete, setCompanyToDelete] = useState<any>(null);
+  const [isDeletingCompany, setIsDeletingCompany] = useState(false);
+  const [twoFACode, setTwoFACode] = useState('');
+
   // Local form state
   const [formData, setFormData] = useState<Record<string, string>>({});
 
@@ -61,6 +68,7 @@ export default function SettingsPage() {
     fetchPasskeys();
     fetchTOTPStatus();
     check2FARequirement();
+    fetchCompanies();
     
     // Check URL params for require2fa flag
     const urlParams = new URLSearchParams(window.location.search);
@@ -69,6 +77,83 @@ export default function SettingsPage() {
       setActiveTab('security');
     }
   }, []);
+
+  const fetchCompanies = async () => {
+    try {
+      const response = await fetch('/api/companies');
+      if (response.ok) {
+        const data = await response.json();
+        setCompanies(data.companies || []);
+      }
+    } catch (err) {
+      console.error('Error fetching companies:', err);
+    }
+  };
+
+  const formatStorageSize = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  const handleDeleteCompanyClick = (company: any) => {
+    setCompanyToDelete(company);
+    setShowDeleteCompanyModal(true);
+    setTwoFACode('');
+  };
+
+  const handleDeleteCompanyConfirm = async () => {
+    if (!companyToDelete) return;
+
+    // Verify 2FA is enabled
+    if (!totpEnabled && passkeys.length === 0) {
+      setError('You must have 2FA enabled to delete companies');
+      return;
+    }
+
+    // Verify 2FA code if TOTP is enabled
+    if (totpEnabled && (!twoFACode || !/^\d{6}$/.test(twoFACode))) {
+      setError('Please enter a valid 6-digit 2FA code');
+      return;
+    }
+
+    setIsDeletingCompany(true);
+    try {
+      // Verify 2FA code first
+      if (totpEnabled) {
+        const verifyResponse = await fetch('/api/totp/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: twoFACode }),
+        });
+
+        if (!verifyResponse.ok) {
+          throw new Error('Invalid 2FA code');
+        }
+      }
+
+      // Delete company
+      const response = await fetch(`/api/companies/${companyToDelete.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete company');
+      }
+
+      setSuccess('Company deleted successfully');
+      setCompanies(companies.filter(c => c.id !== companyToDelete.id));
+      setShowDeleteCompanyModal(false);
+      setCompanyToDelete(null);
+      setTwoFACode('');
+    } catch (error: any) {
+      setError(error.message || 'Failed to delete company');
+    } finally {
+      setIsDeletingCompany(false);
+    }
+  };
 
   const fetchSettings = async () => {
     try {
@@ -1195,6 +1280,87 @@ export default function SettingsPage() {
                 )}
               </div>
             </Tab>
+
+            {/* Companies Tab */}
+            <Tab eventKey="companies" title="Companies">
+              <div className="settings-section">
+                <h5 className="section-title">
+                  <FaBuilding className="me-2" />
+                  Company Management
+                </h5>
+                <Alert variant="warning" className="mb-4">
+                  <FaExclamationTriangle className="me-2" />
+                  <strong>Danger Zone:</strong> Deleting a company requires 2FA verification and cannot be undone.
+                </Alert>
+                
+                {!totpEnabled && passkeys.length === 0 && (
+                  <Alert variant="danger" className="mb-4">
+                    <FaShieldAlt className="me-2" />
+                    <strong>2FA Required:</strong> You must enable 2FA (either TOTP or Passkey) before you can delete companies.
+                  </Alert>
+                )}
+
+                {companies.length === 0 ? (
+                  <Alert variant="info">
+                    <FaBuilding className="me-2" />
+                    No companies found in the system.
+                  </Alert>
+                ) : (
+                  <div className="companies-danger-list">
+                    {companies.map((company) => (
+                      <Card key={company.id} className="company-danger-card mb-3">
+                        <Card.Body>
+                          <div className="d-flex justify-content-between align-items-start">
+                            <div className="flex-grow-1">
+                              <h6 className="mb-2" style={{ color: '#1a1d21', fontWeight: 600 }}>
+                                {company.logo ? (
+                                  <img 
+                                    src={`/api/companies/logo/${company.logo}`}
+                                    alt={company.name}
+                                    style={{
+                                      width: '32px',
+                                      height: '32px',
+                                      borderRadius: '6px',
+                                      marginRight: '0.75rem',
+                                      objectFit: 'cover',
+                                      border: '2px solid #dee2e6'
+                                    }}
+                                  />
+                                ) : (
+                                  <FaBuilding className="me-2" style={{ color: '#667eea' }} />
+                                )}
+                                {company.name}
+                              </h6>
+                              <div className="company-stats-inline">
+                                <span className="stat-badge">
+                                  <FaUsers className="me-1" /> {company._count.employees} employees
+                                </span>
+                                <span className="stat-badge">
+                                  <FaFileAlt className="me-1" /> {company._count.documents} documents
+                                </span>
+                                <span className="stat-badge">
+                                  <FaHdd className="me-1" /> {formatStorageSize(company.storageUsed)}
+                                </span>
+                              </div>
+                            </div>
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              onClick={() => handleDeleteCompanyClick(company)}
+                              disabled={!totpEnabled && passkeys.length === 0}
+                              className="company-delete-btn"
+                            >
+                              <FaTrash className="me-1" />
+                              Delete
+                            </Button>
+                          </div>
+                        </Card.Body>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Tab>
           </Tabs>
         </Card.Body>
       </Card>
@@ -1209,6 +1375,108 @@ export default function SettingsPage() {
           </p>
         </Card.Body>
       </Card>
+
+      {/* Delete Company Modal with 2FA */}
+      <ThemedModal
+        show={showDeleteCompanyModal}
+        onHide={() => {
+          setShowDeleteCompanyModal(false);
+          setCompanyToDelete(null);
+          setTwoFACode('');
+        }}
+        title="Delete Company - 2FA Required"
+        size="md"
+      >
+        <Alert variant="danger" className="mb-3">
+          <FaExclamationTriangle className="me-2" />
+          <strong>Warning: This action cannot be undone!</strong>
+          <p className="mb-0 mt-2">All company data will be permanently deleted.</p>
+        </Alert>
+
+        {companyToDelete && (
+          <>
+            <p style={{ color: '#1a1d21', fontSize: '1rem', marginBottom: '1.5rem' }}>
+              Are you sure you want to delete <strong>{companyToDelete.name}</strong>?
+            </p>
+
+            <div className="impact-box" style={{
+              background: '#f8f9fa',
+              border: '1px solid #dee2e6',
+              borderRadius: '10px',
+              padding: '1rem',
+              marginBottom: '1.5rem'
+            }}>
+              <h6 style={{ color: '#495057', marginBottom: '1rem', fontWeight: 600 }}>
+                This will permanently remove:
+              </h6>
+              <ul style={{ marginBottom: 0, paddingLeft: '1.5rem', color: '#6c757d' }}>
+                <li><FaUsers className="me-1" style={{ color: '#667eea' }} />All {companyToDelete._count.employees} employees</li>
+                <li><FaFileAlt className="me-1" style={{ color: '#667eea' }} />All {companyToDelete._count.documents} documents</li>
+                <li><FaHdd className="me-1" style={{ color: '#667eea' }} />{formatStorageSize(companyToDelete.storageUsed)} of storage</li>
+                <li><FaBuilding className="me-1" style={{ color: '#667eea' }} />Company folder and all files</li>
+              </ul>
+            </div>
+
+            {totpEnabled ? (
+              <Form.Group className="mb-3">
+                <Form.Label style={{ fontWeight: 600, color: '#1a1d21' }}>
+                  <FaShieldAlt className="me-2" />
+                  Enter your 6-digit 2FA code to confirm
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  value={twoFACode}
+                  onChange={(e) => setTwoFACode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="000000"
+                  maxLength={6}
+                  disabled={isDeletingCompany}
+                  className="text-center"
+                  style={{ fontSize: '1.5rem', letterSpacing: '0.5rem', fontFamily: 'monospace' }}
+                />
+                <Form.Text className="text-muted">
+                  Check your authenticator app for the current code
+                </Form.Text>
+              </Form.Group>
+            ) : (
+              <Alert variant="info" className="mb-3">
+                <FaShieldAlt className="me-2" />
+                Passkey authentication will be required on confirmation
+              </Alert>
+            )}
+
+            <div className="d-flex gap-2 justify-content-end">
+              <Button
+                variant="outline-secondary"
+                onClick={() => {
+                  setShowDeleteCompanyModal(false);
+                  setCompanyToDelete(null);
+                  setTwoFACode('');
+                }}
+                disabled={isDeletingCompany}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleDeleteCompanyConfirm}
+                disabled={isDeletingCompany || (totpEnabled && twoFACode.length !== 6)}
+              >
+                {isDeletingCompany ? (
+                  <>
+                    <Spinner animation="border" size="sm" className="me-2" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <FaTrash className="me-2" />
+                    Confirm Deletion
+                  </>
+                )}
+              </Button>
+            </div>
+          </>
+        )}
+      </ThemedModal>
       </div>
 
       <style jsx>{`
@@ -1442,6 +1710,49 @@ export default function SettingsPage() {
         :global(.save-settings-btn:disabled) {
           color: #fff !important;
           opacity: 0.65;
+        }
+
+        :global(.company-danger-card) {
+          border: 1px solid #dee2e6 !important;
+          border-radius: 12px !important;
+          transition: all 0.2s ease !important;
+        }
+
+        :global(.company-danger-card:hover) {
+          border-color: #dc3545 !important;
+          box-shadow: 0 2px 8px rgba(220, 53, 69, 0.1) !important;
+        }
+
+        :global(.company-stats-inline) {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.5rem;
+          margin-top: 0.5rem;
+        }
+
+        :global(.stat-badge) {
+          display: inline-flex;
+          align-items: center;
+          padding: 0.25rem 0.75rem;
+          background: #f8f9fa;
+          border: 1px solid #dee2e6;
+          border-radius: 6px;
+          font-size: 0.85rem;
+          color: #6c757d;
+        }
+
+        :global(.stat-badge svg) {
+          font-size: 0.75rem;
+          color: #667eea;
+        }
+
+        :global(.company-delete-btn) {
+          border-width: 1.5px !important;
+          font-weight: 500 !important;
+        }
+
+        :global(.company-delete-btn:disabled) {
+          opacity: 0.5 !important;
         }
       `}</style>
     </DashboardLayout>

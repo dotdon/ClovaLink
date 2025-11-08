@@ -17,6 +17,7 @@ enum Role {
 model Company {
   id                    String                  @id @default(cuid())
   name                  String
+  logo                  String?                 // Logo filename
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @updatedAt
   employees             Employee[]

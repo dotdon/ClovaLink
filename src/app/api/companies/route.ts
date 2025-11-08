@@ -77,7 +77,26 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({ companies });
+    // Calculate storage usage for each company
+    const companiesWithStorage = await Promise.all(
+      companies.map(async (company) => {
+        const storageResult = await prisma.document.aggregate({
+          where: {
+            companyId: company.id,
+          },
+          _sum: {
+            size: true,
+          },
+        });
+
+        return {
+          ...company,
+          storageUsed: storageResult._sum.size || 0,
+        };
+      })
+    );
+
+    return NextResponse.json({ companies: companiesWithStorage });
   } catch (error) {
     console.error('Error fetching companies:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
