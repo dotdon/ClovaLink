@@ -3,7 +3,7 @@
 import React from 'react';
 import DashboardLayout from '@/components/ui/DashboardLayout';
 import { Card, Accordion } from 'react-bootstrap';
-import { FaUserShield, FaFolderOpen, FaShareAlt, FaKey } from 'react-icons/fa';
+import { FaUserShield, FaFolderOpen, FaShareAlt, FaKey, FaArrowsAlt, FaStar, FaLock, FaThumbtack } from 'react-icons/fa';
 
 export default function HelpPage() {
   return (
@@ -56,6 +56,46 @@ export default function HelpPage() {
                 <p>Best practices for keeping your documents secure.</p>
               </Card.Body>
             </Card>
+
+            <Card className="guide-card">
+              <Card.Body>
+                <div className="guide-icon">
+                  <FaArrowsAlt />
+                </div>
+                <h3>Move & Organize</h3>
+                <p>Move files and folders within or across companies with the advanced move modal.</p>
+              </Card.Body>
+            </Card>
+
+            <Card className="guide-card">
+              <Card.Body>
+                <div className="guide-icon">
+                  <FaStar />
+                </div>
+                <h3>Quick Access</h3>
+                <p>Pin folders and star important items for instant access.</p>
+              </Card.Body>
+            </Card>
+
+            <Card className="guide-card">
+              <Card.Body>
+                <div className="guide-icon">
+                  <FaLock />
+                </div>
+                <h3>Password Protection</h3>
+                <p>Add an extra layer of security with document and folder passwords.</p>
+              </Card.Body>
+            </Card>
+
+            <Card className="guide-card">
+              <Card.Body>
+                <div className="guide-icon">
+                  <FaThumbtack />
+                </div>
+                <h3>Favorites & Pins</h3>
+                <p>Organize with starred items and pinned folders for efficient workflow.</p>
+              </Card.Body>
+            </Card>
           </div>
         </div>
 
@@ -79,19 +119,28 @@ export default function HelpPage() {
               <Accordion.Body>
                 <p>You can organize documents in several ways:</p>
                 <ul>
-                  <li>Create folders and subfolders to categorize documents</li>
-                  <li>Drag and drop documents between folders</li>
+                  <li>Create folders and subfolders with unlimited nesting depth</li>
+                  <li>Drag and drop documents and folders between locations</li>
+                  <li>Use the <strong>"Move to..."</strong> option for precise placement</li>
+                  <li>Pin frequently used folders to Quick Access for instant navigation</li>
+                  <li>Star important files and folders for easy access in the Starred tab</li>
+                  <li>Toggle between Grid and List views for optimal browsing</li>
                   <li>Use the search function to find documents quickly</li>
-                  <li>Sort documents by name, date, or size</li>
-                  <li>Create named upload links that automatically organize uploads into specific folders</li>
-                  <li>Move multiple documents at once using bulk selection</li>
-                  <li>Delete folders and their contents with a single action</li>
+                  <li>Sort documents by name, date, or file size</li>
                 </ul>
-                <p><strong>Folder Management Tips:</strong></p>
+                <p><strong>Advanced Move Features:</strong></p>
                 <ul>
-                  <li>Give folders descriptive names for easy navigation</li>
-                  <li>Use the breadcrumb navigation to move between folder levels</li>
-                  <li>Right-click folders for quick actions like rename, delete, or share</li>
+                  <li>Move files and folders within your company</li>
+                  <li>Move items across companies (if you have multi-company access)</li>
+                  <li>Move items to root (top level) to remove them from folders</li>
+                  <li>See full folder paths when moving (Parent / Child / Grandchild)</li>
+                  <li>The system prevents circular folder moves automatically</li>
+                </ul>
+                <p><strong>Quick Access & Favorites:</strong></p>
+                <ul>
+                  <li>Pin folders to display them in the Quick Access section at the top</li>
+                  <li>Star documents and folders to access them from the Starred tab</li>
+                  <li>Use breadcrumb navigation to jump between folder levels</li>
                 </ul>
               </Accordion.Body>
             </Accordion.Item>
@@ -173,19 +222,22 @@ export default function HelpPage() {
               <Accordion.Body>
                 <p>ClovaLink implements comprehensive security measures:</p>
                 <ul>
-                  <li>Secure user authentication and role-based access control</li>
+                  <li>Secure user authentication with 2FA and passkey support</li>
+                  <li>Role-based access control with granular permissions</li>
+                  <li>Document and folder password protection</li>
                   <li>Encrypted file storage and transfer</li>
                   <li>Temporary, expiring download and upload links</li>
                   <li>Detailed activity logging and monitoring</li>
-                  <li>Company data isolation</li>
+                  <li>Company data isolation with cross-company access control</li>
                   <li>Automatic malware scanning for uploads</li>
                   <li>Regular security updates</li>
                 </ul>
-                <p><strong>Role-Based Permissions:</strong></p>
+                <p><strong>Password Protection Features:</strong></p>
                 <ul>
-                  <li>Admins: Full system access and user management</li>
-                  <li>Managers: Document and team management within their company</li>
-                  <li>Users: Basic document access and sharing capabilities</li>
+                  <li>Add passwords to individual documents and folders</li>
+                  <li>Users must enter password to access protected items</li>
+                  <li>Passwords are securely hashed and stored</li>
+                  <li>Administrators can remove password protection</li>
                 </ul>
               </Accordion.Body>
             </Accordion.Item>
@@ -206,6 +258,174 @@ export default function HelpPage() {
                   <li>Set appropriate expiration dates based on need</li>
                   <li>Monitor link usage through the dashboard</li>
                   <li>Delete unused or expired links regularly</li>
+                </ul>
+              </Accordion.Body>
+            </Accordion.Item>
+
+            <Accordion.Item eventKey="7">
+              <Accordion.Header>How do I move files and folders?</Accordion.Header>
+              <Accordion.Body>
+                <p>ClovaLink offers powerful file and folder moving capabilities:</p>
+                <h5>Using the Move Modal:</h5>
+                <ol>
+                  <li>Click the three-dot menu (⋮) on any file or folder</li>
+                  <li>Select "Move to..."</li>
+                  <li>Choose your destination folder from the dropdown</li>
+                  <li>Select "Root" to move items to the top level (out of folders)</li>
+                  <li>If you have multi-company access, change the company in the lower section</li>
+                  <li>Click "Move" to complete the action</li>
+                </ol>
+                <p><strong>Move Features:</strong></p>
+                <ul>
+                  <li>View all folders with full paths (Parent / Child / Grandchild)</li>
+                  <li>Move within the same company or across companies</li>
+                  <li>Move multiple items by selecting them first</li>
+                  <li>The system prevents moving folders into themselves</li>
+                  <li>Drag and drop is also available for quick moves</li>
+                </ul>
+                <p><strong>Cross-Company Moves:</strong></p>
+                <ul>
+                  <li>Available if you have access to multiple companies</li>
+                  <li>Documents transfer ownership to the target company</li>
+                  <li>All moves are logged in the activity tracker</li>
+                  <li>Permissions are preserved during the move</li>
+                </ul>
+              </Accordion.Body>
+            </Accordion.Item>
+
+            <Accordion.Item eventKey="8">
+              <Accordion.Header>What's the difference between Pinning and Starring?</Accordion.Header>
+              <Accordion.Body>
+                <p>Both features help you organize and access important items quickly:</p>
+                <h5>Pinning (Folders Only):</h5>
+                <ul>
+                  <li>Click the pin icon on any folder</li>
+                  <li>Pinned folders appear in the "Quick Access" section at the top</li>
+                  <li>Perfect for folders you access frequently</li>
+                  <li>Provides instant navigation without browsing</li>
+                  <li>Only works with folders, not individual documents</li>
+                </ul>
+                <h5>Starring (Files and Folders):</h5>
+                <ul>
+                  <li>Click the star icon on any file or folder</li>
+                  <li>Starred items appear in the dedicated "Starred" tab</li>
+                  <li>Works for both documents and folders</li>
+                  <li>Similar to Google Drive's starred items</li>
+                  <li>Great for marking important items for easy retrieval</li>
+                </ul>
+                <p><strong>Use Cases:</strong></p>
+                <ul>
+                  <li><strong>Pin:</strong> Project folders you're actively working on</li>
+                  <li><strong>Star:</strong> Important contracts, reports, or reference documents</li>
+                  <li>You can use both features together for maximum organization</li>
+                </ul>
+              </Accordion.Body>
+            </Accordion.Item>
+
+            <Accordion.Item eventKey="9">
+              <Accordion.Header>How do I protect documents with passwords?</Accordion.Header>
+              <Accordion.Body>
+                <p>Add an extra layer of security to sensitive files and folders:</p>
+                <h5>Setting a Password:</h5>
+                <ol>
+                  <li>Click the three-dot menu (⋮) on a document or folder</li>
+                  <li>Select "Set Password"</li>
+                  <li>Enter your desired password</li>
+                  <li>Confirm the password</li>
+                  <li>Click "Set Password" to save</li>
+                </ol>
+                <h5>Accessing Protected Items:</h5>
+                <ol>
+                  <li>Click on a password-protected item</li>
+                  <li>A password prompt will appear</li>
+                  <li>Enter the correct password</li>
+                  <li>The item will be accessible for your session</li>
+                </ol>
+                <p><strong>Password Protection Features:</strong></p>
+                <ul>
+                  <li>Passwords protect both viewing and downloading</li>
+                  <li>Folder passwords protect all contents within</li>
+                  <li>Starred/pinned items still require passwords to access</li>
+                  <li>Administrators can remove passwords if needed</li>
+                  <li>Passwords are securely hashed and cannot be recovered</li>
+                  <li>Each item can have a unique password</li>
+                </ul>
+                <p><strong>Important Notes:</strong></p>
+                <ul>
+                  <li>Remember your passwords - they cannot be recovered, only reset</li>
+                  <li>Contact an administrator if you forget a password</li>
+                  <li>Password protection is separate from user permissions</li>
+                </ul>
+              </Accordion.Body>
+            </Accordion.Item>
+
+            <Accordion.Item eventKey="10">
+              <Accordion.Header>How do I view document activity logs?</Accordion.Header>
+              <Accordion.Body>
+                <p>Track all activities related to specific documents and folders:</p>
+                <h5>Accessing Activity Logs:</h5>
+                <ol>
+                  <li>Click the three-dot menu (⋮) on any document or folder</li>
+                  <li>Select "Activity Log"</li>
+                  <li>View detailed activity history for that specific item</li>
+                </ol>
+                <p><strong>Tracked Activities Include:</strong></p>
+                <ul>
+                  <li>Uploads and downloads</li>
+                  <li>Moves and renames</li>
+                  <li>Password changes</li>
+                  <li>Share link generation</li>
+                  <li>Access attempts</li>
+                  <li>Deletions and modifications</li>
+                  <li>Favoriting and pinning actions</li>
+                </ul>
+                <p><strong>Activity Information Displayed:</strong></p>
+                <ul>
+                  <li>User who performed the action</li>
+                  <li>Timestamp of the action</li>
+                  <li>Type of activity</li>
+                  <li>Detailed description</li>
+                  <li>Company context</li>
+                </ul>
+                <p><strong>Benefits:</strong></p>
+                <ul>
+                  <li>Compliance and audit trails</li>
+                  <li>Track document access and usage</li>
+                  <li>Identify who made changes</li>
+                  <li>Monitor sensitive document activity</li>
+                </ul>
+              </Accordion.Body>
+            </Accordion.Item>
+
+            <Accordion.Item eventKey="11">
+              <Accordion.Header>Can I access multiple companies?</Accordion.Header>
+              <Accordion.Body>
+                <p>Yes! ClovaLink supports cross-company access for users who need to work with multiple organizations:</p>
+                <h5>Getting Access:</h5>
+                <ul>
+                  <li>An administrator must grant you cross-company access</li>
+                  <li>Access is configured per-company basis</li>
+                  <li>Your primary company remains unchanged</li>
+                </ul>
+                <h5>Using Multi-Company Access:</h5>
+                <ol>
+                  <li>Look for the company dropdown in the documents page</li>
+                  <li>Select the company you want to work with</li>
+                  <li>All documents will switch to that company's context</li>
+                  <li>Your Quick Access and Starred items are company-specific</li>
+                </ol>
+                <p><strong>Moving Between Companies:</strong></p>
+                <ul>
+                  <li>Use the "Move to..." feature to transfer files between companies</li>
+                  <li>Select the target company in the move modal</li>
+                  <li>Choose destination folder in the target company</li>
+                  <li>All moves are logged for security and compliance</li>
+                </ul>
+                <p><strong>Permissions:</strong></p>
+                <ul>
+                  <li>Your role may differ between companies</li>
+                  <li>Each company maintains separate permissions</li>
+                  <li>Administrators control cross-company access grants</li>
                 </ul>
               </Accordion.Body>
             </Accordion.Item>
