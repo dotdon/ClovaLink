@@ -27,10 +27,20 @@ export default function UploadLinksPage() {
   const [links, setLinks] = useState<UploadLink[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const linksPerPage = 10;
 
   // Check permissions
   const canViewLinks = hasPermission(session, Permission.VIEW_UPLOAD_LINKS);
   const canCreateLinks = hasPermission(session, Permission.CREATE_UPLOAD_LINKS);
+
+  // Pagination
+  const indexOfLastLink = currentPage * linksPerPage;
+  const indexOfFirstLink = indexOfLastLink - linksPerPage;
+  const currentLinks = links.slice(indexOfFirstLink, indexOfLastLink);
+  const totalPages = Math.ceil(links.length / linksPerPage);
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   const fetchLinks = async () => {
     try {
@@ -119,54 +129,42 @@ export default function UploadLinksPage() {
     return <Badge bg="success">Active</Badge>;
   };
 
-  // Mobile upload link card component
-  const UploadLinkCard = ({ link }: { link: UploadLink }) => (
-    <Card className="upload-link-card mb-3">
-      <Card.Body>
-        <div className="link-header">
-          <h3 className="link-name">{link.name || 'Unnamed Link'}</h3>
-          {getStatusBadge(link)}
+  // Pagination component
+  const Pagination = () => {
+    if (totalPages <= 1) return null;
+
+    return (
+      <div className="pagination-container">
+        <Button 
+          onClick={() => paginate(currentPage - 1)} 
+          disabled={currentPage === 1}
+          className="pagination-btn"
+        >
+          Previous
+        </Button>
+        
+        <div className="pagination-pages">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
+            <Button
+              key={number}
+              onClick={() => paginate(number)}
+              className={`pagination-number ${currentPage === number ? 'active' : ''}`}
+            >
+              {number}
+            </Button>
+          ))}
         </div>
         
-        <div className="link-details">
-          <div className="detail">
-            <FaUser className="detail-icon" />
-            <span>Created by {link.employee.name}</span>
-          </div>
-          <div className="detail">
-            <FaCalendar className="detail-icon" />
-            <span>Expires: {new Date(link.expiresAt).toLocaleDateString()}</span>
-          </div>
-          <div className="detail">
-            <FaLink className="detail-icon" />
-            <span>Uses: {link.useCount} / {link.maxUses}</span>
-          </div>
-        </div>
-
-        <div className="link-token">
-          <code className="token-text">{link.token.substring(0, 16)}...</code>
-        </div>
-
-        <div className="link-actions">
-          <Button
-            variant="outline-primary"
-            size="sm"
-            className="me-2"
-            onClick={() => handleCopyLink(link.token)}
-          >
-            <FaCopy className="me-1" /> Copy
-          </Button>
-          <Button
-            variant="outline-danger"
-            size="sm"
-            onClick={() => handleDeleteLink(link.id)}
-          >
-            <FaTrash className="me-1" /> Delete
-          </Button>
-        </div>
-      </Card.Body>
-    </Card>
-  );
+        <Button 
+          onClick={() => paginate(currentPage + 1)} 
+          disabled={currentPage === totalPages}
+          className="pagination-btn"
+        >
+          Next
+        </Button>
+      </div>
+    );
+  };
 
   return (
     <DashboardLayout>
@@ -194,82 +192,85 @@ export default function UploadLinksPage() {
           <Alert variant="danger">{error}</Alert>
         ) : (
           <>
-            {/* Desktop View */}
-            <div className="desktop-view">
-              <Card>
-                <Card.Body>
-                  <Table responsive>
+            {isLoading ? (
+              <div className="loading-state">
+                <div className="loading-spinner"></div>
+                <p>Loading upload links...</p>
+              </div>
+            ) : links.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">
+                  <FaLink />
+                </div>
+                <h3>No Upload Links Yet</h3>
+                <p>Create your first upload link to get started</p>
+                {canCreateLinks && (
+                  <Button className="gradient-btn mt-3" onClick={() => setShowCreateModal(true)}>
+                    <FaPlus className="me-2" /> Create Upload Link
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="modern-table-container">
+                  <table className="modern-table">
                     <thead>
                       <tr>
                         <th>Name</th>
-                        <th>Created By</th>
-                        <th>Link</th>
                         <th>Status</th>
+                        <th>Created By</th>
+                        <th>Token</th>
                         <th>Uses</th>
                         <th>Expires</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {isLoading ? (
-                        <tr>
-                          <td colSpan={7} className="text-center">Loading...</td>
-                        </tr>
-                      ) : links.length === 0 ? (
-                        <tr>
-                          <td colSpan={7} className="text-center">No upload links created yet</td>
-                        </tr>
-                      ) : (
-                        links.map((link) => (
-                          <tr key={link.id}>
-                            <td>{link.name || 'Unnamed Link'}</td>
-                            <td>{link.employee.name}</td>
-                            <td>
-                              <code className="small">{link.token.substring(0, 16)}...</code>
-                            </td>
-                            <td>{getStatusBadge(link)}</td>
-                            <td>
-                              {link.useCount} / {link.maxUses}
-                            </td>
-                            <td>{new Date(link.expiresAt).toLocaleDateString()}</td>
-                            <td>
+                      {currentLinks.map((link) => (
+                        <tr key={link.id} className="table-row">
+                          <td className="link-name-cell">
+                            <div className="name-with-icon">
+                              <div className="small-icon">
+                                <FaLink />
+                              </div>
+                              <span>{link.name || 'Unnamed Link'}</span>
+                            </div>
+                          </td>
+                          <td>{getStatusBadge(link)}</td>
+                          <td>{link.employee.name}</td>
+                          <td>
+                            <code className="token-code">{link.token.substring(0, 16)}...</code>
+                          </td>
+                          <td>
+                            <span className="usage-text">{link.useCount} / {link.maxUses}</span>
+                          </td>
+                          <td>{new Date(link.expiresAt).toLocaleDateString()}</td>
+                          <td>
+                            <div className="table-actions">
                               <Button
-                                variant="outline-primary"
                                 size="sm"
-                                className="me-2"
+                                className="action-btn-sm copy-btn-sm"
                                 onClick={() => handleCopyLink(link.token)}
                               >
-                                <FaCopy /> Copy
+                                <FaCopy />
                               </Button>
                               <Button
-                                variant="outline-danger"
                                 size="sm"
+                                className="action-btn-sm delete-btn-sm"
                                 onClick={() => handleDeleteLink(link.id)}
                               >
-                                <FaTrash /> Delete
+                                <FaTrash />
                               </Button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
-                  </Table>
-                </Card.Body>
-              </Card>
-            </div>
-
-            {/* Mobile View */}
-            <div className="mobile-view">
-              {isLoading ? (
-                <div className="text-center py-4">Loading...</div>
-              ) : links.length === 0 ? (
-                <div className="text-center py-4">No upload links created yet</div>
-              ) : (
-                links.map((link) => (
-                  <UploadLinkCard key={link.id} link={link} />
-                ))
-              )}
-            </div>
+                  </table>
+                </div>
+                <Pagination />
+              </>
+            )}
           </>
         )}
 
@@ -423,97 +424,445 @@ export default function UploadLinksPage() {
             transform: translateY(-1px) scale(0.98) !important;
           }
 
+          /* Modern Table */
+          .modern-table-container {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 16px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+          }
+
+          .modern-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+          }
+
+          .modern-table thead {
+            background: rgba(102, 126, 234, 0.15);
+            border-radius: 12px;
+          }
+
+          .modern-table thead th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #ffffff;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid rgba(102, 126, 234, 0.3);
+            white-space: nowrap;
+          }
+
+          .modern-table thead th:first-child {
+            border-top-left-radius: 12px;
+            padding-left: 1.5rem;
+          }
+
+          .modern-table thead th:last-child {
+            border-top-right-radius: 12px;
+            padding-right: 1.5rem;
+          }
+
+          .modern-table tbody tr {
+            transition: all 0.3s ease;
+            border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+          }
+
+          .modern-table tbody tr:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: scale(1.01);
+          }
+
+          .modern-table tbody td {
+            padding: 1rem;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.95rem;
+          }
+
+          .modern-table tbody td:first-child {
+            padding-left: 1.5rem;
+          }
+
+          .modern-table tbody td:last-child {
+            padding-right: 1.5rem;
+          }
+
+          .name-with-icon {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+          }
+
+          .small-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+          }
+
+          .link-name-cell {
+            font-weight: 600;
+            color: #ffffff !important;
+          }
+
+          .token-code {
+            background: rgba(102, 126, 234, 0.15);
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: #667eea;
+            font-family: 'Courier New', monospace;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+          }
+
+          .usage-text {
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+          }
+
+          .table-actions {
+            display: flex;
+            gap: 0.5rem;
+          }
+
+          :global(.action-btn-sm) {
+            width: 36px !important;
+            height: 36px !important;
+            padding: 0 !important;
+            border-radius: 8px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border: none !important;
+            transition: all 0.3s ease !important;
+          }
+
+          :global(.copy-btn-sm) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            color: white !important;
+          }
+
+          :global(.copy-btn-sm:hover) {
+            transform: scale(1.1) !important;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6) !important;
+          }
+
+          :global(.delete-btn-sm) {
+            background: rgba(220, 53, 69, 0.15) !important;
+            color: #dc3545 !important;
+            border: 1px solid rgba(220, 53, 69, 0.3) !important;
+          }
+
+          :global(.delete-btn-sm:hover) {
+            background: rgba(220, 53, 69, 0.3) !important;
+            transform: scale(1.1) !important;
+          }
+
+          /* Pagination */
+          .pagination-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+          }
+
+          .pagination-pages {
+            display: flex;
+            gap: 0.5rem;
+          }
+
+          :global(.pagination-btn) {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%) !important;
+            border: 1px solid rgba(102, 126, 234, 0.3) !important;
+            color: rgba(255, 255, 255, 0.9) !important;
+            padding: 0.65rem 1.25rem !important;
+            border-radius: 10px !important;
+            font-weight: 600 !important;
+            transition: all 0.3s ease !important;
+          }
+
+          :global(.pagination-btn:hover:not(:disabled)) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border-color: #667eea !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
+          }
+
+          :global(.pagination-btn:disabled) {
+            opacity: 0.4 !important;
+            cursor: not-allowed !important;
+          }
+
+          :global(.pagination-number) {
+            width: 40px !important;
+            height: 40px !important;
+            padding: 0 !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(102, 126, 234, 0.2) !important;
+            color: rgba(255, 255, 255, 0.7) !important;
+            border-radius: 10px !important;
+            font-weight: 600 !important;
+            transition: all 0.3s ease !important;
+          }
+
+          :global(.pagination-number.active) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border-color: #667eea !important;
+            color: white !important;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
+          }
+
+          :global(.pagination-number:hover:not(.active)) {
+            background: rgba(102, 126, 234, 0.2) !important;
+            border-color: rgba(102, 126, 234, 0.4) !important;
+            color: rgba(255, 255, 255, 0.9) !important;
+          }
+
+          /* Empty State */
+          .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 16px;
+          }
+
+          .empty-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: #667eea;
+            margin: 0 auto 1.5rem;
+          }
+
+          .empty-state h3 {
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+            font-size: 1.5rem;
+          }
+
+          .empty-state p {
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 1.5rem;
+          }
+
+          /* Loading State */
+          .loading-state {
+            text-align: center;
+            padding: 4rem 2rem;
+          }
+
+          .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(102, 126, 234, 0.2);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+          }
+
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+
+          .loading-state p {
+            color: rgba(255, 255, 255, 0.6);
+          }
+
+          /* Gradient Button */
+          :global(.gradient-btn) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border: none !important;
+            padding: 0.75rem 1.5rem !important;
+            border-radius: 10px !important;
+            font-weight: 600 !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
+            color: white !important;
+            position: relative;
+            overflow: hidden;
+          }
+
+          :global(.gradient-btn::before) {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+          }
+
+          :global(.gradient-btn:hover::before) {
+            width: 300px;
+            height: 300px;
+          }
+
+          :global(.gradient-btn:hover) {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6) !important;
+          }
+
           /* Mobile Styles */
-          @media (max-width: 1023px) {
-            .upload-links-container {
-              padding: 0.5rem;
+        @media (max-width: 1023px) {
+          .upload-links-container {
+            padding: 0.5rem;
+          }
+
+          .page-header {
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem !important;
+            margin-bottom: 1rem !important;
+            gap: 0.75rem !important;
+          }
+
+          .header-icon {
+            width: 42px !important;
+            height: 42px !important;
+            font-size: 1.1rem !important;
+          }
+
+          .header-text {
+            text-align: center;
+            width: 100%;
+          }
+
+          .page-header h1 {
+            font-size: 1.35rem !important;
+          }
+
+          .header-subtitle {
+            font-size: 0.8rem !important;
+          }
+
+          :global(.add-btn) {
+            width: 100% !important;
+            margin-left: 0 !important;
+            padding: 0.7rem 1rem !important;
+            font-size: 0.9rem !important;
+          }
+
+            .modern-table-container {
+              padding: 0.75rem;
+              overflow-x: scroll;
             }
 
-            .page-header {
-              padding: 0.5rem;
-              margin-bottom: 1rem;
-              flex-wrap: wrap;
-              gap: 1rem;
+            .modern-table {
+              font-size: 0.85rem;
             }
 
-            .page-header h1 {
-              font-size: 1.5rem;
-              width: 100%;
+            .modern-table thead th {
+              padding: 0.75rem 0.5rem;
+              font-size: 0.75rem;
             }
 
-            .page-header button {
-              width: 100%;
+            .modern-table thead th:first-child {
+              padding-left: 0.75rem;
             }
 
-            .desktop-view {
-              display: none;
+            .modern-table thead th:last-child {
+              padding-right: 0.75rem;
             }
 
-            .mobile-view {
-              display: block;
-              padding: 0.5rem;
+            .modern-table tbody td {
+              padding: 0.75rem 0.5rem;
+              font-size: 0.85rem;
             }
 
-            :global(.upload-link-card) {
-              border: none;
-              border-radius: 12px;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            .modern-table tbody td:first-child {
+              padding-left: 0.75rem;
             }
 
-            :global(.link-header) {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              margin-bottom: 1rem;
+            .modern-table tbody td:last-child {
+              padding-right: 0.75rem;
             }
 
-            :global(.link-name) {
-              font-size: 1.125rem;
-              margin: 0;
-              font-weight: 600;
+            .small-icon {
+              width: 28px;
+              height: 28px;
+              font-size: 0.75rem;
             }
 
-            :global(.link-details) {
-              display: flex;
+            .name-with-icon {
+              gap: 0.5rem;
+              font-size: 0.85rem;
+            }
+
+            .token-code {
+              font-size: 0.75rem;
+              padding: 0.25rem 0.5rem;
+            }
+
+            .table-actions {
+              gap: 0.35rem;
+            }
+
+            :global(.action-btn-sm) {
+              width: 32px !important;
+              height: 32px !important;
+            }
+
+            .pagination-container {
               flex-direction: column;
-              gap: 0.5rem;
+              gap: 0.75rem;
+            }
+
+            .pagination-pages {
+              flex-wrap: wrap;
+              justify-content: center;
+            }
+
+            :global(.pagination-btn) {
+              padding: 0.5rem 0.85rem !important;
+              font-size: 0.85rem !important;
+            }
+
+            :global(.pagination-number) {
+              width: 36px !important;
+              height: 36px !important;
+              font-size: 0.85rem !important;
+            }
+
+            .empty-state {
+              padding: 3rem 1.5rem;
+            }
+
+            .empty-icon {
+              width: 64px;
+              height: 64px;
+              font-size: 2rem;
               margin-bottom: 1rem;
             }
 
-            :global(.detail) {
-              display: flex;
-              align-items: center;
-              gap: 0.5rem;
-              color: #6c757d;
-              font-size: 0.875rem;
-            }
-
-            :global(.detail-icon) {
-              color: #0d6efd;
-              font-size: 1rem;
-            }
-
-            :global(.link-token) {
-              background: #f8f9fa;
-              padding: 0.5rem;
-              border-radius: 6px;
-              margin-bottom: 1rem;
-            }
-
-            :global(.token-text) {
-              font-size: 0.875rem;
-              color: #495057;
-            }
-
-            :global(.link-actions) {
-              display: flex;
-              gap: 0.5rem;
+            .empty-state h3 {
+              font-size: 1.25rem;
             }
 
             :global(.info-card) {
-              border: none;
-              border-radius: 12px;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+              border-radius: 12px !important;
+              background: rgba(255, 255, 255, 0.03) !important;
+              border: 1px solid rgba(102, 126, 234, 0.2) !important;
             }
           }
 
@@ -521,14 +870,6 @@ export default function UploadLinksPage() {
           @media (min-width: 1024px) {
             .upload-links-container {
               padding: 2rem;
-            }
-
-            .mobile-view {
-              display: none;
-            }
-
-            .desktop-view {
-              display: block;
             }
           }
         `}</style>

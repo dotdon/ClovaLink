@@ -336,6 +336,7 @@ export default function AccountPage() {
     try {
       setUploadingPicture(true);
       setError('');
+      setSuccess('');
 
       const formData = new FormData();
       formData.append('file', file);
@@ -346,20 +347,23 @@ export default function AccountPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Failed to upload profile picture');
       }
 
       const data = await response.json();
-      setSuccess('Profile picture updated successfully!');
       
-      // Update state and force immediate reload to bypass cache
+      // Update state with new profile picture
       setProfilePicture(data.profilePicture);
+      setSuccess('Profile picture updated successfully!');
       setUploadingPicture(false);
       
-      // Reload page to show new picture everywhere
-      window.location.reload();
+      // Delay reload slightly to show success message
+      setTimeout(() => {
+        window.location.reload();
+      }, 800);
     } catch (error: any) {
+      console.error('Profile upload error:', error);
       setError(error.message || 'Failed to upload profile picture');
       setUploadingPicture(false);
     }
@@ -474,7 +478,7 @@ export default function AccountPage() {
           </Alert>
         )}
 
-        <Card>
+        <Card className="modern-card">
           <Card.Body>
             <Tabs
               activeKey={activeTab}
@@ -483,224 +487,245 @@ export default function AccountPage() {
             >
               {/* Profile Tab */}
               <Tab eventKey="profile" title="Profile">
-                <div className="mb-4">
-                  <h5>Profile Picture</h5>
-                  <div className="d-flex align-items-center gap-3 mb-4">
-                    <div 
-                      style={{
-                        width: '120px',
-                        height: '120px',
-                        borderRadius: '50%',
-                        overflow: 'hidden',
-                        border: '3px solid #667eea',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: '#f0f0f0'
-                      }}
-                    >
-                      {profilePicture ? (
-                        <img 
-                          src={`/api/employees/profile-picture/${profilePicture}`}
-                          alt="Profile"
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                          }}
-                          loading="eager"
-                        />
-                      ) : (
-                        <FaUser style={{ fontSize: '3rem', color: '#999' }} />
-                      )}
+                {/* Profile Picture Card */}
+                <div className="profile-section-card">
+                  <div className="section-header">
+                    <div className="section-icon">
+                      <FaUser />
                     </div>
-                    <div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleProfilePictureUpload}
-                        disabled={uploadingPicture}
-                        id="profile-picture-upload"
-                        style={{ display: 'none' }}
-                      />
-                      <label htmlFor="profile-picture-upload">
-                        <Button
-                          as="span"
-                          variant="primary"
+                    <h5 className="section-title">Profile Picture</h5>
+                  </div>
+                  <div className="section-content">
+                    <div className="profile-picture-wrapper">
+                      <div className="profile-avatar-large">
+                        {profilePicture ? (
+                          <img 
+                            src={`/api/employees/profile-picture/${profilePicture}`}
+                            alt="Profile"
+                            loading="eager"
+                          />
+                        ) : (
+                          <FaUser className="avatar-icon" />
+                        )}
+                      </div>
+                      <div className="profile-actions">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleProfilePictureUpload}
                           disabled={uploadingPicture}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          {uploadingPicture ? 'Uploading...' : profilePicture ? 'Change Picture' : 'Upload Picture'}
-                        </Button>
-                      </label>
-                      {profilePicture && (
-                        <Button
-                          variant="outline-danger"
-                          onClick={handleRemoveProfilePicture}
-                          disabled={uploadingPicture}
-                          className="ms-2"
-                        >
-                          Remove
-                        </Button>
-                      )}
-                      <Form.Text className="d-block mt-2 text-muted">
-                        Max size: 5MB. Formats: JPEG, PNG, GIF, WebP
-                      </Form.Text>
+                          id="profile-picture-upload"
+                          style={{ display: 'none' }}
+                        />
+                        <label htmlFor="profile-picture-upload" className="mb-0">
+                          <Button
+                            as="span"
+                            className="gradient-btn"
+                            disabled={uploadingPicture}
+                          >
+                            {uploadingPicture ? 'Uploading...' : profilePicture ? 'Change Picture' : 'Upload Picture'}
+                          </Button>
+                        </label>
+                        {profilePicture && (
+                          <Button
+                            variant="outline-danger"
+                            onClick={handleRemoveProfilePicture}
+                            disabled={uploadingPicture}
+                          >
+                            Remove
+                          </Button>
+                        )}
+                        <Form.Text className="d-block mt-2">
+                          Max size: 5MB. Formats: JPEG, PNG, GIF, WebP
+                        </Form.Text>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="mb-4">
-                  <h5>Your Information</h5>
-                  <ListGroup variant="flush">
-                    <ListGroup.Item>
-                      <strong>Name:</strong> {session?.user?.name}
-                    </ListGroup.Item>
-                    <ListGroup.Item>
-                      <strong>Email:</strong> {session?.user?.email}
-                    </ListGroup.Item>
-                    <ListGroup.Item>
-                      <strong>Role:</strong> <Badge bg="primary">{session?.user?.role}</Badge>
-                    </ListGroup.Item>
-                  </ListGroup>
+                {/* User Information Card */}
+                <div className="profile-section-card">
+                  <div className="section-header">
+                    <div className="section-icon">
+                      <FaUser />
+                    </div>
+                    <h5 className="section-title">Your Information</h5>
+                  </div>
+                  <div className="section-content">
+                    <div className="info-grid">
+                      <div className="info-item">
+                        <span className="info-label">Name</span>
+                        <span className="info-value">{session?.user?.name}</span>
+                      </div>
+                      <div className="info-item">
+                        <span className="info-label">Email</span>
+                        <span className="info-value">{session?.user?.email}</span>
+                      </div>
+                      <div className="info-item">
+                        <span className="info-label">Role</span>
+                        <Badge bg="primary" className="role-badge">{session?.user?.role}</Badge>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <h5 className="mt-4">Change Password</h5>
-                <Form onSubmit={handleChangePassword}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Current Password</Form.Label>
-                    <Form.Control
-                      type="password"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      disabled={changingPassword}
-                      required
-                    />
-                  </Form.Group>
+                {/* Change Password Card */}
+                <div className="profile-section-card">
+                  <div className="section-header">
+                    <div className="section-icon">
+                      <FaLock />
+                    </div>
+                    <h5 className="section-title">Change Password</h5>
+                  </div>
+                  <div className="section-content">
+                    <Form onSubmit={handleChangePassword}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Current Password</Form.Label>
+                        <Form.Control
+                          type="password"
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          disabled={changingPassword}
+                          required
+                          className="modern-input"
+                        />
+                      </Form.Group>
 
-                  <Form.Group className="mb-3">
-                    <Form.Label>New Password</Form.Label>
-                    <Form.Control
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      disabled={changingPassword}
-                      required
-                    />
-                    <Form.Text className="text-muted">
-                      At least 8 characters with uppercase and numbers
-                    </Form.Text>
-                  </Form.Group>
+                      <Form.Group className="mb-3">
+                        <Form.Label>New Password</Form.Label>
+                        <Form.Control
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          disabled={changingPassword}
+                          required
+                          className="modern-input"
+                        />
+                        <Form.Text>
+                          At least 8 characters with uppercase and numbers
+                        </Form.Text>
+                      </Form.Group>
 
-                  <Form.Group className="mb-3">
-                    <Form.Label>Confirm New Password</Form.Label>
-                    <Form.Control
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      disabled={changingPassword}
-                      required
-                    />
-                  </Form.Group>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Confirm New Password</Form.Label>
+                        <Form.Control
+                          type="password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          disabled={changingPassword}
+                          required
+                          className="modern-input"
+                        />
+                      </Form.Group>
 
-                  <Button
-                    variant="primary"
-                    type="submit"
-                    disabled={changingPassword}
-                  >
-                    <FaLock className="me-2" />
-                    {changingPassword ? 'Changing...' : 'Change Password'}
-                  </Button>
-                </Form>
+                      <Button
+                        type="submit"
+                        disabled={changingPassword}
+                        className="gradient-btn"
+                      >
+                        <FaLock className="me-2" />
+                        {changingPassword ? 'Changing...' : 'Change Password'}
+                      </Button>
+                    </Form>
+                  </div>
+                </div>
               </Tab>
 
               {/* Passkeys Tab */}
               <Tab eventKey="passkeys" title="Passkeys">
-                <div className="mb-4">
-                  <h5>
-                    <FaKey className="me-2" />
-                    Your Passkeys
-                  </h5>
-                  <p className="text-muted">
-                    Passkeys let you sign in using Face ID, Touch ID, or a security key. They're more secure than passwords and count as two-factor authentication.
-                  </p>
-                  
-                  {has2FA && (
-                    <Alert variant="success">
-                      <FaCheck className="me-2" />
-                      You have 2FA enabled {passkeys.length > 0 && totpEnabled ? '(Passkey + TOTP)' : passkeys.length > 0 ? '(Passkey)' : '(TOTP)'}
-                    </Alert>
-                  )}
-                </div>
+                <div className="profile-section-card">
+                  <div className="section-header">
+                    <div className="section-icon">
+                      <FaKey />
+                    </div>
+                    <h5 className="section-title">Your Passkeys</h5>
+                  </div>
+                  <div className="section-content">
+                    <p className="section-description">
+                      Passkeys let you sign in using Face ID, Touch ID, or a security key. They're more secure than passwords and count as two-factor authentication.
+                    </p>
+                    
+                    {has2FA && (
+                      <Alert variant="success" className="modern-alert">
+                        <FaCheck className="me-2" />
+                        You have 2FA enabled {passkeys.length > 0 && totpEnabled ? '(Passkey + TOTP)' : passkeys.length > 0 ? '(Passkey)' : '(TOTP)'}
+                      </Alert>
+                    )}
 
-                {passkeys.length > 0 && (
-                  <ListGroup className="mb-4">
-                    {passkeys.map((passkey) => (
-                      <ListGroup.Item
-                        key={passkey.id}
-                        className="d-flex justify-content-between align-items-center"
-                      >
-                        <div>
-                          <strong>{passkey.deviceName || 'Unnamed Device'}</strong>
-                          <div className="text-muted small">
-                            Created: {new Date(passkey.createdAt).toLocaleDateString()}
-                            {' • '}
-                            Last used: {new Date(passkey.lastUsedAt).toLocaleDateString()}
+                    {passkeys.length > 0 && (
+                      <div className="passkeys-list">
+                        {passkeys.map((passkey) => (
+                          <div key={passkey.id} className="passkey-item">
+                            <div className="passkey-icon">
+                              <FaKey />
+                            </div>
+                            <div className="passkey-info">
+                              <div className="passkey-name">{passkey.deviceName || 'Unnamed Device'}</div>
+                              <div className="passkey-meta">
+                                Created: {new Date(passkey.createdAt).toLocaleDateString()}
+                                {' • '}
+                                Last used: {new Date(passkey.lastUsedAt).toLocaleDateString()}
+                              </div>
+                            </div>
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              onClick={() => handleDeletePasskey(passkey.id)}
+                              className="passkey-delete"
+                            >
+                              <FaTrash />
+                            </Button>
                           </div>
-                        </div>
-                        <Button
-                          variant="outline-danger"
-                          size="sm"
-                          onClick={() => handleDeletePasskey(passkey.id)}
-                        >
-                          <FaTrash />
-                        </Button>
-                      </ListGroup.Item>
-                    ))}
-                  </ListGroup>
-                )}
-                
-                <Form.Group className="mb-3">
-                  <Form.Label>Device Name (optional)</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="e.g., MacBook Pro, iPhone"
-                    value={deviceName}
-                    onChange={(e) => setDeviceName(e.target.value)}
-                    disabled={registeringPasskey}
-                  />
-                </Form.Group>
-                
-                <Button
-                  variant="primary"
-                  onClick={handleRegisterPasskey}
-                  disabled={registeringPasskey}
-                >
-                  <FaPlus className="me-2" />
-                  {registeringPasskey ? 'Setting up...' : 'Add New Passkey'}
-                </Button>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <Form.Group className="mb-3 mt-4">
+                      <Form.Label>Device Name (optional)</Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="e.g., MacBook Pro, iPhone"
+                        value={deviceName}
+                        onChange={(e) => setDeviceName(e.target.value)}
+                        disabled={registeringPasskey}
+                        className="modern-input"
+                      />
+                    </Form.Group>
+                    
+                    <Button
+                      onClick={handleRegisterPasskey}
+                      disabled={registeringPasskey}
+                      className="gradient-btn"
+                    >
+                      <FaPlus className="me-2" />
+                      {registeringPasskey ? 'Setting up...' : 'Add New Passkey'}
+                    </Button>
+                  </div>
+                </div>
               </Tab>
 
               {/* Security (TOTP) Tab */}
               <Tab eventKey="security" title="Authenticator App">
-                <div className="mb-4">
-                  <h5>
-                    <FaShieldAlt className="me-2" />
-                    Two-Factor Authentication (TOTP)
-                  </h5>
-                  <p className="text-muted">
-                    Use an authenticator app like Google Authenticator or Authy to generate 6-digit codes for signing in.
-                  </p>
-                </div>
-
-                {twoFactorRequired && !totpEnabled && passkeys.length === 0 && (
-                  <Alert variant="danger" className="mb-3">
-                    <strong>⚠️ 2FA is Required</strong>
-                    <p className="mb-0 mt-2">
-                      Your organization requires two-factor authentication. Please set up TOTP below or add a Passkey in the Passkeys tab.
+                <div className="profile-section-card">
+                  <div className="section-header">
+                    <div className="section-icon">
+                      <FaShieldAlt />
+                    </div>
+                    <h5 className="section-title">Two-Factor Authentication (TOTP)</h5>
+                  </div>
+                  <div className="section-content">
+                    <p className="section-description">
+                      Use an authenticator app like Google Authenticator or Authy to generate 6-digit codes for signing in.
                     </p>
-                  </Alert>
-                )}
+
+                    {twoFactorRequired && !totpEnabled && passkeys.length === 0 && (
+                      <Alert variant="danger" className="modern-alert">
+                        <strong>⚠️ 2FA is Required</strong>
+                        <p className="mb-0 mt-2">
+                          Your organization requires two-factor authentication. Please set up TOTP below or add a Passkey in the Passkeys tab.
+                        </p>
+                      </Alert>
+                    )}
 
                 {totpEnabled ? (
                   <div>
@@ -813,31 +838,33 @@ export default function AccountPage() {
                   </div>
                 )}
 
-                {showBackupCodes && backupCodes.length > 0 && (
-                  <Alert variant="warning" className="mt-4">
-                    <strong>⚠️ Save these backup codes!</strong>
-                    <p className="mb-2 mt-2">Save them in a safe place - they won't be shown again.</p>
-                    <div className="d-flex flex-wrap gap-2 mb-3">
-                      {backupCodes.map((code, index) => (
-                        <Badge key={index} bg="secondary" className="p-2" style={{ fontFamily: 'monospace' }}>
-                          {code}
-                        </Badge>
-                      ))}
-                    </div>
-                    <Button
-                      variant="outline-primary"
-                      size="sm"
-                      onClick={() => {
-                        setShowBackupCodes(false);
-                        if (require2fa) {
-                          setTimeout(() => window.location.href = '/dashboard', 500);
-                        }
-                      }}
-                    >
-                      I've saved these codes{require2fa && ' - Continue to Dashboard'}
-                    </Button>
-                  </Alert>
-                )}
+                    {showBackupCodes && backupCodes.length > 0 && (
+                      <Alert variant="warning" className="mt-4 modern-alert">
+                        <strong>⚠️ Save these backup codes!</strong>
+                        <p className="mb-2 mt-2">Save them in a safe place - they won't be shown again.</p>
+                        <div className="d-flex flex-wrap gap-2 mb-3">
+                          {backupCodes.map((code, index) => (
+                            <Badge key={index} bg="secondary" className="p-2" style={{ fontFamily: 'monospace' }}>
+                              {code}
+                            </Badge>
+                          ))}
+                        </div>
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          onClick={() => {
+                            setShowBackupCodes(false);
+                            if (require2fa) {
+                              setTimeout(() => window.location.href = '/dashboard', 500);
+                            }
+                          }}
+                        >
+                          I've saved these codes{require2fa && ' - Continue to Dashboard'}
+                        </Button>
+                      </Alert>
+                    )}
+                  </div>
+                </div>
               </Tab>
             </Tabs>
           </Card.Body>
@@ -930,6 +957,25 @@ export default function AccountPage() {
             font-weight: 400;
           }
 
+          /* Desktop Nav Tabs */
+          :global(.nav-tabs .nav-link) {
+            color: rgba(255, 255, 255, 0.7) !important;
+            border: none !important;
+            border-bottom: 2px solid transparent !important;
+            background: transparent !important;
+            transition: all 0.2s ease !important;
+          }
+
+          :global(.nav-tabs .nav-link.active) {
+            color: #ffffff !important;
+            background: transparent !important;
+            border-bottom-color: #667eea !important;
+          }
+
+          :global(.nav-tabs .nav-link:hover:not(.active)) {
+            color: rgba(255, 255, 255, 0.9) !important;
+          }
+
           @media (min-width: 1024px) {
             .settings-container {
               padding: 2rem;
@@ -938,28 +984,518 @@ export default function AccountPage() {
 
           @media (max-width: 767px) {
             .settings-container {
-              padding: 1rem;
+              padding: 0.5rem;
             }
 
             .page-header {
               flex-direction: column;
-              align-items: flex-start;
-              gap: 1rem;
-              padding: 1.5rem 1rem;
+              align-items: center;
+              gap: 0.75rem;
+              padding: 1rem;
+              margin-bottom: 1rem !important;
             }
 
             .header-icon {
-              width: 48px;
-              height: 48px;
-              font-size: 1.25rem;
+              width: 42px !important;
+              height: 42px !important;
+              font-size: 1.1rem !important;
+            }
+
+            .header-text {
+              text-align: center;
+              width: 100%;
             }
 
             .page-header h1 {
-              font-size: 1.5rem;
+              font-size: 1.35rem !important;
             }
 
             .header-subtitle {
-              font-size: 0.875rem;
+              font-size: 0.8rem !important;
+            }
+
+            :global(.card) {
+              margin-bottom: 1rem !important;
+            }
+
+            :global(.card .card-body) {
+              padding: 0.875rem !important;
+            }
+
+            :global(.nav-tabs) {
+              display: flex !important;
+              overflow-x: auto !important;
+              white-space: nowrap !important;
+              -webkit-overflow-scrolling: touch !important;
+              scrollbar-width: none !important;
+              border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+              margin-bottom: 0.75rem !important;
+              gap: 0 !important;
+            }
+
+            :global(.nav-tabs::-webkit-scrollbar) {
+              display: none;
+            }
+
+            :global(.nav-tabs .nav-link) {
+              padding: 0.65rem 1rem !important;
+              font-size: 0.85rem !important;
+              font-weight: 500 !important;
+              text-align: center !important;
+              white-space: nowrap !important;
+              border: none !important;
+              border-bottom: 2px solid transparent !important;
+              border-radius: 0 !important;
+              background: transparent !important;
+              color: rgba(255, 255, 255, 0.7) !important;
+              transition: all 0.2s ease !important;
+              margin: 0 !important;
+              display: inline-block !important;
+            }
+
+            :global(.nav-tabs .nav-link.active) {
+              color: #ffffff !important;
+              border-bottom-color: #667eea !important;
+            }
+
+            :global(.nav-tabs .nav-link:hover:not(.active)) {
+              color: rgba(255, 255, 255, 0.9) !important;
+            }
+
+            :global(.tab-content) {
+              padding-top: 0.75rem !important;
+            }
+
+            :global(.form-group) {
+              margin-bottom: 1rem !important;
+            }
+
+            :global(.form-label) {
+              font-size: 0.9rem !important;
+              font-weight: 500 !important;
+            }
+
+            :global(.form-control),
+            :global(.form-select) {
+              font-size: 0.9rem !important;
+              padding: 0.75rem 1rem !important;
+            }
+
+            :global(.form-text) {
+              font-size: 0.85rem !important;
+            }
+
+            :global(.btn) {
+              font-size: 0.875rem !important;
+              padding: 0.65rem 1rem !important;
+            }
+
+            :global(.list-group-item) {
+              padding: 0.75rem !important;
+              font-size: 0.875rem !important;
+            }
+
+            :global(.alert) {
+              padding: 0.75rem !important;
+              font-size: 0.875rem !important;
+              margin-bottom: 1rem !important;
+            }
+
+            :global(h5) {
+              font-size: 1.1rem !important;
+              margin-bottom: 0.75rem !important;
+            }
+
+            :global(p) {
+              font-size: 0.9rem !important;
+            }
+
+            :global(.text-muted) {
+              font-size: 0.85rem !important;
+            }
+          }
+
+          /* Modern Card Styling */
+          :global(.modern-card) {
+            background: rgba(255, 255, 255, 0.03) !important;
+            border: 1px solid rgba(102, 126, 234, 0.2) !important;
+            border-radius: 16px !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+            backdrop-filter: blur(10px) !important;
+            margin-bottom: 2rem !important;
+          }
+
+          :global(.modern-card .card-body) {
+            padding: 2rem !important;
+          }
+
+          /* Profile Section Cards */
+          .profile-section-card {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 14px;
+            padding: 1.25rem;
+            margin-bottom: 1.25rem;
+            transition: all 0.3s ease;
+          }
+
+          .profile-section-card:hover {
+            border-color: rgba(102, 126, 234, 0.4);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.12);
+            transform: translateY(-1px);
+          }
+
+          .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.85rem;
+            border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+          }
+
+          .section-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1rem;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+          }
+
+          .section-title {
+            margin: 0 !important;
+            font-size: 1.1rem !important;
+            font-weight: 600 !important;
+            color: #ffffff !important;
+          }
+
+          .section-content {
+            padding-top: 0.25rem;
+          }
+
+          .section-description {
+            color: rgba(255, 255, 255, 0.75) !important;
+            margin-bottom: 1rem;
+            line-height: 1.5;
+            font-size: 0.9rem;
+          }
+
+          /* Profile Picture Styling */
+          .profile-picture-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+          }
+
+          .profile-avatar-large {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 3px solid #667eea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            position: relative;
+            flex-shrink: 0;
+          }
+
+          .profile-avatar-large img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          .profile-avatar-large .avatar-icon {
+            font-size: 2.5rem;
+            color: #ffffff;
+          }
+
+          .profile-actions {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+          }
+
+          .profile-actions .d-flex {
+            gap: 0.5rem;
+          }
+
+          .profile-actions :global(.form-text) {
+            color: rgba(255, 255, 255, 0.6) !important;
+            font-size: 0.85rem !important;
+            margin-top: 0.25rem !important;
+          }
+
+          /* Info Grid */
+          .info-grid {
+            display: grid;
+            gap: 0.75rem;
+          }
+
+          .info-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(102, 126, 234, 0.15);
+            border-radius: 10px;
+            padding: 0.85rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            transition: all 0.3s ease;
+          }
+
+          .info-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(102, 126, 234, 0.3);
+          }
+
+          .info-label {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+
+          .info-value {
+            color: #ffffff !important;
+            font-size: 1rem;
+            font-weight: 600;
+          }
+
+          :global(.role-badge) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            padding: 0.4rem 0.85rem !important;
+            font-size: 0.85rem !important;
+            font-weight: 600 !important;
+            border-radius: 8px !important;
+            display: inline-block !important;
+            width: fit-content !important;
+          }
+
+          /* Passkeys List */
+          .passkeys-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+            margin-bottom: 1.25rem;
+          }
+
+          .passkey-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 10px;
+            padding: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            transition: all 0.3s ease;
+          }
+
+          .passkey-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(102, 126, 234, 0.4);
+            transform: translateX(3px);
+          }
+
+          .passkey-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #667eea;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+          }
+
+          .passkey-info {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .passkey-name {
+            color: #ffffff !important;
+            font-weight: 600;
+            margin-bottom: 0.2rem;
+            font-size: 0.95rem;
+          }
+
+          .passkey-meta {
+            color: rgba(255, 255, 255, 0.6) !important;
+            font-size: 0.8rem;
+          }
+
+          .passkey-delete {
+            flex-shrink: 0;
+          }
+
+          :global(.passkey-delete) {
+            padding: 0.4rem 0.65rem !important;
+            font-size: 0.85rem !important;
+          }
+
+          /* Modern Inputs */
+          :global(.modern-input) {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(102, 126, 234, 0.3) !important;
+            border-radius: 8px !important;
+            color: #ffffff !important;
+            padding: 0.65rem 0.9rem !important;
+            transition: all 0.3s ease !important;
+            font-size: 0.95rem !important;
+          }
+
+          :global(.modern-input:focus) {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: #667eea !important;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2) !important;
+            color: #ffffff !important;
+          }
+
+          :global(.modern-input::placeholder) {
+            color: rgba(255, 255, 255, 0.4) !important;
+          }
+
+          :global(.form-label) {
+            color: rgba(255, 255, 255, 0.85) !important;
+            font-weight: 500 !important;
+            font-size: 0.9rem !important;
+            margin-bottom: 0.5rem !important;
+          }
+
+          :global(.form-text) {
+            color: rgba(255, 255, 255, 0.6) !important;
+            font-size: 0.85rem !important;
+          }
+
+          /* Gradient Button */
+          :global(.gradient-btn) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border: none !important;
+            padding: 0.65rem 1.25rem !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            font-size: 0.95rem !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
+            color: white !important;
+            position: relative;
+            overflow: hidden;
+          }
+
+          :global(.gradient-btn::before) {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+          }
+
+          :global(.gradient-btn:hover::before) {
+            width: 300px;
+            height: 300px;
+          }
+
+          :global(.gradient-btn:hover) {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 18px rgba(102, 126, 234, 0.6) !important;
+          }
+
+          :global(.gradient-btn:active) {
+            transform: translateY(0) !important;
+          }
+
+          :global(.gradient-btn:disabled) {
+            opacity: 0.6 !important;
+            cursor: not-allowed !important;
+            transform: none !important;
+          }
+
+          :global(.btn-outline-danger) {
+            background: rgba(220, 53, 69, 0.1) !important;
+            border: 1px solid rgba(220, 53, 69, 0.4) !important;
+            color: #dc3545 !important;
+            padding: 0.65rem 1.25rem !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            font-size: 0.95rem !important;
+            transition: all 0.3s ease !important;
+          }
+
+          :global(.btn-outline-danger:hover) {
+            background: rgba(220, 53, 69, 0.2) !important;
+            border-color: rgba(220, 53, 69, 0.6) !important;
+            transform: translateY(-2px) !important;
+          }
+
+          /* Modern Alert */
+          :global(.modern-alert) {
+            border-radius: 12px !important;
+            border-width: 1px !important;
+            backdrop-filter: blur(10px) !important;
+          }
+
+          /* Mobile Adjustments for New Styles */
+          @media (max-width: 767px) {
+            .profile-section-card {
+              padding: 1rem;
+            }
+
+            .section-icon {
+              width: 36px;
+              height: 36px;
+              font-size: 1rem;
+            }
+
+            .section-header h5 {
+              font-size: 1.1rem;
+            }
+
+            .profile-picture-wrapper {
+              flex-direction: column;
+              align-items: flex-start;
+              gap: 1rem;
+            }
+
+            .profile-avatar-large {
+              width: 100px;
+              height: 100px;
+            }
+
+            .profile-avatar-large .avatar-icon {
+              font-size: 2.5rem;
+            }
+
+            .profile-actions {
+              width: 100%;
+            }
+
+            .info-item {
+              flex-direction: column;
+              align-items: flex-start;
+              gap: 0.5rem;
+            }
+
+            .passkey-item {
+              flex-wrap: wrap;
             }
           }
         `}</style>

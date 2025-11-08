@@ -1846,21 +1846,149 @@ export default function SettingsPage() {
         }
 
         @media (max-width: 767px) {
+          .settings-container {
+            padding: 0.5rem !important;
+          }
+
+          .page-header {
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem !important;
+            margin-bottom: 1rem !important;
+          }
+
+          .header-icon {
+            width: 42px !important;
+            height: 42px !important;
+            font-size: 1.1rem !important;
+          }
+
+          .header-text {
+            text-align: center;
+            width: 100%;
+          }
+
+          .page-header h1 {
+            font-size: 1.35rem !important;
+          }
+
+          .header-subtitle {
+            font-size: 0.8rem !important;
+          }
+
+          :global(.settings-card) {
+            margin-bottom: 1rem !important;
+          }
+
           :global(.settings-card .card-body) {
-            padding: 1rem;
+            padding: 0.75rem !important;
+          }
+
+          :global(.settings-card .nav-tabs) {
+            margin-bottom: 0.75rem !important;
+            display: flex !important;
+            overflow-x: auto !important;
+            white-space: nowrap !important;
+            -webkit-overflow-scrolling: touch !important;
+            scrollbar-width: none !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+            gap: 0 !important;
+          }
+
+          :global(.settings-card .nav-tabs::-webkit-scrollbar) {
+            display: none;
           }
 
           :global(.settings-card .nav-tabs .nav-link) {
-            padding: 0.75rem 1rem;
-            font-size: 0.875rem;
+            padding: 0.65rem 1rem !important;
+            font-size: 0.85rem !important;
+            font-weight: 500 !important;
+            text-align: center !important;
+            white-space: nowrap !important;
+            border: none !important;
+            border-bottom: 2px solid transparent !important;
+            border-radius: 0 !important;
+            background: transparent !important;
+            color: rgba(255, 255, 255, 0.6) !important;
+            transition: all 0.2s ease !important;
+            margin: 0 !important;
+            display: inline-block !important;
+          }
+
+          :global(.settings-card .nav-tabs .nav-link.active) {
+            color: #667eea !important;
+            border-bottom-color: #667eea !important;
+          }
+
+          :global(.settings-card .nav-tabs .nav-link:hover:not(.active)) {
+            color: rgba(255, 255, 255, 0.8) !important;
+          }
+
+          :global(.settings-card .tab-content) {
+            padding-top: 0.75rem !important;
+          }
+
+          :global(.form-group) {
+            margin-bottom: 1rem !important;
+          }
+
+          :global(.form-label) {
+            font-size: 0.9rem !important;
+            font-weight: 500 !important;
+          }
+
+          :global(.form-control),
+          :global(.form-select) {
+            font-size: 0.9rem !important;
+            padding: 0.75rem 1rem !important;
+          }
+
+          :global(.form-text) {
+            font-size: 0.85rem !important;
+          }
+
+          :global(.settings-section) {
+            margin-bottom: 1.5rem !important;
+            padding-bottom: 1.5rem !important;
+          }
+
+          :global(.section-title) {
+            font-size: 1.1rem !important;
+            margin-bottom: 1rem !important;
+            font-weight: 600 !important;
           }
 
           :global(.d-flex.gap-2) {
             flex-direction: column;
+            gap: 0.75rem !important;
           }
 
           :global(.d-flex.gap-2 .btn) {
-            width: 100%;
+            width: 100% !important;
+            padding: 0.75rem 1rem !important;
+          }
+
+          :global(.company-danger-card) {
+            margin-bottom: 0.75rem !important;
+          }
+
+          :global(.company-danger-card .card-body) {
+            padding: 0.875rem !important;
+          }
+
+          :global(.company-stats-inline) {
+            flex-direction: column;
+            gap: 0.35rem !important;
+          }
+
+          :global(.info-card) {
+            margin-top: 1rem !important;
+          }
+
+          :global(.info-card .card-body) {
+            padding: 1rem !important;
+            font-size: 0.875rem !important;
           }
         }
 

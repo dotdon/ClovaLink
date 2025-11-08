@@ -408,32 +408,41 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           letter-spacing: 0.5px;
         }
 
-        .mobile-profile-avatar {
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          overflow: hidden;
-          border: 2px solid #667eea;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: rgba(255, 255, 255, 0.1);
-          flex-shrink: 0;
-          text-decoration: none;
-          min-width: 40px;
-        }
+          .mobile-profile-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid #667eea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            flex-shrink: 0;
+            text-decoration: none;
+            min-width: 52px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: white;
+            transition: all 0.2s ease;
+          }
 
-        .mobile-profile-avatar img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
+          .mobile-profile-avatar:hover {
+            border-color: rgba(255,255,255,0.5);
+            transform: scale(1.05);
+          }
 
-        .mobile-profile-avatar svg {
-          width: 22px;
-          height: 22px;
-          color: #fff;
-        }
+          .mobile-profile-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          .mobile-profile-avatar svg {
+            width: 26px;
+            height: 26px;
+            color: #fff;
+          }
 
         .brand {
           color: #fff;
@@ -546,23 +555,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           justify-content: space-between;
           width: 100%;
           height: 100%;
-          padding: 0 0.5rem;
-          gap: 0.25rem;
+          padding: 0 1rem;
+          gap: 0.75rem;
         }
 
         .menu-button {
           background: none;
           border: none;
           color: #fff;
-          font-size: 1.5rem;
-          padding: 0.4rem;
+          font-size: 2rem;
+          padding: 0.5rem;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
-          width: 40px;
-          height: 40px;
+          width: 52px;
+          height: 52px;
         }
 
         .mobile-header-logo {
@@ -572,19 +581,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           justify-content: center;
           text-decoration: none;
           transition: opacity 0.2s ease;
-          max-width: 300px;
-          height: 75px;
-          overflow: visible;
+          max-width: 0;
+          height: 0;
+          overflow: hidden;
+          opacity: 0;
+          visibility: hidden;
         }
 
         .mobile-header-logo img {
-          max-width: 100%;
-          max-height: 100%;
-          object-fit: contain;
+          display: none;
         }
 
         .mobile-header-logo:hover {
-          opacity: 0.8;
+          opacity: 0;
         }
 
         .side-menu-header {
@@ -617,33 +626,33 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           justify-content: center;
         }
 
-        /* Mobile optimizations */
-        @media (max-width: 1023px) {
-          .mobile-header, .mobile-side-menu {
-            display: block;
-          }
+          /* Mobile optimizations */
+          @media (max-width: 1023px) {
+            .mobile-header, .mobile-side-menu {
+              display: block;
+            }
 
-          .desktop-nav {
-            display: none;
-          }
+            .desktop-nav {
+              display: none;
+            }
 
-          .main-content {
-            padding-top: 96px !important;
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-          }
+            .main-content {
+              padding-top: 95px !important;
+              padding-left: 1rem !important;
+              padding-right: 1rem !important;
+            }
 
-          .main-content.is-documents {
-            padding-top: 96px !important;
-            padding-left: 0 !important;
-            padding-right: 0 !important;
-          }
+            .main-content.is-documents {
+              padding-top: 95px !important;
+              padding-left: 0 !important;
+              padding-right: 0 !important;
+            }
 
-          .logo-image {
-            width: 100px;
-            height: 100px;
+            .logo-image {
+              width: 100px;
+              height: 100px;
+            }
           }
-        }
 
         /* Main Content */
         .main-content {

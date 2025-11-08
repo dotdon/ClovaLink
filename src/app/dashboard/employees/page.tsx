@@ -1268,35 +1268,34 @@ export default function EmployeesPage() {
 
             .page-header {
               flex-direction: column;
-              align-items: stretch;
+              align-items: center;
               padding: 1rem;
               gap: 0.75rem;
             }
 
-            .header-content {
-              flex-direction: row;
-              gap: 0.75rem;
-              align-items: center;
+            .header-icon {
+              width: 42px !important;
+              height: 42px !important;
+              font-size: 1.1rem !important;
             }
 
-            .header-icon {
-              width: 45px;
-              height: 45px;
-              font-size: 1.25rem;
+            .header-text {
+              text-align: center;
+              width: 100%;
             }
 
             .page-header h1 {
-              font-size: 1.3rem;
+              font-size: 1.35rem !important;
             }
 
-            .page-header p {
-              font-size: 0.85rem;
+            .header-subtitle {
+              font-size: 0.8rem !important;
             }
 
             :global(.add-btn) {
               width: 100% !important;
-              padding: 0.75rem !important;
-              font-size: 0.95rem !important;
+              padding: 0.7rem 1rem !important;
+              font-size: 0.9rem !important;
             }
 
             .mobile-view {

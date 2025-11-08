@@ -609,6 +609,33 @@ export default function HelpPage() {
               padding: 1rem;
             }
 
+            .page-header {
+              flex-direction: column;
+              align-items: center;
+              gap: 0.75rem;
+              padding: 1rem !important;
+              margin-bottom: 1rem !important;
+            }
+
+            .header-icon {
+              width: 42px !important;
+              height: 42px !important;
+              font-size: 1.1rem !important;
+            }
+
+            .header-text {
+              text-align: center;
+              width: 100%;
+            }
+
+            .page-header h1 {
+              font-size: 1.35rem !important;
+            }
+
+            .header-subtitle {
+              font-size: 0.8rem !important;
+            }
+
             .help-header h1 {
               font-size: 1.5rem;
             }
