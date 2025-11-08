@@ -20,6 +20,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
 
+  // Scroll to top on route change and initial load
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  // Prevent scroll restoration on page refresh
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+    window.scrollTo(0, 0);
+  }, []);
+
   // Check password change requirement FIRST (takes precedence over 2FA)
   useEffect(() => {
     const checkPasswordChange = async () => {
