@@ -313,6 +313,58 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {children}
       </main>
 
+      {/* Global Footer */}
+      <footer className="global-footer">
+        <div className="footer-content">
+          <div className="footer-section">
+            <div className="footer-logo">
+              <Image
+                src="/logo.svg"
+                alt="ClovaLink"
+                width={168}
+                height={168}
+                style={{ filter: 'brightness(0) invert(1)' }}
+                unoptimized
+              />
+            </div>
+            <p className="footer-tagline">Secure document management for your organization</p>
+          </div>
+          
+          <div className="footer-section">
+            <h4>Quick Links</h4>
+            <ul className="footer-links">
+              <li><Link href="/dashboard">Dashboard</Link></li>
+              <li><Link href="/dashboard/documents">Documents</Link></li>
+              <li><Link href="/dashboard/help">Help & FAQs</Link></li>
+              <li><Link href="/dashboard/account">My Account</Link></li>
+            </ul>
+          </div>
+          
+          <div className="footer-section">
+            <h4>Support</h4>
+            <ul className="footer-links">
+              <li><Link href="/dashboard/help">Documentation</Link></li>
+              <li><a href="mailto:support@clovalink.com">Contact Support</a></li>
+              {session?.user?.role === 'ADMIN' && (
+                <li><Link href="/dashboard/settings">Settings</Link></li>
+              )}
+            </ul>
+          </div>
+          
+          <div className="footer-section">
+            <h4>Legal</h4>
+            <ul className="footer-links">
+              <li><a href="/privacy">Privacy Policy</a></li>
+              <li><a href="/terms">Terms of Service</a></li>
+            </ul>
+          </div>
+        </div>
+        
+        <div className="footer-bottom">
+          <p>&copy; {new Date().getFullYear()} ClovaLink. All rights reserved.</p>
+        </div>
+      </footer>
+
       <style jsx global>{`
         /* Base styles */
         .dashboard-layout {
@@ -822,6 +874,128 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         @media (min-width: 1536px) {
           .container { max-width: 1536px; }
+        }
+
+        /* Global Footer */
+        .global-footer {
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+          border-top: 1px solid rgba(102, 126, 234, 0.2);
+          padding: 1.5rem 2rem 1rem;
+          margin-top: 2rem;
+          color: white;
+        }
+
+        @media (min-width: 1024px) {
+          .global-footer {
+            margin-left: 280px;
+            width: calc(100% - 280px);
+          }
+        }
+
+        .footer-content {
+          max-width: 1400px;
+          margin: 0 auto;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 1.5rem;
+          margin-bottom: 1rem;
+        }
+
+        @media (max-width: 767px) {
+          .footer-content {
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+            text-align: center;
+          }
+
+          .global-footer {
+            padding: 1.25rem 1rem 0.75rem;
+            margin-top: 1.5rem;
+          }
+        }
+
+        .footer-section h4 {
+          color: #ffffff;
+          font-size: 0.95rem;
+          font-weight: 600;
+          margin-bottom: 0.65rem;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .footer-logo {
+          margin-bottom: 0.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: flex-start;
+        }
+
+        @media (max-width: 767px) {
+          .footer-logo {
+            justify-content: center;
+          }
+        }
+
+        .footer-logo img {
+          max-width: 126px;
+          height: auto;
+        }
+
+        .footer-tagline {
+          color: rgba(255, 255, 255, 0.7);
+          font-size: 0.8rem;
+          line-height: 1.4;
+          max-width: 220px;
+        }
+
+        @media (max-width: 767px) {
+          .footer-tagline {
+            max-width: 100%;
+          }
+        }
+
+        .footer-links {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+        }
+
+        .footer-links li {
+          margin-bottom: 0.5rem;
+        }
+
+        .footer-links a {
+          color: rgba(255, 255, 255, 0.7);
+          text-decoration: none;
+          font-size: 0.85rem;
+          transition: all 0.3s ease;
+          display: inline-block;
+        }
+
+        .footer-links a:hover {
+          color: #ffffff;
+          transform: translateX(4px);
+        }
+
+        .footer-bottom {
+          text-align: center;
+          padding-top: 1rem;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+          color: rgba(255, 255, 255, 0.6);
+          font-size: 0.8rem;
+        }
+
+        .footer-bottom p {
+          margin: 0;
+        }
+
+        @media (max-width: 767px) {
+          .footer-bottom {
+            padding-top: 0.75rem;
+            font-size: 0.75rem;
+          }
         }
       `}</style>
     </div>
