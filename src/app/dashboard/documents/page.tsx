@@ -267,6 +267,20 @@ export default function DocumentsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'name' | 'date' | 'size'>('name');
 
+  // Force list view on mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      const isMobile = window.innerWidth <= 768;
+      if (isMobile) {
+        setViewMode('list');
+      }
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // New states for Google Drive-like features
   const [favoriteDocuments, setFavoriteDocuments] = useState<FavoriteItem[]>([]);
   const [favoriteFolders, setFavoriteFolders] = useState<FavoriteItem[]>([]);
@@ -1533,8 +1547,10 @@ export default function DocumentsPage() {
                       <FaLock className="lock-badge-small" style={{ color: '#ffffff' }} />
                     )}
                   </div>
-                  <div className="item-name">{folder.name}</div>
-                  <div className="item-company">{folder.company?.name}</div>
+                  <div className="item-content">
+                    <div className="item-name">{folder.name}</div>
+                    <div className="item-company">{folder.company?.name}</div>
+                  </div>
                 </div>
                     );
                   })}
@@ -1610,7 +1626,7 @@ export default function DocumentsPage() {
               className="search-input"
             />
             <div className="view-controls">
-              <ButtonGroup className="view-toggle">
+              <ButtonGroup className="view-toggle d-none d-md-flex">
                 <Button
                   variant={viewMode === 'grid' ? 'primary' : 'outline-light'}
                   onClick={() => setViewMode('grid')}
@@ -3657,6 +3673,13 @@ export default function DocumentsPage() {
             align-items: center;
           }
 
+          .quick-access-item .item-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+          }
+
           .quick-access-item .folder-icon {
             color: #ffffff !important;
             fill: #ffffff !important;
@@ -4441,24 +4464,204 @@ export default function DocumentsPage() {
             }
 
             .documents-content {
-              padding: 1rem;
+              padding: 0.75rem;
             }
 
+            /* Force list view layout on mobile */
+            .items-list {
+              gap: 0.5rem !important;
+            }
+
+            .list-item-row {
+              padding: 0.75rem !important;
+              min-height: auto !important;
+            }
+
+            .item-icon-wrapper {
+              width: 40px !important;
+              height: 40px !important;
+            }
+
+            .item-icon-wrapper :global(svg) {
+              font-size: 32px !important;
+            }
+
+            .item-details {
+              flex: 1 !important;
+              min-width: 0 !important;
+            }
+
+            .item-name {
+              font-size: 0.95rem !important;
+              font-weight: 500 !important;
+            }
+
+            .item-meta {
+              font-size: 0.75rem !important;
+              margin-top: 0.25rem !important;
+            }
+
+            .list-item-actions {
+              gap: 0.25rem !important;
+            }
+
+            .list-item-actions :global(.btn) {
+              padding: 0.4rem 0.6rem !important;
+              font-size: 0.8rem !important;
+            }
+
+            /* Grid fallback if somehow still used */
             .items-grid {
-              grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-              gap: 1rem;
+              grid-template-columns: 1fr !important;
+              gap: 0.5rem;
             }
 
-            .company-switcher, .action-bar {
-              display: none;
+            .item-card {
+              padding: 0.75rem !important;
+              display: flex !important;
+              flex-direction: row !important;
+              align-items: center !important;
+              gap: 0.75rem !important;
+            }
+
+            .item-card h6 {
+              font-size: 0.9rem !important;
+              margin: 0 !important;
+            }
+
+            .company-switcher, .action-bar, .navigation-tabs {
+              display: none !important;
+            }
+
+            /* Quick Access Section Mobile */
+            .quick-access-section {
+              padding: 0.75rem !important;
+              margin-bottom: 0.75rem !important;
+            }
+
+            .quick-access-section .section-header h3 {
+              font-size: 1.1rem !important;
+            }
+
+            .quick-access-section .section-header {
+              margin-bottom: 0.5rem !important;
+            }
+
+            .quick-access-section p {
+              font-size: 0.8rem !important;
+              margin-bottom: 0.75rem !important;
             }
 
             .quick-access-grid {
-              grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+              display: flex !important;
+              flex-direction: column !important;
+              gap: 0.5rem !important;
+            }
+
+            .quick-access-item {
+              display: flex !important;
+              flex-direction: row !important;
+              align-items: center !important;
+              padding: 0.75rem !important;
+              gap: 0.75rem !important;
+              width: 100% !important;
+              min-height: 60px !important;
+            }
+
+            .quick-access-item .item-icon {
+              width: 40px !important;
+              height: 40px !important;
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              flex-shrink: 0 !important;
+              position: relative !important;
+            }
+
+            .quick-access-item .item-icon :global(svg) {
+              font-size: 28px !important;
+            }
+
+            .quick-access-item .pin-badge {
+              font-size: 10px !important;
+              right: -2px !important;
+              bottom: -2px !important;
+            }
+
+            .quick-access-item .lock-badge-small {
+              font-size: 10px !important;
+              left: -2px !important;
+              bottom: -2px !important;
+            }
+
+            .quick-access-item .item-content {
+              display: flex !important;
+              flex-direction: column !important;
+              flex: 1 !important;
+              min-width: 0 !important;
+            }
+
+            .quick-access-item .item-name {
+              font-size: 0.95rem !important;
+              font-weight: 500 !important;
+              text-align: left !important;
+              margin: 0 !important;
+              white-space: nowrap !important;
+              overflow: hidden !important;
+              text-overflow: ellipsis !important;
+            }
+
+            .quick-access-item .item-company {
+              font-size: 0.75rem !important;
+              margin-top: 0.15rem !important;
+              text-align: left !important;
+              white-space: nowrap !important;
+              overflow: hidden !important;
+              text-overflow: ellipsis !important;
+            }
+
+            .quick-access-collapsed {
+              padding: 0.5rem 0.75rem !important;
+            }
+
+            .quick-access-collapsed button {
+              font-size: 0.9rem !important;
+              padding: 0.5rem 0.75rem !important;
             }
 
             .search-section, .breadcrumb-nav {
-              padding: 1rem;
+              padding: 0.75rem;
+            }
+
+            .search-section h4 {
+              font-size: 1.1rem !important;
+            }
+
+            /* Optimize dropdowns for mobile */
+            .item-dropdown :global(.dropdown-menu) {
+              min-width: 180px !important;
+              font-size: 0.9rem !important;
+            }
+
+            /* Mobile-friendly buttons */
+            .mobile-doc-header :global(.btn) {
+              padding: 0.5rem 0.75rem !important;
+              font-size: 0.875rem !important;
+            }
+
+            /* Better touch targets for mobile */
+            .list-item-row {
+              min-height: 60px !important;
+            }
+
+            /* Hide less critical info on mobile */
+            .breadcrumb-nav {
+              font-size: 0.85rem !important;
+            }
+
+            /* Hide view toggle on mobile */
+            .view-toggle {
+              display: none !important;
             }
           }
 

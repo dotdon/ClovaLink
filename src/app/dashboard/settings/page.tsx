@@ -497,8 +497,8 @@ export default function SettingsPage() {
       ];
       return (
         <Form.Group key={def.key} className="mb-3">
-          <Form.Label>{label}</Form.Label>
-          <Form.Text className="d-block mb-2 text-muted">
+          <Form.Label style={{ color: 'rgba(255, 255, 255, 0.9)' }}>{label}</Form.Label>
+          <Form.Text className="d-block mb-2" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
             {def.description}
           </Form.Text>
           <Form.Select
@@ -524,8 +524,8 @@ export default function SettingsPage() {
       // Render as select for boolean options
       return (
         <Form.Group key={def.key} className="mb-3">
-          <Form.Label>{label}</Form.Label>
-          <Form.Text className="d-block mb-2 text-muted">
+          <Form.Label style={{ color: 'rgba(255, 255, 255, 0.9)' }}>{label}</Form.Label>
+          <Form.Text className="d-block mb-2" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
             {def.description}
           </Form.Text>
           <Form.Select
@@ -543,8 +543,8 @@ export default function SettingsPage() {
     if (def.isEncrypted || def.key.includes('password')) {
       return (
         <Form.Group key={def.key} className="mb-3">
-          <Form.Label>{label} <small className="text-muted">(encrypted in database)</small></Form.Label>
-          <Form.Text className="d-block mb-2 text-muted">
+          <Form.Label style={{ color: 'rgba(255, 255, 255, 0.9)' }}>{label} <small style={{ color: 'rgba(255, 255, 255, 0.5)' }}>(encrypted in database)</small></Form.Label>
+          <Form.Text className="d-block mb-2" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
             {def.description}
           </Form.Text>
           <Form.Control
@@ -559,8 +559,8 @@ export default function SettingsPage() {
 
     return (
       <Form.Group key={def.key} className="mb-3">
-        <Form.Label>{label}</Form.Label>
-        <Form.Text className="d-block mb-2 text-muted">
+        <Form.Label style={{ color: 'rgba(255, 255, 255, 0.9)' }}>{label}</Form.Label>
+        <Form.Text className="d-block mb-2" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
           {def.description}
         </Form.Text>
         <Form.Control
@@ -586,9 +586,9 @@ export default function SettingsPage() {
       ];
       return (
         <Form.Group key={setting.key} className="mb-3">
-          <Form.Label>{label}</Form.Label>
+          <Form.Label style={{ color: 'rgba(255, 255, 255, 0.9)' }}>{label}</Form.Label>
           {setting.description && (
-            <Form.Text className="d-block mb-2 text-muted">
+            <Form.Text className="d-block mb-2" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
               {setting.description}
             </Form.Text>
           )}
@@ -608,9 +608,9 @@ export default function SettingsPage() {
     if (setting.description && setting.description.includes('true/false')) {
       return (
         <Form.Group key={setting.key} className="mb-3">
-          <Form.Label>{label}</Form.Label>
+          <Form.Label style={{ color: 'rgba(255, 255, 255, 0.9)' }}>{label}</Form.Label>
           {setting.description && (
-            <Form.Text className="d-block mb-2 text-muted">
+            <Form.Text className="d-block mb-2" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
               {setting.description}
             </Form.Text>
           )}
@@ -638,9 +638,9 @@ export default function SettingsPage() {
     if (setting.isEncrypted || setting.key.includes('password')) {
       return (
         <Form.Group key={setting.key} className="mb-3">
-          <Form.Label>{label} <small className="text-muted">(encrypted in database)</small></Form.Label>
+          <Form.Label style={{ color: 'rgba(255, 255, 255, 0.9)' }}>{label} <small style={{ color: 'rgba(255, 255, 255, 0.5)' }}>(encrypted in database)</small></Form.Label>
           {setting.description && (
-            <Form.Text className="d-block mb-2 text-muted">
+            <Form.Text className="d-block mb-2" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
               {setting.description}
             </Form.Text>
           )}
@@ -656,9 +656,9 @@ export default function SettingsPage() {
 
     return (
       <Form.Group key={setting.key} className="mb-3">
-        <Form.Label>{label}</Form.Label>
+        <Form.Label style={{ color: 'rgba(255, 255, 255, 0.9)' }}>{label}</Form.Label>
         {setting.description && (
-          <Form.Text className="d-block mb-2 text-muted">
+          <Form.Text className="d-block mb-2" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
             {setting.description}
           </Form.Text>
         )}
@@ -677,9 +677,10 @@ export default function SettingsPage() {
       <DashboardLayout>
         <div className="settings-container">
           <div className="text-center py-5">
-            <Spinner animation="border" role="status">
+            <Spinner animation="border" role="status" variant="primary">
               <span className="visually-hidden">Loading...</span>
             </Spinner>
+            <p style={{ color: 'rgba(255, 255, 255, 0.6)', marginTop: '1rem' }}>Loading settings...</p>
           </div>
         </div>
       </DashboardLayout>
@@ -690,8 +691,13 @@ export default function SettingsPage() {
     <DashboardLayout>
       <div className="settings-container">
         <div className="page-header">
-          <h1 className="h3">System Settings</h1>
-          <p className="text-muted">Configure system-wide settings and preferences</p>
+          <div className="header-icon">
+            <FaCog />
+          </div>
+          <div className="header-text">
+            <h1 style={{ color: '#ffffff' }}>System Settings</h1>
+            <p className="header-subtitle" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>Configure system-wide settings and preferences</p>
+          </div>
         </div>
 
         {error && (
@@ -731,7 +737,7 @@ export default function SettingsPage() {
             </div>
             <p style={{ 
               fontSize: '1.1rem', 
-              color: '#1a1a2e',
+              color: '#ffffff',
               marginBottom: '0.5rem',
               fontWeight: 600
             }}>
@@ -739,7 +745,7 @@ export default function SettingsPage() {
             </p>
             <p style={{ 
               fontSize: '0.9rem', 
-              color: '#666',
+              color: 'rgba(255, 255, 255, 0.6)',
               margin: 0
             }}>
               Changes will take effect immediately.
@@ -758,7 +764,7 @@ export default function SettingsPage() {
             <Tab eventKey="smtp" title="Email">
               <Form>
                 <div className="settings-section">
-                  <h5 className="section-title">Server Configuration</h5>
+                  <h5 className="section-title" style={{ color: '#ffffff' }}>Server Configuration</h5>
                   {(!settings.smtp || settings.smtp.length === 0) ? (
                     <>
                       {renderFieldFromDefault({ key: 'smtp_host', description: 'SMTP server hostname (e.g., smtp.gmail.com)', isEncrypted: false, defaultValue: '' })}
@@ -771,7 +777,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="settings-section">
-                  <h5 className="section-title">Authentication</h5>
+                  <h5 className="section-title" style={{ color: '#ffffff' }}>Authentication</h5>
                   {(!settings.smtp || settings.smtp.length === 0) ? (
                     <>
                       {renderFieldFromDefault({ key: 'smtp_user', description: 'SMTP authentication username', isEncrypted: false, defaultValue: '' })}
@@ -783,7 +789,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="settings-section">
-                  <h5 className="section-title">Sender Information</h5>
+                  <h5 className="section-title" style={{ color: '#ffffff' }}>Sender Information</h5>
                   {(!settings.smtp || settings.smtp.length === 0) ? (
                     <>
                       {renderFieldFromDefault({ key: 'smtp_from', description: 'From email address for outgoing emails', isEncrypted: false, defaultValue: '' })}
@@ -820,7 +826,7 @@ export default function SettingsPage() {
             <Tab eventKey="upload" title="Upload">
               <Form>
                 <div className="settings-section">
-                  <h5 className="section-title">Upload Limits</h5>
+                  <h5 className="section-title" style={{ color: '#ffffff' }}>Upload Limits</h5>
                   {(!settings.upload || settings.upload.length === 0) ? (
                     <>
                       {renderFieldFromDefault({ key: 'max_upload_size', description: 'Maximum file upload size in bytes (100MB = 104857600)', isEncrypted: false, defaultValue: '104857600' })}
@@ -832,7 +838,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="settings-section">
-                  <h5 className="section-title">Storage & Cleanup</h5>
+                  <h5 className="section-title" style={{ color: '#ffffff' }}>Storage & Cleanup</h5>
                   {(!settings.upload || settings.upload.length === 0) ? (
                     <>
                       {renderFieldFromDefault({ key: 'upload_dir', description: 'Directory path for uploaded files', isEncrypted: false, defaultValue: './uploads' })}
@@ -845,7 +851,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="settings-section">
-                  <h5 className="section-title">Security Scanning</h5>
+                  <h5 className="section-title" style={{ color: '#ffffff' }}>Security Scanning</h5>
                   {(!settings.upload || settings.upload.length === 0) ? (
                     <>
                       {renderFieldFromDefault({ key: 'enable_virus_scan', description: 'Enable virus scanning on upload (true/false)', isEncrypted: false, defaultValue: 'false' })}
@@ -880,8 +886,8 @@ export default function SettingsPage() {
             <Tab eventKey="security" title="Security">
               <Form>
                 <div className="settings-section">
-                  <h5 className="section-title">
-                    <FaShieldAlt className="me-2" />
+                  <h5 className="section-title" style={{ color: '#ffffff' }}>
+                    <FaShieldAlt className="me-2" style={{ color: '#667eea' }} />
                     Organization 2FA Policy (Admin Only)
                   </h5>
                   {twoFactorRequired ? (
@@ -921,7 +927,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="settings-section">
-                  <h5 className="section-title">Session Management</h5>
+                  <h5 className="section-title" style={{ color: '#ffffff' }}>Session Management</h5>
                   {(!settings.security || settings.security.length === 0) ? (
                     <>
                       {renderFieldFromDefault({ key: 'session_timeout', description: 'Session timeout in seconds (3600 = 1 hour)', isEncrypted: false, defaultValue: '3600' })}
@@ -934,7 +940,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="settings-section">
-                  <h5 className="section-title">Password Policy</h5>
+                  <h5 className="section-title" style={{ color: '#ffffff' }}>Password Policy</h5>
                   {(!settings.security || settings.security.length === 0) ? (
                     <>
                       {renderFieldFromDefault({ key: 'password_min_length', description: 'Minimum password length', isEncrypted: false, defaultValue: '8' })}
@@ -949,11 +955,11 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="settings-section">
-                  <h5 className="section-title">
-                    <FaShieldAlt className="me-2" />
+                  <h5 className="section-title" style={{ color: '#ffffff' }}>
+                    <FaShieldAlt className="me-2" style={{ color: '#667eea' }} />
                     Your Personal 2FA Settings
                   </h5>
-                  <p className="text-muted mb-3">
+                  <p style={{ color: 'rgba(255, 255, 255, 0.6)' }} className="mb-3">
                     Configure two-factor authentication for your personal account. This is separate from the organization-wide 2FA policy above.
                   </p>
                   
@@ -988,7 +994,7 @@ export default function SettingsPage() {
                       
                       <div className="mt-3">
                         <Form.Group className="mb-3">
-                          <Form.Label>Enter your password to disable 2FA</Form.Label>
+                          <Form.Label style={{ color: 'rgba(255, 255, 255, 0.9)' }}>Enter your password to disable 2FA</Form.Label>
                           <Form.Control
                             type="password"
                             value={disablePassword}
@@ -1028,7 +1034,7 @@ export default function SettingsPage() {
                       </Alert>
                       
                       <Form.Group className="mb-3 mt-3">
-                        <Form.Label>Verification Code</Form.Label>
+                        <Form.Label style={{ color: 'rgba(255, 255, 255, 0.9)' }}>Verification Code</Form.Label>
                         <Form.Control
                           type="text"
                           value={verificationCode}
@@ -1039,7 +1045,7 @@ export default function SettingsPage() {
                           className="text-center"
                           style={{ fontSize: '1.5rem', letterSpacing: '0.5rem', fontFamily: 'monospace' }}
                         />
-                        <Form.Text className="text-muted">
+                        <Form.Text style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
                           Enter the 6-digit code from your authenticator app
                         </Form.Text>
                       </Form.Group>
@@ -1074,7 +1080,7 @@ export default function SettingsPage() {
                         2FA is not enabled. Add an extra layer of security to your account.
                       </Alert>
                       
-                      <p className="text-muted mt-3">
+                      <p style={{ color: 'rgba(255, 255, 255, 0.6)' }} className="mt-3">
                         Two-factor authentication adds an extra layer of security by requiring a 6-digit code from your authenticator app in addition to your password.
                       </p>
                       
@@ -1138,7 +1144,7 @@ export default function SettingsPage() {
             <Tab eventKey="general" title="General">
               <Form>
                 <div className="settings-section">
-                  <h5 className="section-title">Application Identity</h5>
+                  <h5 className="section-title" style={{ color: '#ffffff' }}>Application Identity</h5>
                   {(!settings.general || settings.general.length === 0) ? (
                     <>
                       {renderFieldFromDefault({ key: 'app_name', description: 'Application name displayed in UI', isEncrypted: false, defaultValue: 'ClovaLink' })}
@@ -1151,7 +1157,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="settings-section">
-                  <h5 className="section-title">Regional Settings</h5>
+                  <h5 className="section-title" style={{ color: '#ffffff' }}>Regional Settings</h5>
                   {(!settings.general || settings.general.length === 0) ? (
                     <>
                       {renderFieldFromDefault({ key: 'timezone', description: 'Server timezone (e.g., America/New_York)', isEncrypted: false, defaultValue: 'UTC' })}
@@ -1163,7 +1169,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="settings-section">
-                  <h5 className="section-title">Activity & Logging</h5>
+                  <h5 className="section-title" style={{ color: '#ffffff' }}>Activity & Logging</h5>
                   {(!settings.general || settings.general.length === 0) ? (
                     <>
                       {renderFieldFromDefault({ key: 'enable_activity_logs', description: 'Enable activity logging (true/false)', isEncrypted: false, defaultValue: 'true' })}
@@ -1175,7 +1181,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="settings-section">
-                  <h5 className="section-title">Features & Access</h5>
+                  <h5 className="section-title" style={{ color: '#ffffff' }}>Features & Access</h5>
                   {(!settings.general || settings.general.length === 0) ? (
                     <>
                       {renderFieldFromDefault({ key: 'default_link_expiry', description: 'Default link expiry in days', isEncrypted: false, defaultValue: '7' })}
@@ -1215,11 +1221,11 @@ export default function SettingsPage() {
                   <FaKey className="me-2" />
                   Register New Passkey
                 </h5>
-                <p className="text-muted mb-3">
+                <p style={{ color: 'rgba(255, 255, 255, 0.6)' }} className="mb-3">
                   Register a new passkey to sign in with Face ID, Touch ID, or your device's security key.
                 </p>
                 <Form.Group className="mb-3">
-                  <Form.Label>Device Name (optional)</Form.Label>
+                  <Form.Label style={{ color: 'rgba(255, 255, 255, 0.9)' }}>Device Name (optional)</Form.Label>
                   <Form.Control
                     type="text"
                     placeholder="e.g., iPhone, MacBook Pro"
@@ -1227,7 +1233,7 @@ export default function SettingsPage() {
                     onChange={(e) => setDeviceName(e.target.value)}
                     disabled={registeringPasskey}
                   />
-                  <Form.Text className="text-muted">
+                  <Form.Text style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
                     Give this device a name to help you identify it later.
                   </Form.Text>
                 </Form.Group>
@@ -1312,7 +1318,7 @@ export default function SettingsPage() {
                         <Card.Body>
                           <div className="d-flex justify-content-between align-items-start">
                             <div className="flex-grow-1">
-                              <h6 className="mb-2" style={{ color: '#1a1d21', fontWeight: 600 }}>
+                              <h6 className="mb-2" style={{ color: '#ffffff', fontWeight: 600 }}>
                                 {company.logo ? (
                                   <img 
                                     src={`/api/companies/logo/${company.logo}`}
@@ -1323,7 +1329,7 @@ export default function SettingsPage() {
                                       borderRadius: '6px',
                                       marginRight: '0.75rem',
                                       objectFit: 'cover',
-                                      border: '2px solid #dee2e6'
+                                      border: '2px solid #667eea'
                                     }}
                                   />
                                 ) : (
@@ -1367,8 +1373,8 @@ export default function SettingsPage() {
 
       <Card className="info-card mt-4">
         <Card.Body>
-          <h5 className="mb-3"><FaCog className="me-2" />About Settings</h5>
-          <p className="text-muted mb-0">
+          <h5 className="mb-3" style={{ color: '#ffffff' }}><FaCog className="me-2" />About Settings</h5>
+          <p className="mb-0" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
             System settings are stored in the database and can be updated through this interface.
             Encrypted settings (like passwords) are masked for security. Changes take effect immediately
             for new operations, but some services may need to be restarted to pick up changes.
@@ -1395,21 +1401,21 @@ export default function SettingsPage() {
 
         {companyToDelete && (
           <>
-            <p style={{ color: '#1a1d21', fontSize: '1rem', marginBottom: '1.5rem' }}>
-              Are you sure you want to delete <strong>{companyToDelete.name}</strong>?
+            <p style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: '1rem', marginBottom: '1.5rem' }}>
+              Are you sure you want to delete <strong style={{ color: '#ffffff' }}>{companyToDelete.name}</strong>?
             </p>
 
             <div className="impact-box" style={{
-              background: '#f8f9fa',
-              border: '1px solid #dee2e6',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
               borderRadius: '10px',
               padding: '1rem',
               marginBottom: '1.5rem'
             }}>
-              <h6 style={{ color: '#495057', marginBottom: '1rem', fontWeight: 600 }}>
+              <h6 style={{ color: 'rgba(255, 255, 255, 0.8)', marginBottom: '1rem', fontWeight: 600 }}>
                 This will permanently remove:
               </h6>
-              <ul style={{ marginBottom: 0, paddingLeft: '1.5rem', color: '#6c757d' }}>
+              <ul style={{ marginBottom: 0, paddingLeft: '1.5rem', color: 'rgba(255, 255, 255, 0.7)' }}>
                 <li><FaUsers className="me-1" style={{ color: '#667eea' }} />All {companyToDelete._count.employees} employees</li>
                 <li><FaFileAlt className="me-1" style={{ color: '#667eea' }} />All {companyToDelete._count.documents} documents</li>
                 <li><FaHdd className="me-1" style={{ color: '#667eea' }} />{formatStorageSize(companyToDelete.storageUsed)} of storage</li>
@@ -1419,8 +1425,8 @@ export default function SettingsPage() {
 
             {totpEnabled ? (
               <Form.Group className="mb-3">
-                <Form.Label style={{ fontWeight: 600, color: '#1a1d21' }}>
-                  <FaShieldAlt className="me-2" />
+                <Form.Label style={{ fontWeight: 600, color: 'rgba(255, 255, 255, 0.9)' }}>
+                  <FaShieldAlt className="me-2" style={{ color: '#667eea' }} />
                   Enter your 6-digit 2FA code to confirm
                 </Form.Label>
                 <Form.Control
@@ -1433,7 +1439,7 @@ export default function SettingsPage() {
                   className="text-center"
                   style={{ fontSize: '1.5rem', letterSpacing: '0.5rem', fontFamily: 'monospace' }}
                 />
-                <Form.Text className="text-muted">
+                <Form.Text style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
                   Check your authenticator app for the current code
                 </Form.Text>
               </Form.Group>
@@ -1482,190 +1488,351 @@ export default function SettingsPage() {
       <style jsx>{`
         .settings-container {
           padding: 1rem;
-          max-width: 1200px;
+          max-width: 1400px;
           margin: 0 auto;
         }
 
         .page-header {
+          display: flex;
+          align-items: center;
+          gap: 1.5rem;
           margin-bottom: 2rem;
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+          border: 1px solid rgba(102, 126, 234, 0.3);
+          border-radius: 16px;
+          padding: 1.75rem 2rem;
+          position: relative;
+          overflow: hidden;
+          box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
+        }
+
+        .page-header::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 3px;
+          background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+          background-size: 200% 100%;
+          animation: shimmer 3s linear infinite;
+        }
+
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+
+        .header-icon {
+          width: 56px;
+          height: 56px;
+          border-radius: 16px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.5rem;
+          color: white;
+          flex-shrink: 0;
+          box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+          position: relative;
+        }
+
+        .header-icon::after {
+          content: '';
+          position: absolute;
+          inset: -2px;
+          border-radius: 16px;
+          padding: 2px;
+          background: linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1));
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+        }
+
+        .header-text {
+          flex: 1;
+          min-width: 0;
         }
 
         .page-header h1 {
-          margin-bottom: 0.5rem;
+          margin: 0;
           font-size: 1.75rem;
-          font-weight: 600;
-          color: #1a1d21;
+          font-weight: 700;
+          color: #ffffff !important;
+          letter-spacing: -0.5px;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
 
-        .page-header p {
+        .header-subtitle {
+          margin: 0.35rem 0 0 0;
+          color: rgba(255, 255, 255, 0.75) !important;
           font-size: 0.95rem;
+          font-weight: 400;
         }
 
         :global(.settings-card) {
-          border: none;
-          border-radius: 16px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-          overflow: hidden;
+          background: rgba(255, 255, 255, 0.05) !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          border-radius: 12px !important;
+          overflow: hidden !important;
+          box-shadow: none !important;
         }
 
         :global(.settings-card .card-body) {
-          padding: 2rem;
+          padding: 1.5rem !important;
         }
 
         :global(.settings-card .nav-tabs) {
-          border-bottom: 2px solid #e9ecef;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
           margin-bottom: 2rem;
         }
 
         :global(.settings-card .nav-tabs .nav-link) {
-          color: #6c757d;
-          border: none;
-          padding: 1rem 1.5rem;
-          font-weight: 500;
-          transition: all 0.2s;
-          border-bottom: 3px solid transparent;
+          color: rgba(255, 255, 255, 0.6) !important;
+          border: none !important;
+          padding: 0.75rem 1.25rem !important;
+          font-weight: 500 !important;
+          transition: all 0.2s !important;
+          border-bottom: 3px solid transparent !important;
+          background: transparent !important;
         }
 
         :global(.settings-card .nav-tabs .nav-link:hover) {
-          color: #0d6efd;
-          border-bottom-color: rgba(13, 110, 253, 0.3);
-          background: transparent;
+          color: #667eea !important;
+          border-bottom-color: rgba(102, 126, 234, 0.3) !important;
+          background: transparent !important;
         }
 
         :global(.settings-card .nav-tabs .nav-link.active) {
-          color: #0d6efd;
-          border-bottom-color: #0d6efd;
-          background: transparent;
-          font-weight: 600;
+          color: #667eea !important;
+          border-bottom-color: #667eea !important;
+          background: transparent !important;
+          font-weight: 600 !important;
         }
 
         :global(.form-group) {
-          margin-bottom: 1.5rem;
+          margin-bottom: 1.5rem !important;
         }
 
         :global(.form-label) {
-          font-weight: 600;
-          color: #1a1d21;
-          margin-bottom: 0.5rem;
-          font-size: 0.95rem;
+          font-weight: 600 !important;
+          color: rgba(255, 255, 255, 0.9) !important;
+          margin-bottom: 0.5rem !important;
+          font-size: 0.95rem !important;
         }
 
         :global(.form-text) {
-          font-size: 0.875rem;
-          color: #6c757d;
-          margin-bottom: 0.5rem;
+          font-size: 0.875rem !important;
+          color: rgba(255, 255, 255, 0.5) !important;
+          margin-bottom: 0.5rem !important;
         }
 
         :global(.form-control),
         :global(.form-select) {
-          border-radius: 8px;
-          border: 1.5px solid #dee2e6;
-          padding: 0.75rem 1rem;
-          font-size: 0.95rem;
-          transition: all 0.2s;
+          background: rgba(255, 255, 255, 0.05) !important;
+          border: 1px solid rgba(255, 255, 255, 0.15) !important;
+          border-radius: 8px !important;
+          color: #ffffff !important;
+          padding: 0.75rem 1rem !important;
+          font-size: 0.95rem !important;
+          transition: all 0.2s !important;
         }
 
         :global(.form-control:focus),
         :global(.form-select:focus) {
-          border-color: #0d6efd;
-          box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+          background: rgba(255, 255, 255, 0.08) !important;
+          border-color: #667eea !important;
+          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2) !important;
+          color: #ffffff !important;
+          outline: none !important;
+        }
+
+        :global(.form-control::placeholder) {
+          color: rgba(255, 255, 255, 0.4) !important;
+        }
+
+        :global(.form-select option) {
+          background: #1a1a2e !important;
+          color: #ffffff !important;
         }
 
         :global(.d-flex.gap-2) {
           margin-top: 2rem;
           padding-top: 1.5rem;
-          border-top: 1px solid #e9ecef;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         :global(.btn) {
-          padding: 0.75rem 1.5rem;
-          font-weight: 500;
-          border-radius: 8px;
-          transition: all 0.2s;
+          padding: 0.75rem 1.5rem !important;
+          font-weight: 500 !important;
+          border-radius: 8px !important;
+          transition: all 0.2s !important;
         }
 
         :global(.btn-primary) {
-          background: #0d6efd;
-          border-color: #0d6efd;
-          box-shadow: 0 2px 4px rgba(13, 110, 253, 0.2);
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+          border: none !important;
+          color: white !important;
+          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
         }
 
         :global(.btn-primary:hover) {
-          background: #0b5ed7;
-          border-color: #0b5ed7;
-          box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3);
-          transform: translateY(-1px);
+          transform: translateY(-2px) !important;
+          box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6) !important;
         }
 
         :global(.btn-outline-secondary) {
-          border: 1.5px solid #dee2e6;
-          color: #6c757d;
+          background: rgba(255, 255, 255, 0.05) !important;
+          border: 1px solid rgba(255, 255, 255, 0.2) !important;
+          color: #ffffff !important;
         }
 
         :global(.btn-outline-secondary:hover) {
-          background: #f8f9fa;
-          border-color: #dee2e6;
-          color: #495057;
+          background: rgba(255, 255, 255, 0.1) !important;
+          border-color: rgba(255, 255, 255, 0.3) !important;
+          color: #ffffff !important;
+          transform: translateY(-1px) !important;
+        }
+
+        :global(.btn-danger) {
+          background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+          border: none !important;
+          color: white !important;
+          box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4) !important;
+        }
+
+        :global(.btn-danger:hover) {
+          transform: translateY(-2px) !important;
+          box-shadow: 0 6px 20px rgba(220, 53, 69, 0.6) !important;
+        }
+
+        :global(.btn-outline-danger) {
+          background: rgba(220, 53, 69, 0.1) !important;
+          border: 1px solid rgba(220, 53, 69, 0.3) !important;
+          color: #ff6b6b !important;
+        }
+
+        :global(.btn-outline-danger:hover) {
+          background: rgba(220, 53, 69, 0.2) !important;
+          border-color: #dc3545 !important;
+          color: #ff4444 !important;
+        }
+
+        :global(.btn-outline-primary) {
+          background: rgba(102, 126, 234, 0.1) !important;
+          border: 1px solid rgba(102, 126, 234, 0.3) !important;
+          color: #667eea !important;
+        }
+
+        :global(.btn-outline-primary:hover) {
+          background: rgba(102, 126, 234, 0.2) !important;
+          border-color: #667eea !important;
         }
 
         :global(.info-card) {
-          border: none;
-          border-radius: 12px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          border-radius: 12px !important;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+          color: white !important;
+          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3) !important;
+        }
+
+        :global(.info-card .card-body) {
+          padding: 1.5rem !important;
         }
 
         :global(.info-card h5) {
-          display: flex;
-          align-items: center;
-          font-size: 1.1rem;
-          font-weight: 600;
-          color: white;
-          margin-bottom: 0.75rem;
+          display: flex !important;
+          align-items: center !important;
+          font-size: 1.1rem !important;
+          font-weight: 600 !important;
+          color: white !important;
+          margin-bottom: 0.75rem !important;
         }
 
         :global(.info-card p) {
-          color: rgba(255, 255, 255, 0.95);
-          margin: 0;
+          color: rgba(255, 255, 255, 0.95) !important;
+          margin: 0 !important;
         }
 
         :global(.alert) {
-          border-radius: 12px;
-          border: none;
-          padding: 1rem 1.25rem;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          border-radius: 10px !important;
+          padding: 1rem 1.25rem !important;
+        }
+
+        :global(.alert-success) {
+          background: rgba(82, 196, 26, 0.15) !important;
+          border: 1px solid rgba(82, 196, 26, 0.3) !important;
+          color: #52c41a !important;
+        }
+
+        :global(.alert-danger) {
+          background: rgba(220, 53, 69, 0.15) !important;
+          border: 1px solid rgba(220, 53, 69, 0.3) !important;
+          color: #ff6b6b !important;
+        }
+
+        :global(.alert-warning) {
+          background: rgba(255, 193, 7, 0.15) !important;
+          border: 1px solid rgba(255, 193, 7, 0.3) !important;
+          color: #ffc107 !important;
+        }
+
+        :global(.alert-info) {
+          background: rgba(102, 126, 234, 0.15) !important;
+          border: 1px solid rgba(102, 126, 234, 0.3) !important;
+          color: #667eea !important;
+        }
+
+        :global(.alert strong) {
+          color: inherit !important;
+        }
+
+        :global(.alert p) {
+          color: rgba(255, 255, 255, 0.8) !important;
         }
 
         :global(.settings-section) {
-          margin-bottom: 2.5rem;
-          padding-bottom: 2rem;
-          border-bottom: 1px solid #e9ecef;
+          margin-bottom: 2.5rem !important;
+          padding-bottom: 2rem !important;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
         }
 
         :global(.settings-section:last-of-type) {
-          border-bottom: none;
-          padding-bottom: 0;
+          border-bottom: none !important;
+          padding-bottom: 0 !important;
         }
 
         :global(.section-title) {
-          font-size: 1.1rem;
-          font-weight: 600;
-          color: #495057;
-          margin-bottom: 1.25rem;
-          padding-bottom: 0.75rem;
-          border-bottom: 2px solid #e9ecef;
-          display: flex;
-          align-items: center;
+          font-size: 1.1rem !important;
+          font-weight: 600 !important;
+          color: #ffffff !important;
+          margin-bottom: 1.25rem !important;
+          padding-bottom: 0.75rem !important;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+          display: flex !important;
+          align-items: center !important;
         }
 
-        :global(.section-title::before) {
-          content: '';
-          width: 4px;
-          height: 24px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          border-radius: 2px;
-          margin-right: 0.75rem;
+        :global(.section-title svg) {
+          color: #667eea !important;
+        }
+
+        :global(h5.section-title) {
+          color: #ffffff !important;
+        }
+
+        :global(.settings-section h5) {
+          color: #ffffff !important;
+        }
+
+        :global(.settings-card h5) {
+          color: #ffffff !important;
+        }
+
+        :global(.settings-card h6) {
+          color: #ffffff !important;
         }
 
         @media (min-width: 1024px) {
@@ -1713,37 +1880,48 @@ export default function SettingsPage() {
         }
 
         :global(.company-danger-card) {
-          border: 1px solid #dee2e6 !important;
+          background: rgba(255, 255, 255, 0.05) !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
           border-radius: 12px !important;
           transition: all 0.2s ease !important;
         }
 
         :global(.company-danger-card:hover) {
-          border-color: #dc3545 !important;
-          box-shadow: 0 2px 8px rgba(220, 53, 69, 0.1) !important;
+          border-color: rgba(220, 53, 69, 0.4) !important;
+          box-shadow: 0 2px 8px rgba(220, 53, 69, 0.2) !important;
+        }
+
+        :global(.company-danger-card .card-body) {
+          padding: 1rem !important;
+        }
+
+        :global(.company-danger-card h6) {
+          color: #ffffff !important;
+          display: flex;
+          align-items: center;
         }
 
         :global(.company-stats-inline) {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 0.5rem;
-          margin-top: 0.5rem;
+          display: flex !important;
+          flex-wrap: wrap !important;
+          gap: 0.5rem !important;
+          margin-top: 0.5rem !important;
         }
 
         :global(.stat-badge) {
-          display: inline-flex;
-          align-items: center;
-          padding: 0.25rem 0.75rem;
-          background: #f8f9fa;
-          border: 1px solid #dee2e6;
-          border-radius: 6px;
-          font-size: 0.85rem;
-          color: #6c757d;
+          display: inline-flex !important;
+          align-items: center !important;
+          padding: 0.25rem 0.75rem !important;
+          background: rgba(255, 255, 255, 0.05) !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          border-radius: 6px !important;
+          font-size: 0.85rem !important;
+          color: rgba(255, 255, 255, 0.7) !important;
         }
 
         :global(.stat-badge svg) {
-          font-size: 0.75rem;
-          color: #667eea;
+          font-size: 0.75rem !important;
+          color: #667eea !important;
         }
 
         :global(.company-delete-btn) {
@@ -1753,6 +1931,68 @@ export default function SettingsPage() {
 
         :global(.company-delete-btn:disabled) {
           opacity: 0.5 !important;
+        }
+
+        :global(.list-group-item) {
+          background: rgba(255, 255, 255, 0.05) !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          color: #ffffff !important;
+          margin-bottom: 0.5rem !important;
+          border-radius: 8px !important;
+        }
+
+        :global(.list-group-item .fw-bold) {
+          color: #ffffff !important;
+        }
+
+        :global(.list-group-item .text-muted) {
+          color: rgba(255, 255, 255, 0.6) !important;
+        }
+
+        :global(.badge) {
+          background: rgba(102, 126, 234, 0.2) !important;
+          color: #667eea !important;
+          padding: 0.5rem 0.75rem !important;
+          font-weight: 500 !important;
+        }
+
+        :global(.text-muted) {
+          color: rgba(255, 255, 255, 0.6) !important;
+        }
+
+        :global(.small) {
+          color: rgba(255, 255, 255, 0.6) !important;
+        }
+
+        :global(code) {
+          background: rgba(255, 255, 255, 0.1) !important;
+          color: #667eea !important;
+          padding: 0.2rem 0.4rem !important;
+          border-radius: 4px !important;
+          font-family: monospace !important;
+        }
+
+        :global(.totp-enabled),
+        :global(.totp-disabled),
+        :global(.totp-setup) {
+          color: rgba(255, 255, 255, 0.9);
+        }
+
+        :global(.totp-setup img) {
+          background: white !important;
+          padding: 1rem !important;
+        }
+
+        :global(p) {
+          color: rgba(255, 255, 255, 0.8) !important;
+        }
+
+        :global(.settings-card p) {
+          color: rgba(255, 255, 255, 0.8) !important;
+        }
+
+        :global(.settings-section p) {
+          color: rgba(255, 255, 255, 0.7) !important;
         }
       `}</style>
     </DashboardLayout>

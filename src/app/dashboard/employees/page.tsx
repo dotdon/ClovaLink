@@ -336,14 +336,12 @@ export default function EmployeesPage() {
       <div className="employees-container">
         {/* Page Header */}
         <div className="page-header">
-          <div className="header-content">
-            <div className="header-icon">
-              <FaUserShield />
-            </div>
-            <div>
-              <h1>Employee Management</h1>
-              <p className="header-subtitle">Manage your team members and their access</p>
-            </div>
+          <div className="header-icon">
+            <FaUserShield />
+          </div>
+          <div className="header-text">
+            <h1>Employee Management</h1>
+            <p className="header-subtitle">Manage your team members and their access</p>
           </div>
           {canCreateEmployee && (
             <Button variant="primary" className="add-btn" onClick={() => setShowAddModal(true)}>
@@ -805,68 +803,130 @@ export default function EmployeesPage() {
 
         <style jsx>{`
           .employees-container {
-            padding: 1.5rem;
+            padding: 1rem;
             max-width: 100%;
           }
 
           /* Page Header */
           .page-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 1.5rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 1.25rem 1.5rem;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 16px;
+            padding: 1.75rem 2rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
           }
 
-          .header-content {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
+          .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+            background-size: 200% 100%;
+            animation: shimmer 3s linear infinite;
+          }
+
+          @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
           }
 
           .header-icon {
-            width: 45px;
-            height: 45px;
-            border-radius: 12px;
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             color: white;
             flex-shrink: 0;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+            position: relative;
+          }
+
+          .header-icon::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 16px;
+            padding: 2px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+          }
+
+          .header-text {
+            flex: 1;
+            min-width: 0;
           }
 
           .page-header h1 {
             margin: 0;
-            font-size: 1.35rem;
-            font-weight: 600;
+            font-size: 1.75rem;
+            font-weight: 700;
             color: #ffffff;
+            letter-spacing: -0.5px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
           }
 
           .header-subtitle {
-            margin: 0.15rem 0 0 0;
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 0.85rem;
+            margin: 0.35rem 0 0 0;
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 0.95rem;
+            font-weight: 400;
           }
 
           :global(.add-btn) {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
             border: none !important;
-            padding: 0.6rem 1.25rem !important;
-            border-radius: 8px !important;
-            font-weight: 500 !important;
-            font-size: 0.9rem !important;
-            transition: all 0.3s ease !important;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
+            padding: 0.75rem 1.75rem !important;
+            border-radius: 12px !important;
+            font-weight: 600 !important;
+            font-size: 0.95rem !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.5) !important;
+            color: white !important;
+            margin-left: auto !important;
+            position: relative;
+            overflow: hidden;
+          }
+
+          :global(.add-btn::before) {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+          }
+
+          :global(.add-btn:hover::before) {
+            width: 300px;
+            height: 300px;
           }
 
           :global(.add-btn:hover) {
-            transform: translateY(-2px) !important;
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6) !important;
+            transform: translateY(-3px) scale(1.02) !important;
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.7) !important;
+          }
+
+          :global(.add-btn:active) {
+            transform: translateY(-1px) scale(0.98) !important;
           }
 
           /* Loading and Empty States */
@@ -1203,33 +1263,40 @@ export default function EmployeesPage() {
           /* Mobile Styles */
           @media (max-width: 1023px) {
             .employees-container {
-              padding: 1rem;
+              padding: 0.75rem;
             }
 
             .page-header {
               flex-direction: column;
               align-items: stretch;
-              padding: 1.5rem;
-              gap: 1rem;
+              padding: 1rem;
+              gap: 0.75rem;
             }
 
             .header-content {
               flex-direction: row;
-              gap: 1rem;
+              gap: 0.75rem;
+              align-items: center;
             }
 
             .header-icon {
-              width: 50px;
-              height: 50px;
-              font-size: 1.5rem;
+              width: 45px;
+              height: 45px;
+              font-size: 1.25rem;
             }
 
             .page-header h1 {
-              font-size: 1.5rem;
+              font-size: 1.3rem;
+            }
+
+            .page-header p {
+              font-size: 0.85rem;
             }
 
             :global(.add-btn) {
               width: 100% !important;
+              padding: 0.75rem !important;
+              font-size: 0.95rem !important;
             }
 
             .mobile-view {
@@ -1242,7 +1309,75 @@ export default function EmployeesPage() {
 
             .employees-grid {
               grid-template-columns: 1fr;
-              gap: 1rem;
+              gap: 0.75rem;
+            }
+
+            /* Mobile employee card optimizations */
+            .employee-card-desktop {
+              padding: 1rem !important;
+            }
+
+            .employee-avatar {
+              width: 55px !important;
+              height: 55px !important;
+            }
+
+            .employee-info h5 {
+              font-size: 1rem !important;
+            }
+
+            .employee-info p {
+              font-size: 0.85rem !important;
+            }
+
+            .info-grid {
+              grid-template-columns: 1fr !important;
+              gap: 0.5rem !important;
+            }
+
+            .stat-item {
+              padding: 0.5rem !important;
+            }
+
+            .stat-label {
+              font-size: 0.75rem !important;
+            }
+
+            .stat-value {
+              font-size: 0.85rem !important;
+            }
+
+            /* Mobile-friendly action buttons */
+            .employee-actions {
+              flex-wrap: wrap;
+              gap: 0.5rem !important;
+            }
+
+            .employee-actions :global(.btn) {
+              padding: 0.5rem 0.75rem !important;
+              font-size: 0.85rem !important;
+            }
+
+            /* Pagination for mobile */
+            .pagination-container {
+              flex-direction: column;
+              gap: 0.75rem;
+              padding: 1rem 0.75rem;
+            }
+
+            .pagination-controls {
+              width: 100%;
+            }
+
+            .pagination-controls :global(.btn) {
+              flex: 1;
+              padding: 0.6rem !important;
+              font-size: 0.9rem !important;
+            }
+
+            .pagination-info {
+              text-align: center;
+              font-size: 0.9rem;
             }
           }
 

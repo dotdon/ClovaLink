@@ -206,9 +206,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           >
             <FaBars />
           </button>
-          <h1 className="page-title">
-            {pathname === '/dashboard' ? 'Dashboard' : navigationItems.find(item => item.path === pathname)?.label || 'ClovaLink'}
-          </h1>
+          <Link href="/dashboard" className="mobile-header-logo">
+            <Image
+              src="/logo.svg"
+              alt="ClovaLink"
+              width={300}
+              height={300}
+              style={{ filter: 'brightness(0) invert(1)' }}
+              priority
+              unoptimized
+            />
+          </Link>
           <Link href="/dashboard/account" className="mobile-profile-avatar">
             {profilePicture ? (
               <img 
@@ -401,8 +409,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         }
 
         .mobile-profile-avatar {
-          width: 36px;
-          height: 36px;
+          width: 40px;
+          height: 40px;
           border-radius: 50%;
           overflow: hidden;
           border: 2px solid #667eea;
@@ -412,6 +420,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           background: rgba(255, 255, 255, 0.1);
           flex-shrink: 0;
           text-decoration: none;
+          min-width: 40px;
         }
 
         .mobile-profile-avatar img {
@@ -421,8 +430,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         }
 
         .mobile-profile-avatar svg {
-          width: 20px;
-          height: 20px;
+          width: 22px;
+          height: 22px;
           color: #fff;
         }
 
@@ -527,16 +536,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           right: 0;
           z-index: 1000;
           width: 100%;
-          height: 60px;
+          height: 80px;
           box-shadow: 0 2px 12px rgba(0,0,0,0.3);
         }
 
         .header-content {
           display: flex;
           align-items: center;
+          justify-content: space-between;
           width: 100%;
           height: 100%;
-          padding: 0 1rem;
+          padding: 0 0.5rem;
+          gap: 0.25rem;
         }
 
         .menu-button {
@@ -544,19 +555,36 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           border: none;
           color: #fff;
           font-size: 1.5rem;
-          padding: 0.5rem;
+          padding: 0.4rem;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
+          flex-shrink: 0;
+          width: 40px;
+          height: 40px;
         }
 
-        .page-title {
-          color: #fff;
-          font-size: 1.25rem !important;
-          margin: 0;
-          margin-left: 1rem;
-          font-weight: 600;
+        .mobile-header-logo {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-decoration: none;
+          transition: opacity 0.2s ease;
+          max-width: 300px;
+          height: 75px;
+          overflow: visible;
+        }
+
+        .mobile-header-logo img {
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
+        }
+
+        .mobile-header-logo:hover {
+          opacity: 0.8;
         }
 
         .side-menu-header {
@@ -600,13 +628,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           }
 
           .main-content {
-            padding-top: 76px !important;
+            padding-top: 96px !important;
             padding-left: 1rem !important;
             padding-right: 1rem !important;
           }
 
           .main-content.is-documents {
-            padding-top: 76px !important;
+            padding-top: 96px !important;
             padding-left: 0 !important;
             padding-right: 0 !important;
           }
