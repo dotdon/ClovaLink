@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Button, Alert } from 'react-bootstrap';
+import { Card, Button, Alert, Spinner } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
-import { FaPlus, FaBuilding, FaUsers, FaFileAlt, FaChevronRight, FaFileDownload } from 'react-icons/fa';
+import { FaPlus, FaBuilding, FaUsers, FaFileAlt, FaChevronRight, FaFileDownload, FaCalendar } from 'react-icons/fa';
 import AddCompanyModal from '@/components/modals/AddCompanyModal';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -94,50 +94,139 @@ export default function CompaniesPage() {
     return session.user.role === 'ADMIN';
   };
 
-  // Mobile company card component
+  // Company card component
   const CompanyCard = ({ company }: { company: Company }) => (
-    <Card className="company-card mb-3">
+    <Card 
+      className="company-card-desktop"
+      onClick={() => handleViewCompany(company.id)}
+      style={{ cursor: 'pointer' }}
+    >
       <Card.Body>
-        <div className="company-content">
-          <div className="company-info">
-            <h3 className="company-name">{company.name}</h3>
-            <div className="company-stats">
-              <div className="stat">
-                <FaUsers className="stat-icon" />
-                <span>{company._count.employees} Employees</span>
-              </div>
-              <div className="stat">
-                <FaFileAlt className="stat-icon" />
-                <span>{company._count.documents} Documents</span>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'flex-start',
+          marginBottom: '1rem',
+          paddingBottom: '1rem',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              overflow: 'hidden',
+              border: '2px solid #667eea',
+              flexShrink: 0,
+              boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)'
+            }}>
+              <div style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                fontWeight: 700,
+                fontSize: '1.1rem'
+              }}>
+                <FaBuilding />
               </div>
             </div>
-            <div className="company-date">
-              Created: {new Date(company.createdAt).toLocaleDateString()}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{
+                fontSize: '1rem',
+                fontWeight: 600,
+                color: '#ffffff',
+                marginBottom: '0.35rem',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}>{company.name}</div>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontSize: '0.8rem'
+              }}>
+                <FaCalendar style={{ fontSize: '0.7rem', marginRight: '0.25rem' }} />
+                Created {new Date(company.createdAt).toLocaleDateString()}
+              </div>
             </div>
           </div>
-          <div className="company-actions">
-            <Button
-              variant="link"
-              className="action-btn view-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleViewCompany(company.id);
-              }}
-            >
-              <FaChevronRight />
-            </Button>
+          <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0 }}>
             {canExportCompanyActivities(company.id) && (
               <Button
                 variant="link"
-                className="action-btn export-btn"
+                className="action-btn-desktop export"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleExportActivities(company.id);
                 }}
+                title="Export Activities"
               >
                 <FaFileDownload />
               </Button>
             )}
+          </div>
+        </div>
+
+        <div style={{ marginTop: '1rem' }}>
+          <div style={{ display: 'grid', gap: '0.65rem' }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '0.6rem',
+              background: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: '8px',
+              border: '1px solid rgba(255, 255, 255, 0.05)'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                color: 'rgba(255, 255, 255, 0.6)',
+                fontSize: '0.8rem',
+                fontWeight: 500
+              }}>
+                <FaUsers style={{ fontSize: '0.85rem', color: '#667eea' }} />
+                <span>Employees</span>
+              </div>
+              <div style={{
+                color: '#ffffff',
+                fontWeight: 500,
+                fontSize: '0.85rem'
+              }}>{company._count.employees}</div>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '0.6rem',
+              background: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: '8px',
+              border: '1px solid rgba(255, 255, 255, 0.05)'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                color: 'rgba(255, 255, 255, 0.6)',
+                fontSize: '0.8rem',
+                fontWeight: 500
+              }}>
+                <FaFileAlt style={{ fontSize: '0.85rem', color: '#667eea' }} />
+                <span>Documents</span>
+              </div>
+              <div style={{
+                color: '#ffffff',
+                fontWeight: 500,
+                fontSize: '0.85rem'
+              }}>{company._count.documents}</div>
+            </div>
           </div>
         </div>
       </Card.Body>
@@ -148,92 +237,53 @@ export default function CompaniesPage() {
     <DashboardLayout>
       <div className="companies-container">
         <div className="page-header">
-          <h1 className="h3">Companies</h1>
+          <div className="header-content">
+            <div className="header-icon">
+              <FaBuilding />
+            </div>
+            <div>
+              <h1 style={{ color: '#ffffff' }}>Companies</h1>
+              <p className="header-subtitle" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Manage and view all companies</p>
+            </div>
+          </div>
           {canCreateCompany && (
-            <Button variant="primary" onClick={() => setShowAddModal(true)}>
+            <Button className="add-btn" onClick={() => setShowAddModal(true)}>
               <FaPlus className="me-2" /> Add Company
             </Button>
           )}
         </div>
 
         {!canViewCompanies ? (
-          <Alert variant="warning">
+          <Alert variant="warning" className="permission-alert">
             You do not have permission to view companies. Please contact your administrator for access.
           </Alert>
         ) : error ? (
-          <Alert variant="danger">{error}</Alert>
+          <Alert variant="danger" className="error-alert">{error}</Alert>
         ) : (
           <>
-            {/* Desktop View */}
-            <div className="desktop-view">
-              <Card>
-                <Card.Body>
-                  <Table responsive>
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Employees</th>
-                        <th>Documents</th>
-                        <th>Created</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {isLoading ? (
-                        <tr>
-                          <td colSpan={5} className="text-center">Loading...</td>
-                        </tr>
-                      ) : companies.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="text-center">No companies found</td>
-                        </tr>
-                      ) : (
-                        companies.map((company) => (
-                          <tr key={company.id}>
-                            <td>{company.name}</td>
-                            <td>{company._count.employees}</td>
-                            <td>{company._count.documents}</td>
-                            <td>{new Date(company.createdAt).toLocaleDateString()}</td>
-                            <td>
-                              <Button 
-                                variant="outline-primary" 
-                                size="sm"
-                                className="me-2"
-                                onClick={() => handleViewCompany(company.id)}
-                              >
-                                View
-                              </Button>
-                              {canExportCompanyActivities(company.id) && (
-                                <Button
-                                  variant="outline-secondary"
-                                  size="sm"
-                                  onClick={() => handleExportActivities(company.id)}
-                                >
-                                  Export Activity
-                                </Button>
-                              )}
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </Table>
-                </Card.Body>
-              </Card>
-            </div>
-
-            {/* Mobile View */}
-            <div className="mobile-view">
-              {isLoading ? (
-                <div className="text-center py-4">Loading...</div>
-              ) : companies.length === 0 ? (
-                <div className="text-center py-4">No companies found</div>
-              ) : (
-                companies.map((company) => (
+            {isLoading ? (
+              <div className="loading-state">
+                <Spinner animation="border" variant="primary" />
+                <p style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Loading companies...</p>
+              </div>
+            ) : companies.length === 0 ? (
+              <div className="empty-state">
+                <FaBuilding className="empty-icon" style={{ color: 'rgba(255, 255, 255, 0.3)' }} />
+                <h3 style={{ color: '#ffffff' }}>No Companies Found</h3>
+                <p style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Start by adding your first company</p>
+                {canCreateCompany && (
+                  <Button className="empty-action-btn" onClick={() => setShowAddModal(true)}>
+                    <FaPlus className="me-2" /> Add Company
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="companies-grid">
+                {companies.map((company) => (
                   <CompanyCard key={company.id} company={company} />
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </>
         )}
 
@@ -247,150 +297,328 @@ export default function CompaniesPage() {
 
         <style jsx>{`
           .companies-container {
-            padding: 2.5rem 2rem;
-            max-width: 1400px;
-            margin: 0 auto;
+            padding: 1.5rem;
+            max-width: 100%;
           }
 
+          /* Page Header */
           .page-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2.5rem;
+            margin-bottom: 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+          }
+
+          .header-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+          }
+
+          .header-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: white;
+            flex-shrink: 0;
           }
 
           .page-header h1 {
             margin: 0;
-            font-size: 2rem;
-            font-weight: 700;
-            color: #ffffff;
-          }
-          
-          :global(.btn-primary) {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            transition: all 0.3s ease;
-          }
-          
-          :global(.btn-primary:hover) {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            font-size: 1.35rem;
+            font-weight: 600;
+            color: #ffffff !important;
           }
 
-          /* Mobile Styles */
+          .header-subtitle {
+            margin: 0.15rem 0 0 0;
+            color: rgba(255, 255, 255, 0.6) !important;
+            font-size: 0.85rem;
+          }
+
+          :global(.add-btn) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border: none !important;
+            padding: 0.6rem 1.25rem !important;
+            border-radius: 8px !important;
+            font-weight: 500 !important;
+            font-size: 0.9rem !important;
+            transition: all 0.3s ease !important;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
+            color: white !important;
+          }
+
+          :global(.add-btn:hover) {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6) !important;
+          }
+
+          /* Loading and Empty States */
+          .loading-state,
+          .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+          }
+
+          .loading-state p,
+          .empty-state p {
+            color: rgba(255, 255, 255, 0.6) !important;
+            margin-top: 1rem;
+          }
+
+          .empty-icon {
+            font-size: 4rem;
+            color: rgba(255, 255, 255, 0.3) !important;
+            margin-bottom: 1rem;
+          }
+
+          .empty-state h3 {
+            color: #ffffff !important;
+            margin-bottom: 0.5rem;
+          }
+
+          :global(.empty-action-btn) {
+            margin-top: 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border: none !important;
+            padding: 0.65rem 1.5rem !important;
+            border-radius: 8px !important;
+            font-weight: 500 !important;
+            color: white !important;
+          }
+
+          /* Companies Grid */
+          .companies-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1rem;
+          }
+
+          /* Company Cards */
+          :global(.company-card-desktop) {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 12px !important;
+            transition: all 0.2s ease !important;
+            overflow: hidden !important;
+          }
+
+          :global(.company-card-desktop:hover) {
+            transform: translateY(-2px) !important;
+            border-color: rgba(102, 126, 234, 0.4) !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+          }
+
+          :global(.company-card-desktop .card-body) {
+            padding: 1rem !important;
+          }
+
+          .company-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          }
+
+          .company-avatar-section {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex: 1;
+            min-width: 0;
+          }
+
+          .company-avatar-desktop {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid #667eea;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+          }
+
+          .avatar-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 700;
+            font-size: 1.1rem;
+          }
+
+          .company-main-info {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .company-name-desktop {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #ffffff !important;
+            margin: 0 0 0.35rem 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .company-date {
+            display: flex;
+            align-items: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.8rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          /* Action Buttons */
+          .company-actions-desktop {
+            display: flex;
+            gap: 0.35rem;
+            flex-shrink: 0;
+          }
+
+          :global(.action-btn-desktop) {
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 8px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0 !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            transition: all 0.2s ease !important;
+            font-size: 0.85rem !important;
+          }
+
+          :global(.action-btn-desktop:hover) {
+            transform: translateY(-1px) !important;
+            border-color: currentColor !important;
+            background: rgba(255, 255, 255, 0.1) !important;
+          }
+
+          :global(.action-btn-desktop.view) {
+            color: #667eea !important;
+          }
+
+          :global(.action-btn-desktop.export) {
+            color: #51cf66 !important;
+          }
+
+          /* Info Grid */
+          .company-card-body {
+            margin-top: 1rem;
+          }
+
+          .info-grid {
+            display: grid;
+            gap: 0.65rem;
+          }
+
+          .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+          }
+
+          .info-label {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.8rem;
+            font-weight: 500;
+          }
+
+          .info-label svg {
+            font-size: 0.85rem;
+            color: #667eea;
+          }
+
+          .info-value {
+            color: #ffffff !important;
+            font-weight: 500;
+            font-size: 0.85rem;
+          }
+
+          /* Alerts */
+          :global(.permission-alert),
+          :global(.error-alert) {
+            border-radius: 12px !important;
+            border: 1px solid !important;
+          }
+
+          :global(.permission-alert) {
+            background: rgba(255, 193, 7, 0.1) !important;
+            border-color: rgba(255, 193, 7, 0.3) !important;
+            color: #ffc107 !important;
+          }
+
+          :global(.error-alert) {
+            background: rgba(220, 53, 69, 0.1) !important;
+            border-color: rgba(220, 53, 69, 0.3) !important;
+            color: #ff6b6b !important;
+          }
+
+          /* Responsive */
           @media (max-width: 1023px) {
             .companies-container {
-              padding: 1.5rem 1rem;
+              padding: 1rem;
             }
 
             .page-header {
-              padding: 0;
-              margin-bottom: 1.5rem;
-              flex-wrap: wrap;
+              flex-direction: column;
+              align-items: stretch;
+              padding: 1rem;
               gap: 1rem;
             }
 
-            .page-header h1 {
-              font-size: 1.5rem;
-              width: 100%;
-              color: #ffffff !important;
-            }
-
-            .page-header button {
-              width: 100%;
-            }
-
-            .company-card {
-              margin: 0.5rem 0;
-            }
-
-            .mobile-view {
-              display: block;
-              padding: 0.5rem;
-            }
-
-            .desktop-view {
-              display: none;
-            }
-
-            .company-content {
-              display: flex;
-              justify-content: space-between;
-              align-items: flex-start;
-              gap: 1rem;
-            }
-
-            .company-info {
-              flex: 1;
-              min-width: 0;
-            }
-
-            :global(.company-actions) {
-              display: flex;
+            .header-content {
               flex-direction: row;
-              gap: 0.5rem;
-              margin-left: auto;
-              align-items: center;
+              gap: 0.75rem;
             }
 
-            :global(.action-btn) {
-              width: 40px;
-              height: 40px;
-              padding: 0;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              border-radius: 50%;
-              color: #666;
-              transition: all 0.3s ease;
-              border: 2px solid #ecf0f1;
-              background: #fff;
+            :global(.add-btn) {
+              width: 100% !important;
             }
 
-            :global(.action-btn:hover) {
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              color: #fff;
-              border-color: #667eea;
-              transform: scale(1.1);
-              box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-            }
-
-            :global(.view-btn) {
-              color: #667eea;
-            }
-
-            :global(.export-btn) {
-              color: #667eea;
-            }
-
-            :global(.action-btn svg) {
-              width: 18px;
-              height: 18px;
+            .companies-grid {
+              grid-template-columns: 1fr;
             }
           }
 
-          /* Desktop Styles */
-          @media (min-width: 1024px) {
-            .companies-container {
-              padding: 3rem 2.5rem;
-            }
-            
-            .page-header {
-              margin-bottom: 3rem;
-            }
-
-            .mobile-view {
-              display: none;
-            }
-
-            .desktop-view {
-              display: block;
+          @media (min-width: 1600px) {
+            .companies-grid {
+              grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
             }
           }
-          
-          @media (min-width: 1440px) {
-            .companies-container {
-              padding: 3.5rem 3rem;
+
+          @media (min-width: 2000px) {
+            .companies-grid {
+              grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
             }
           }
         `}</style>
