@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Badge, Modal, Alert } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
-import { FaPlus, FaBuilding, FaEnvelope, FaUserTag, FaChevronRight, FaEdit, FaFileDownload, FaTrash, FaShieldAlt, FaKey, FaUser, FaUserShield } from 'react-icons/fa';
+import { FaPlus, FaBuilding, FaEnvelope, FaUserTag, FaChevronRight, FaEdit, FaFileDownload, FaTrash, FaShieldAlt, FaKey, FaUser, FaUserShield, FaExclamationTriangle, FaUserSlash, FaHistory, FaFileAlt, FaCheckCircle, FaTimesCircle, FaInfoCircle } from 'react-icons/fa';
 import AddEmployeeModal from '@/components/modals/AddEmployeeModal';
 import EditEmployeeModal from '@/components/modals/EditEmployeeModal';
 import { useSession } from 'next-auth/react';
@@ -668,84 +668,136 @@ export default function EmployeesPage() {
           />
         )}
 
-        <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
-          <Modal.Header closeButton>
-            <Modal.Title>Confirm Delete</Modal.Title>
+        <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} centered className="delete-employee-modal">
+          <Modal.Header closeButton className="delete-modal-header">
+            <Modal.Title className="d-flex align-items-center gap-2">
+              <div className="delete-modal-icon">
+                <FaTrash />
+              </div>
+              <span>Confirm Delete</span>
+            </Modal.Title>
           </Modal.Header>
-          <Modal.Body>
-            <Alert variant="danger">
-              <strong>Warning:</strong> This action cannot be undone!
-            </Alert>
-            <p>Are you sure you want to delete <strong>{selectedEmployee?.name}</strong>?</p>
-            <p className="text-muted">This will permanently remove:</p>
-            <ul className="text-muted">
-              <li>Employee account and credentials</li>
-              <li>All associated passkeys and 2FA settings</li>
-              <li>Activity logs will be preserved</li>
-              <li>Documents uploaded by this user will remain</li>
-            </ul>
+          <Modal.Body className="delete-modal-body">
+            <div className="warning-box">
+              <FaExclamationTriangle className="warning-icon" />
+              <div>
+                <strong>Warning: This action cannot be undone!</strong>
+                <p className="mb-0 mt-1">All employee data will be permanently deleted.</p>
+              </div>
+            </div>
+            
+            <p className="delete-question">
+              Are you sure you want to delete <strong>{selectedEmployee?.name}</strong>?
+            </p>
+            
+            <div className="impact-section">
+              <h6 className="impact-title">This will permanently remove:</h6>
+              <ul className="impact-list">
+                <li><FaUserSlash className="me-2" />Employee account and credentials</li>
+                <li><FaKey className="me-2" />All associated passkeys and 2FA settings</li>
+                <li><FaHistory className="me-2" />Activity logs will be preserved</li>
+                <li><FaFileAlt className="me-2" />Documents uploaded by this user will remain</li>
+              </ul>
+            </div>
           </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
+          <Modal.Footer className="delete-modal-footer">
+            <Button variant="secondary" onClick={() => setShowDeleteModal(false)} className="delete-cancel-btn">
               Cancel
             </Button>
-            <Button variant="danger" onClick={handleDeleteEmployee}>
+            <Button onClick={handleDeleteEmployee} className="delete-confirm-btn">
               <FaTrash className="me-2" />
               Delete Employee
             </Button>
           </Modal.Footer>
         </Modal>
 
-        <Modal show={show2FAModal} onHide={() => setShow2FAModal(false)} size="lg">
-          <Modal.Header closeButton>
-            <Modal.Title>
-              <FaShieldAlt className="me-2" />
-              2FA Management - {selectedEmployee?.name}
+        <Modal show={show2FAModal} onHide={() => setShow2FAModal(false)} size="lg" centered className="twofa-modal">
+          <Modal.Header closeButton className="twofa-modal-header">
+            <Modal.Title className="d-flex align-items-center gap-2">
+              <div className="twofa-modal-icon">
+                <FaShieldAlt />
+              </div>
+              <div>
+                <div>2FA Management</div>
+                <div className="employee-name-subtitle">{selectedEmployee?.name}</div>
+              </div>
             </Modal.Title>
           </Modal.Header>
-          <Modal.Body>
-            <h6 className="mb-3">Current 2FA Status</h6>
-            <div className="mb-4">
+          <Modal.Body className="twofa-modal-body">
+            <h6 className="status-section-title">
+              <FaShieldAlt className="me-2" />
+              Current 2FA Status
+            </h6>
+            
+            <div className="status-cards">
               {selectedEmployee?.totpEnabled ? (
-                <Alert variant="success">
-                  <strong>✓ TOTP Enabled</strong>
-                  <p className="mb-0 mt-2">This employee has authenticator app 2FA enabled</p>
-                </Alert>
+                <div className="status-card status-enabled">
+                  <div className="status-icon">
+                    <FaCheckCircle />
+                  </div>
+                  <div className="status-content">
+                    <strong>TOTP Enabled</strong>
+                    <p>This employee has authenticator app 2FA enabled</p>
+                  </div>
+                </div>
               ) : (
-                <Alert variant="secondary">
-                  <strong>○ TOTP Not Enabled</strong>
-                  <p className="mb-0 mt-2">This employee has not set up authenticator app 2FA</p>
-                </Alert>
+                <div className="status-card status-disabled">
+                  <div className="status-icon">
+                    <FaTimesCircle />
+                  </div>
+                  <div className="status-content">
+                    <strong>TOTP Not Enabled</strong>
+                    <p>This employee has not set up authenticator app 2FA</p>
+                  </div>
+                </div>
               )}
 
               {selectedEmployee?.passkeys && selectedEmployee.passkeys.length > 0 ? (
-                <Alert variant="success">
-                  <strong>✓ Passkeys Enabled</strong>
-                  <p className="mb-0 mt-2">
-                    This employee has {selectedEmployee.passkeys.length} passkey(s) registered
-                  </p>
-                </Alert>
+                <div className="status-card status-enabled">
+                  <div className="status-icon">
+                    <FaCheckCircle />
+                  </div>
+                  <div className="status-content">
+                    <strong>Passkeys Enabled</strong>
+                    <p>
+                      This employee has {selectedEmployee.passkeys.length} passkey(s) registered
+                    </p>
+                  </div>
+                </div>
               ) : (
-                <Alert variant="secondary">
-                  <strong>○ No Passkeys</strong>
-                  <p className="mb-0 mt-2">This employee has not registered any passkeys</p>
-                </Alert>
+                <div className="status-card status-disabled">
+                  <div className="status-icon">
+                    <FaTimesCircle />
+                  </div>
+                  <div className="status-content">
+                    <strong>No Passkeys</strong>
+                    <p>This employee has not registered any passkeys</p>
+                  </div>
+                </div>
               )}
 
               {!selectedEmployee?.totpEnabled && (!selectedEmployee?.passkeys || selectedEmployee.passkeys.length === 0) && (
-                <Alert variant="warning">
-                  <strong>⚠️ No 2FA Configured</strong>
-                  <p className="mb-0 mt-2">This employee does not have any form of 2FA enabled. They will be prompted to set it up if required by organization policy.</p>
-                </Alert>
+                <div className="status-card status-warning">
+                  <div className="status-icon">
+                    <FaExclamationTriangle />
+                  </div>
+                  <div className="status-content">
+                    <strong>No 2FA Configured</strong>
+                    <p>This employee does not have any form of 2FA enabled. They will be prompted to set it up if required by organization policy.</p>
+                  </div>
+                </div>
               )}
             </div>
 
-            <Alert variant="info">
-              <strong>Note:</strong> Employees must enable 2FA themselves through their Account page. Admins cannot force-enable 2FA but can view status and ensure compliance with organization policies.
-            </Alert>
+            <div className="info-box">
+              <FaInfoCircle className="info-icon" />
+              <div>
+                <strong>Note:</strong> Employees must enable 2FA themselves through their Account page. Admins cannot force-enable 2FA but can view status and ensure compliance with organization policies.
+              </div>
+            </div>
           </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShow2FAModal(false)}>
+          <Modal.Footer className="twofa-modal-footer">
+            <Button variant="secondary" onClick={() => setShow2FAModal(false)} className="twofa-close-btn">
               Close
             </Button>
           </Modal.Footer>
@@ -1216,6 +1268,359 @@ export default function EmployeesPage() {
             .employees-grid {
               grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
             }
+          }
+
+          /* Delete Employee Modal Styles */
+          :global(.delete-employee-modal .modal-content) {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
+            border: 1px solid rgba(220, 53, 69, 0.3) !important;
+            border-radius: 16px !important;
+            overflow: hidden !important;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5) !important;
+          }
+
+          :global(.delete-modal-header) {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+            border-bottom: none !important;
+            padding: 1.5rem 2rem !important;
+            color: white !important;
+          }
+
+          :global(.delete-modal-header .btn-close) {
+            filter: brightness(0) invert(1) !important;
+            opacity: 0.8 !important;
+          }
+
+          :global(.delete-modal-header .btn-close:hover) {
+            opacity: 1 !important;
+          }
+
+          :global(.delete-modal-header .modal-title) {
+            font-size: 1.5rem !important;
+            font-weight: 600 !important;
+            color: white !important;
+          }
+
+          :global(.delete-modal-icon) {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            font-size: 1.2rem;
+          }
+
+          :global(.delete-modal-body) {
+            padding: 2rem !important;
+            background: transparent !important;
+          }
+
+          :global(.warning-box) {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            color: #ff6b6b;
+          }
+
+          :global(.warning-icon) {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+            margin-top: 0.2rem;
+          }
+
+          :global(.warning-box strong) {
+            display: block;
+            font-size: 1rem;
+            color: #ff6b6b;
+          }
+
+          :global(.warning-box p) {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+          }
+
+          :global(.delete-question) {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.05rem;
+            margin-bottom: 1.5rem;
+          }
+
+          :global(.delete-question strong) {
+            color: #ffffff;
+          }
+
+          :global(.impact-section) {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.25rem;
+          }
+
+          :global(.impact-title) {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+          }
+
+          :global(.impact-list) {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+          }
+
+          :global(.impact-list li) {
+            display: flex;
+            align-items: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            padding: 0.5rem 0;
+          }
+
+          :global(.impact-list li svg) {
+            color: #667eea;
+            flex-shrink: 0;
+          }
+
+          :global(.delete-modal-footer) {
+            background: rgba(255, 255, 255, 0.03) !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+            padding: 1.5rem 2rem !important;
+            gap: 1rem !important;
+          }
+
+          :global(.delete-cancel-btn) {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            color: #ffffff !important;
+            padding: 0.65rem 1.5rem !important;
+            border-radius: 10px !important;
+            font-weight: 500 !important;
+            transition: all 0.3s ease !important;
+          }
+
+          :global(.delete-cancel-btn:hover) {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border-color: rgba(255, 255, 255, 0.3) !important;
+            transform: translateY(-1px) !important;
+          }
+
+          :global(.delete-confirm-btn) {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+            border: none !important;
+            color: white !important;
+            padding: 0.65rem 1.75rem !important;
+            border-radius: 10px !important;
+            font-weight: 500 !important;
+            transition: all 0.3s ease !important;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4) !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+          }
+
+          :global(.delete-confirm-btn:hover) {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 20px rgba(220, 53, 69, 0.6) !important;
+          }
+
+          /* 2FA Modal Styles */
+          :global(.twofa-modal .modal-content) {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
+            border: 1px solid rgba(102, 126, 234, 0.3) !important;
+            border-radius: 16px !important;
+            overflow: hidden !important;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5) !important;
+          }
+
+          :global(.twofa-modal-header) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border-bottom: none !important;
+            padding: 1.5rem 2rem !important;
+            color: white !important;
+          }
+
+          :global(.twofa-modal-header .btn-close) {
+            filter: brightness(0) invert(1) !important;
+            opacity: 0.8 !important;
+          }
+
+          :global(.twofa-modal-header .btn-close:hover) {
+            opacity: 1 !important;
+          }
+
+          :global(.twofa-modal-header .modal-title) {
+            font-size: 1.5rem !important;
+            font-weight: 600 !important;
+            color: white !important;
+          }
+
+          :global(.twofa-modal-icon) {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+          }
+
+          :global(.employee-name-subtitle) {
+            font-size: 0.9rem;
+            font-weight: 400;
+            opacity: 0.9;
+            margin-top: 0.25rem;
+          }
+
+          :global(.twofa-modal-body) {
+            padding: 2rem !important;
+            background: transparent !important;
+          }
+
+          :global(.status-section-title) {
+            display: flex;
+            align-items: center;
+            color: #ffffff;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          }
+
+          :global(.status-cards) {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+          }
+
+          :global(.status-card) {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1.25rem;
+            border-radius: 12px;
+            border: 1px solid;
+            transition: all 0.2s ease;
+          }
+
+          :global(.status-card.status-enabled) {
+            background: rgba(82, 196, 26, 0.1);
+            border-color: rgba(82, 196, 26, 0.3);
+          }
+
+          :global(.status-card.status-disabled) {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.1);
+          }
+
+          :global(.status-card.status-warning) {
+            background: rgba(255, 193, 7, 0.1);
+            border-color: rgba(255, 193, 7, 0.3);
+          }
+
+          :global(.status-card:hover) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+          }
+
+          :global(.status-icon) {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+            margin-top: 0.15rem;
+          }
+
+          :global(.status-enabled .status-icon) {
+            color: #52c41a;
+          }
+
+          :global(.status-disabled .status-icon) {
+            color: rgba(255, 255, 255, 0.3);
+          }
+
+          :global(.status-warning .status-icon) {
+            color: #ffc107;
+          }
+
+          :global(.status-content strong) {
+            display: block;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+          }
+
+          :global(.status-enabled .status-content strong) {
+            color: #52c41a;
+          }
+
+          :global(.status-disabled .status-content strong) {
+            color: rgba(255, 255, 255, 0.6);
+          }
+
+          :global(.status-warning .status-content strong) {
+            color: #ffc107;
+          }
+
+          :global(.status-content p) {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            margin: 0;
+          }
+
+          :global(.info-box) {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 12px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+          }
+
+          :global(.info-icon) {
+            color: #667eea;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+            margin-top: 0.15rem;
+          }
+
+          :global(.info-box strong) {
+            color: #ffffff;
+          }
+
+          :global(.twofa-modal-footer) {
+            background: rgba(255, 255, 255, 0.03) !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+            padding: 1.5rem 2rem !important;
+            gap: 1rem !important;
+            justify-content: center !important;
+          }
+
+          :global(.twofa-close-btn) {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            color: #ffffff !important;
+            padding: 0.65rem 2rem !important;
+            border-radius: 10px !important;
+            font-weight: 500 !important;
+            transition: all 0.3s ease !important;
+          }
+
+          :global(.twofa-close-btn:hover) {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border-color: rgba(255, 255, 255, 0.3) !important;
+            transform: translateY(-1px) !important;
           }
         `}</style>
       </div>
