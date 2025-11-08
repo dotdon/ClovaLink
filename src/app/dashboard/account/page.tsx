@@ -442,11 +442,13 @@ export default function AccountPage() {
     <DashboardLayout>
       <div className="settings-container">
         <div className="page-header">
-          <h1 className="h3">
-            <FaUser className="me-2" />
-            My Account
-          </h1>
-          <p className="text-muted">Manage your personal account settings and security</p>
+          <div className="header-icon">
+            <FaUser />
+          </div>
+          <div className="header-text">
+            <h1>My Account</h1>
+            <p className="header-subtitle">Manage your personal account settings and security</p>
+          </div>
         </div>
 
         {require2fa && !has2FA && (
@@ -840,6 +842,127 @@ export default function AccountPage() {
             </Tabs>
           </Card.Body>
         </Card>
+
+        <style jsx>{`
+          .settings-container {
+            padding: 1rem;
+            max-width: 1400px;
+            margin: 0 auto;
+          }
+
+          /* Page Header */
+          .page-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 16px;
+            padding: 1.75rem 2rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
+          }
+
+          .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+            background-size: 200% 100%;
+            animation: shimmer 3s linear infinite;
+          }
+
+          @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+          }
+
+          .header-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            flex-shrink: 0;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+            position: relative;
+          }
+
+          .header-icon::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 16px;
+            padding: 2px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+          }
+
+          .header-text {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .page-header h1 {
+            margin: 0;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #ffffff !important;
+            letter-spacing: -0.5px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+          }
+
+          .header-subtitle {
+            margin: 0.35rem 0 0 0;
+            color: rgba(255, 255, 255, 0.75) !important;
+            font-size: 0.95rem;
+            font-weight: 400;
+          }
+
+          @media (min-width: 1024px) {
+            .settings-container {
+              padding: 2rem;
+            }
+          }
+
+          @media (max-width: 767px) {
+            .settings-container {
+              padding: 1rem;
+            }
+
+            .page-header {
+              flex-direction: column;
+              align-items: flex-start;
+              gap: 1rem;
+              padding: 1.5rem 1rem;
+            }
+
+            .header-icon {
+              width: 48px;
+              height: 48px;
+              font-size: 1.25rem;
+            }
+
+            .page-header h1 {
+              font-size: 1.5rem;
+            }
+
+            .header-subtitle {
+              font-size: 0.875rem;
+            }
+          }
+        `}</style>
       </div>
     </DashboardLayout>
   );

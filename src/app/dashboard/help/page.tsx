@@ -3,15 +3,20 @@
 import React from 'react';
 import DashboardLayout from '@/components/ui/DashboardLayout';
 import { Card, Accordion } from 'react-bootstrap';
-import { FaUserShield, FaFolderOpen, FaShareAlt, FaKey, FaArrowsAlt, FaStar, FaLock, FaThumbtack } from 'react-icons/fa';
+import { FaUserShield, FaFolderOpen, FaShareAlt, FaKey, FaArrowsAlt, FaStar, FaLock, FaThumbtack, FaQuestionCircle } from 'react-icons/fa';
 
 export default function HelpPage() {
   return (
     <DashboardLayout>
       <div className="help-container">
-        <div className="help-header">
-          <h1>Getting Started</h1>
-          <p className="text-muted">Learn how to use ClovaLink effectively</p>
+        <div className="page-header">
+          <div className="header-icon">
+            <FaQuestionCircle />
+          </div>
+          <div className="header-text">
+            <h1>Help & FAQs</h1>
+            <p className="header-subtitle">Learn how to use ClovaLink effectively</p>
+          </div>
         </div>
 
         <div className="quick-start-section">
@@ -439,13 +444,84 @@ export default function HelpPage() {
             overflow-x: hidden;
           }
 
-          .help-header {
+          /* Page Header */
+          .page-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
             margin-bottom: 2rem;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 16px;
+            padding: 1.75rem 2rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
           }
 
-          .help-header h1 {
-            margin-bottom: 0.5rem;
-            font-size: 2rem;
+          .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+            background-size: 200% 100%;
+            animation: shimmer 3s linear infinite;
+          }
+
+          @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+          }
+
+          .header-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            flex-shrink: 0;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+            position: relative;
+          }
+
+          .header-icon::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 16px;
+            padding: 2px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+          }
+
+          .header-text {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .page-header h1 {
+            margin: 0;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #ffffff !important;
+            letter-spacing: -0.5px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+          }
+
+          .header-subtitle {
+            margin: 0.35rem 0 0 0;
+            color: rgba(255, 255, 255, 0.75) !important;
+            font-size: 0.95rem;
+            font-weight: 400;
           }
 
           .quick-start-section {

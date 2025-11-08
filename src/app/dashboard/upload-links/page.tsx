@@ -172,9 +172,15 @@ export default function UploadLinksPage() {
     <DashboardLayout>
       <div className="upload-links-container">
         <div className="page-header">
-          <h1 className="h3">Upload Links</h1>
+          <div className="header-icon">
+            <FaLink />
+          </div>
+          <div className="header-text">
+            <h1>Upload Links</h1>
+            <p className="header-subtitle">Create and manage secure upload links for external users</p>
+          </div>
           {canCreateLinks && (
-            <Button variant="primary" onClick={() => setShowCreateModal(true)}>
+            <Button variant="primary" className="add-btn" onClick={() => setShowCreateModal(true)}>
               <FaPlus className="me-2" /> Create Upload Link
             </Button>
           )}
@@ -295,15 +301,126 @@ export default function UploadLinksPage() {
             padding: 1rem;
           }
 
+          /* Page Header */
           .page-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 1.5rem;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 16px;
+            padding: 1.75rem 2rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
+          }
+
+          .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+            background-size: 200% 100%;
+            animation: shimmer 3s linear infinite;
+          }
+
+          @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+          }
+
+          .header-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            flex-shrink: 0;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+            position: relative;
+          }
+
+          .header-icon::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 16px;
+            padding: 2px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+          }
+
+          .header-text {
+            flex: 1;
+            min-width: 0;
           }
 
           .page-header h1 {
             margin: 0;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #ffffff !important;
+            letter-spacing: -0.5px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+          }
+
+          .header-subtitle {
+            margin: 0.35rem 0 0 0;
+            color: rgba(255, 255, 255, 0.75) !important;
+            font-size: 0.95rem;
+            font-weight: 400;
+          }
+
+          :global(.add-btn) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border: none !important;
+            padding: 0.75rem 1.75rem !important;
+            border-radius: 12px !important;
+            font-weight: 600 !important;
+            font-size: 0.95rem !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.5) !important;
+            color: white !important;
+            margin-left: auto !important;
+            position: relative;
+            overflow: hidden;
+          }
+
+          :global(.add-btn::before) {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+          }
+
+          :global(.add-btn:hover::before) {
+            width: 300px;
+            height: 300px;
+          }
+
+          :global(.add-btn:hover) {
+            transform: translateY(-3px) scale(1.02) !important;
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.7) !important;
+          }
+
+          :global(.add-btn:active) {
+            transform: translateY(-1px) scale(0.98) !important;
           }
 
           /* Mobile Styles */
