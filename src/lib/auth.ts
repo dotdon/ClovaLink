@@ -103,11 +103,37 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
         token.companyId = user.companyId;
+
+        // Track login activity on first sign-in
+        if (account) {
+          try {
+            // Update employee last login info
+            await prisma.employee.update({
+              where: { id: user.id },
+              data: {
+                lastLoginAt: new Date(),
+                isActive: true,
+                lastActivityAt: new Date(),
+              },
+            });
+
+            // Create login activity record
+            await prisma.loginActivity.create({
+              data: {
+                employeeId: user.id,
+                loginAt: new Date(),
+                success: true,
+              },
+            });
+          } catch (error) {
+            console.error('Error tracking login:', error);
+          }
+        }
       }
       return token;
     },

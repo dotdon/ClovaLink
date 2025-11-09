@@ -22,6 +22,11 @@ interface Employee {
   totpEnabled?: boolean;
   passkeys?: Array<{ id: string }>;
   profilePicture?: string | null;
+  lastLoginAt?: string | null;
+  lastLoginIp?: string | null;
+  lastLoginLocation?: string | null;
+  isActive?: boolean;
+  lastActivityAt?: string | null;
 }
 
 interface Company {
@@ -635,6 +640,7 @@ export default function EmployeesPage() {
                           <th>Email</th>
                           <th>Company</th>
                           <th>Role</th>
+                          <th>Last Login</th>
                           <th>2FA Status</th>
                           <th>Actions</th>
                         </tr>
@@ -676,6 +682,23 @@ export default function EmployeesPage() {
                               <Badge bg={employee.role === 'ADMIN' ? 'primary' : employee.role === 'MANAGER' ? 'info' : 'secondary'}>
                                 {employee.role}
                               </Badge>
+                            </td>
+                            <td>
+                              {employee.lastLoginAt ? (
+                                <div className="last-login-cell">
+                                  <div className="login-time">
+                                    {new Date(employee.lastLoginAt).toLocaleDateString()} at{' '}
+                                    {new Date(employee.lastLoginAt).toLocaleTimeString()}
+                                  </div>
+                                  {employee.isActive && (
+                                    <span className="active-indicator">
+                                      <span className="pulse-dot"></span> Online
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-muted">Never</span>
+                              )}
                             </td>
                             <td>
                               {employee.totpEnabled || (employee.passkeys && employee.passkeys.length > 0) ? (
@@ -1524,6 +1547,46 @@ export default function EmployeesPage() {
 
           :global(.action-btn-table.export:hover) {
             color: #28a745 !important;
+          }
+
+          /* Last Login Column */
+          .last-login-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+          }
+
+          .login-time {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 0.85rem;
+          }
+
+          .active-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: #28a745;
+            font-size: 0.8rem;
+            font-weight: 500;
+          }
+
+          .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #28a745;
+            animation: pulse 2s infinite;
+          }
+
+          @keyframes pulse {
+            0%, 100% {
+              opacity: 1;
+              transform: scale(1);
+            }
+            50% {
+              opacity: 0.5;
+              transform: scale(1.2);
+            }
           }
 
           /* Employee Cards */

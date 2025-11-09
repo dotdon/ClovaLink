@@ -7,6 +7,7 @@ import { FaDownload, FaTrash, FaFolder, FaEye, FaUpload, FaFolderPlus, FaFile, F
 import { useSession } from 'next-auth/react';
 import { hasPermission, Permission, canAccessFolder, canManageFolder, canManageDocument } from '@/lib/permissions';
 import DocumentViewerModal from '@/components/viewers/DocumentViewerModal';
+import ActiveUsers from '@/components/ActiveUsers';
 
 interface Document {
   id: string;
@@ -1476,6 +1477,11 @@ export default function DocumentsPage() {
   return (
     <DashboardLayout>
       <div className="documents-page">
+        {/* Active Users Widget */}
+        <div className="active-users-container">
+          <ActiveUsers />
+        </div>
+
         {/* Mobile Header */}
         <div className="mobile-doc-header d-md-none">
           <div className="header-left">
@@ -3163,6 +3169,10 @@ export default function DocumentsPage() {
         </Modal>
 
         <style jsx>{`
+          .active-users-container {
+            margin-bottom: 1rem;
+          }
+
           .documents-page {
             display: flex;
             flex-direction: column;

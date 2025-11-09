@@ -38,6 +38,11 @@ model Employee {
   role                Role          @default(USER)
   companyId           String        // Primary company
   profilePicture      String?       // Filename of profile picture
+  lastLoginAt         DateTime?     // Last login timestamp
+  lastLoginIp         String?       // Last login IP address
+  lastLoginLocation   String?       // Last login location (city, country)
+  isActive            Boolean       @default(false) // Currently active/online
+  lastActivityAt      DateTime?     // Last activity timestamp
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   company             Company       @relation(fields: [companyId], references: [id])
@@ -55,9 +60,11 @@ model Employee {
   favoriteDocuments   FavoriteDocument[] // Documents favorited by this employee
   favoriteFolders     FavoriteFolder[]   // Folders favorited by this employee
   pinnedFolders       PinnedFolder[]     // Folders pinned by this employee
+  loginActivities     LoginActivity[] // Login history
 
   @@index([companyId])
   @@index([role])
+  @@index([isActive])
   @@map("employees")
 }
 
@@ -239,6 +246,22 @@ model Passkey {
   @@index([employeeId])
   @@index([credentialId])
   @@map("passkeys")
+}
+
+// Login activity tracking
+model LoginActivity {
+  id             String   @id @default(cuid())
+  employeeId     String
+  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  loginAt        DateTime @default(now())
+  ipAddress      String?
+  location       String?  // City, Country
+  userAgent      String?  // Browser/device info
+  success        Boolean  @default(true)
+
+  @@index([employeeId])
+  @@index([loginAt])
+  @@map("login_activities")
 }
 
 // Favorite documents (like Google Drive starred files)
