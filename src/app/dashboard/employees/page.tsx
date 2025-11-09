@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Badge, Modal, Alert } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
-import { FaPlus, FaBuilding, FaEnvelope, FaUserTag, FaChevronRight, FaEdit, FaFileDownload, FaTrash, FaShieldAlt, FaKey, FaUser, FaUserShield, FaExclamationTriangle, FaUserSlash, FaHistory, FaFileAlt, FaCheckCircle, FaTimesCircle, FaInfoCircle, FaTh, FaThList, FaFilter, FaSearch } from 'react-icons/fa';
+import { FaPlus, FaBuilding, FaEnvelope, FaUserTag, FaChevronRight, FaEdit, FaFileDownload, FaTrash, FaShieldAlt, FaKey, FaUser, FaUserShield, FaExclamationTriangle, FaUserSlash, FaHistory, FaFileAlt, FaCheckCircle, FaTimesCircle, FaInfoCircle, FaTh, FaThList, FaFilter, FaSearch, FaComments, FaFile as FaFileIcon } from 'react-icons/fa';
 import AddEmployeeModal from '@/components/modals/AddEmployeeModal';
 import EditEmployeeModal from '@/components/modals/EditEmployeeModal';
 import { useSession } from 'next-auth/react';
@@ -40,7 +40,13 @@ export default function EmployeesPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [show2FAModal, setShow2FAModal] = useState(false);
+  const [showMessagesModal, setShowMessagesModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [messagesEmployee, setMessagesEmployee] = useState<Employee | null>(null);
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<any>(null);
+  const [conversationMessages, setConversationMessages] = useState<any[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -112,6 +118,44 @@ export default function EmployeesPage() {
       console.error('Error fetching companies:', error);
       setCompanies([]); // Ensure it's always an array
     }
+  };
+
+  const fetchConversations = async (employeeId: string) => {
+    setLoadingMessages(true);
+    try {
+      const response = await fetch(`/api/admin/messages?employeeId=${employeeId}`);
+      if (!response.ok) throw new Error('Failed to fetch conversations');
+      const data = await response.json();
+      setConversations(data.conversations || []);
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+      setConversations([]);
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const fetchConversationMessages = async (employeeId: string, conversationWith: string) => {
+    setLoadingMessages(true);
+    try {
+      const response = await fetch(`/api/admin/messages?employeeId=${employeeId}&conversationWith=${conversationWith}`);
+      if (!response.ok) throw new Error('Failed to fetch messages');
+      const data = await response.json();
+      setConversationMessages(data.messages || []);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      setConversationMessages([]);
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const handleViewMessages = async (employee: Employee) => {
+    setMessagesEmployee(employee);
+    setSelectedConversation(null);
+    setConversationMessages([]);
+    setShowMessagesModal(true);
+    await fetchConversations(employee.id);
   };
 
   useEffect(() => {
@@ -311,6 +355,16 @@ export default function EmployeesPage() {
                   </>
                 )}
               </>
+            )}
+            {session?.user?.role === 'ADMIN' && (
+              <Button
+                variant="link"
+                className="action-btn messages-btn"
+                onClick={() => handleViewMessages(employee)}
+                title="View Messages"
+              >
+                <FaComments />
+              </Button>
             )}
             {canExportActivities(employee.id, employee.companyId, employee.role) && (
               <Button
@@ -546,6 +600,16 @@ export default function EmployeesPage() {
                                   </>
                                 )}
                               </>
+                            )}
+                            {session?.user?.role === 'ADMIN' && (
+                              <Button
+                                variant="link"
+                                className="action-btn-desktop messages"
+                                onClick={() => handleViewMessages(employee)}
+                                title="View Messages"
+                              >
+                                <FaComments />
+                              </Button>
                             )}
                             {canExportActivities(employee.id, employee.companyId, employee.role) && (
                               <Button
@@ -1056,6 +1120,175 @@ export default function EmployeesPage() {
           </Modal.Body>
           <Modal.Footer className="twofa-modal-footer">
             <Button variant="secondary" onClick={() => setShow2FAModal(false)} className="twofa-close-btn">
+              Close
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Messages Modal */}
+        <Modal show={showMessagesModal} onHide={() => setShowMessagesModal(false)} size="xl" centered className="messages-audit-modal">
+          <Modal.Header closeButton className="messages-modal-header">
+            <Modal.Title className="d-flex align-items-center gap-2">
+              <div className="messages-modal-icon">
+                <FaComments />
+              </div>
+              <div>
+                <div>Message History</div>
+                <div className="employee-name-subtitle">{messagesEmployee?.name}</div>
+              </div>
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body className="messages-modal-body">
+            {loadingMessages ? (
+              <div className="loading-messages">
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                <p>Loading messages...</p>
+              </div>
+            ) : (
+              <div className="messages-viewer">
+                <div className="conversations-list">
+                  <h6 className="conversations-title">
+                    <FaUser className="me-2" />
+                    Conversations ({conversations.length})
+                  </h6>
+                  {conversations.length === 0 ? (
+                    <div className="no-conversations">
+                      <FaComments className="empty-icon" />
+                      <p>No conversations found</p>
+                    </div>
+                  ) : (
+                    <div className="conversation-items">
+                      {conversations.map((conv) => (
+                        <div
+                          key={conv.participant.id}
+                          className={`conversation-item ${selectedConversation?.id === conv.participant.id ? 'active' : ''}`}
+                          onClick={() => {
+                            setSelectedConversation(conv.participant);
+                            fetchConversationMessages(messagesEmployee!.id, conv.participant.id);
+                          }}
+                        >
+                          <div className="conversation-avatar">
+                            {conv.participant.profilePicture ? (
+                              <img
+                                src={`/api/employees/profile-picture/${conv.participant.profilePicture}`}
+                                alt={conv.participant.name}
+                              />
+                            ) : (
+                              <div className="avatar-placeholder">
+                                {conv.participant.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="conversation-details">
+                            <div className="conversation-name">{conv.participant.name}</div>
+                            <div className="conversation-email">{conv.participant.email}</div>
+                            <Badge bg={conv.participant.role === 'ADMIN' ? 'primary' : 'secondary'} className="mt-1">
+                              {conv.participant.role}
+                            </Badge>
+                          </div>
+                          <div className="conversation-stats">
+                            <div className="message-count">{conv.messageCount} msgs</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="messages-content">
+                  {selectedConversation ? (
+                    <>
+                      <div className="messages-content-header">
+                        <div className="d-flex align-items-center gap-2">
+                          <div className="conversation-avatar-small">
+                            {selectedConversation.profilePicture ? (
+                              <img
+                                src={`/api/employees/profile-picture/${selectedConversation.profilePicture}`}
+                                alt={selectedConversation.name}
+                              />
+                            ) : (
+                              <div className="avatar-placeholder">
+                                {selectedConversation.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="conversation-name-header">{selectedConversation.name}</div>
+                            <div className="conversation-email-header">{selectedConversation.email}</div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="messages-list-audit">
+                        {conversationMessages.length === 0 ? (
+                          <div className="no-messages">
+                            <FaComments className="empty-icon" />
+                            <p>No messages in this conversation</p>
+                          </div>
+                        ) : (
+                          conversationMessages.map((message) => {
+                            const isSentByEmployee = message.senderId === messagesEmployee?.id;
+                            const isEncrypted = message.isEncrypted;
+                            
+                            return (
+                              <div
+                                key={message.id}
+                                className={`message-item-audit ${isSentByEmployee ? 'sent' : 'received'}`}
+                              >
+                                <div className="message-header-audit">
+                                  <div className="message-sender">
+                                    <strong>{isSentByEmployee ? messagesEmployee?.name : selectedConversation.name}</strong>
+                                    <span className="message-direction">
+                                      {isSentByEmployee ? '→' : '←'}
+                                    </span>
+                                  </div>
+                                  <div className="message-time-audit">
+                                    {new Date(message.createdAt).toLocaleString()}
+                                  </div>
+                                </div>
+                                <div className="message-content-audit">
+                                  {isEncrypted ? (
+                                    <div className="encrypted-message">
+                                      <FaShieldAlt className="encrypted-icon" />
+                                      <span>[End-to-End Encrypted - Content Not Accessible]</span>
+                                    </div>
+                                  ) : (
+                                    <div className="message-text-audit">{message.content}</div>
+                                  )}
+                                  {message.attachments && message.attachments.length > 0 && (
+                                    <div className="message-attachments-audit">
+                                      {message.attachments.map((att: any) => (
+                                        <div key={att.id} className="attachment-badge">
+                                          <FaFileIcon /> {att.document.name}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                {message.isRead && (
+                                  <div className="message-status-audit">
+                                    <FaCheckCircle className="read-icon" /> Read
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="no-conversation-selected">
+                      <FaComments className="empty-icon-large" />
+                      <h5>Select a conversation</h5>
+                      <p>Choose a conversation from the list to view message history</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </Modal.Body>
+          <Modal.Footer className="messages-modal-footer">
+            <Button variant="secondary" onClick={() => setShowMessagesModal(false)} className="messages-close-btn">
               Close
             </Button>
           </Modal.Footer>
@@ -2434,6 +2667,359 @@ export default function EmployeesPage() {
             background: rgba(255, 255, 255, 0.1) !important;
             border-color: rgba(255, 255, 255, 0.3) !important;
             transform: translateY(-1px) !important;
+          }
+
+          /* Messages Audit Modal Styles */
+          :global(.messages-audit-modal .modal-content) {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
+            border: 1px solid rgba(102, 126, 234, 0.3) !important;
+            border-radius: 16px !important;
+            overflow: hidden !important;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5) !important;
+          }
+
+          :global(.messages-modal-header) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border-bottom: none !important;
+            padding: 1.5rem 2rem !important;
+            color: white !important;
+          }
+
+          :global(.messages-modal-icon) {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+          }
+
+          :global(.messages-modal-body) {
+            padding: 0 !important;
+            background: #16213e !important;
+            max-height: 70vh !important;
+          }
+
+          .loading-messages {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            gap: 1rem;
+          }
+
+          .messages-viewer {
+            display: flex;
+            height: 70vh;
+          }
+
+          .conversations-list {
+            width: 350px;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.2);
+            overflow-y: auto;
+          }
+
+          .conversations-title {
+            padding: 1rem 1.5rem;
+            margin: 0;
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.2);
+          }
+
+          .no-conversations,
+          .no-messages {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem 1rem;
+            color: rgba(255, 255, 255, 0.5);
+          }
+
+          .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+          }
+
+          .conversation-items {
+            padding: 0.5rem;
+          }
+
+          .conversation-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 0.5rem;
+          }
+
+          .conversation-item:hover {
+            background: rgba(102, 126, 234, 0.15);
+          }
+
+          .conversation-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          }
+
+          .conversation-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            overflow: hidden;
+            flex-shrink: 0;
+          }
+
+          .conversation-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          .conversation-details {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .conversation-name {
+            font-weight: 600;
+            color: #ffffff;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .conversation-email {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .conversation-stats {
+            flex-shrink: 0;
+          }
+
+          .message-count {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.7);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+          }
+
+          .messages-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+          }
+
+          .messages-content-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.2);
+          }
+
+          .conversation-avatar-small {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            overflow: hidden;
+          }
+
+          .conversation-avatar-small img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          .conversation-name-header {
+            font-weight: 600;
+            color: #ffffff;
+            font-size: 1rem;
+          }
+
+          .conversation-email-header {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6);
+          }
+
+          .messages-list-audit {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+          }
+
+          .message-item-audit {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+          }
+
+          .message-item-audit.sent {
+            border-left: 3px solid #667eea;
+          }
+
+          .message-item-audit.received {
+            border-left: 3px solid #28a745;
+          }
+
+          .message-header-audit {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+          }
+
+          .message-sender {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #ffffff;
+            font-size: 0.95rem;
+          }
+
+          .message-direction {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.5);
+          }
+
+          .message-time-audit {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.5);
+          }
+
+          .message-content-audit {
+            color: rgba(255, 255, 255, 0.9);
+            line-height: 1.6;
+          }
+
+          .encrypted-message {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 8px;
+            color: #ffc107;
+            font-style: italic;
+          }
+
+          .encrypted-icon {
+            font-size: 1.2rem;
+          }
+
+          .message-text-audit {
+            padding: 0.5rem 0;
+          }
+
+          .message-attachments-audit {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+          }
+
+          .attachment-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: #667eea;
+          }
+
+          .message-status-audit {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: #28a745;
+          }
+
+          .read-icon {
+            font-size: 1rem;
+          }
+
+          .no-conversation-selected {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            color: rgba(255, 255, 255, 0.5);
+          }
+
+          .empty-icon-large {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            opacity: 0.3;
+          }
+
+          .no-conversation-selected h5 {
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+          }
+
+          :global(.messages-modal-footer) {
+            background: rgba(255, 255, 255, 0.03) !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+            padding: 1.5rem 2rem !important;
+          }
+
+          :global(.messages-close-btn) {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            color: #ffffff !important;
+            padding: 0.65rem 2rem !important;
+            border-radius: 10px !important;
+            font-weight: 500 !important;
+            transition: all 0.3s ease !important;
+          }
+
+          :global(.messages-close-btn:hover) {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border-color: rgba(255, 255, 255, 0.3) !important;
+            transform: translateY(-1px) !important;
+          }
+
+          .action-btn.messages-btn {
+            color: #17a2b8 !important;
+          }
+
+          .action-btn.messages-btn:hover {
+            color: #138496 !important;
+            transform: scale(1.2) !important;
+          }
+
+          :global(.action-btn-desktop.messages) {
+            color: #17a2b8 !important;
+          }
+
+          :global(.action-btn-desktop.messages:hover) {
+            background: rgba(23, 162, 184, 0.2) !important;
+            border-color: rgba(23, 162, 184, 0.4) !important;
+            transform: scale(1.1) !important;
           }
         `}</style>
       </div>
