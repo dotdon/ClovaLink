@@ -517,24 +517,27 @@ export default function AccountPage() {
                           id="profile-picture-upload"
                           style={{ display: 'none' }}
                         />
-                        <label htmlFor="profile-picture-upload" className="mb-0">
-                          <Button
-                            as="span"
-                            className="gradient-btn"
-                            disabled={uploadingPicture}
-                          >
-                            {uploadingPicture ? 'Uploading...' : profilePicture ? 'Change Picture' : 'Upload Picture'}
-                          </Button>
-                        </label>
-                        {profilePicture && (
-                          <Button
-                            variant="outline-danger"
-                            onClick={handleRemoveProfilePicture}
-                            disabled={uploadingPicture}
-                          >
-                            Remove
-                          </Button>
-                        )}
+                        <div className="d-flex gap-2 align-items-center">
+                          <label htmlFor="profile-picture-upload" className="mb-0">
+                            <Button
+                              as="span"
+                              className="gradient-btn"
+                              disabled={uploadingPicture}
+                            >
+                              {uploadingPicture ? 'Uploading...' : profilePicture ? 'Change Picture' : 'Upload Picture'}
+                            </Button>
+                          </label>
+                          {profilePicture && (
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              onClick={handleRemoveProfilePicture}
+                              disabled={uploadingPicture}
+                            >
+                              Remove
+                            </Button>
+                          )}
+                        </div>
                         <Form.Text className="d-block mt-2">
                           Max size: 5MB. Formats: JPEG, PNG, GIF, WebP
                         </Form.Text>
@@ -1438,6 +1441,11 @@ export default function AccountPage() {
             font-weight: 600 !important;
             font-size: 0.95rem !important;
             transition: all 0.3s ease !important;
+          }
+
+          :global(.btn-outline-danger.btn-sm) {
+            padding: 0.4rem 0.85rem !important;
+            font-size: 0.85rem !important;
           }
 
           :global(.btn-outline-danger:hover) {
