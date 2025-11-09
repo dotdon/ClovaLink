@@ -5,6 +5,7 @@ import { Button, Form, Modal, Badge } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
 import { FaPaperPlane, FaFile, FaUser, FaSearch, FaBell, FaPaperclip, FaTimes, FaCheck, FaCheckDouble, FaSmile, FaUsers, FaPlus, FaUserPlus, FaFilter, FaLock, FaDownload, FaSave, FaEye, FaFilePdf, FaTrash, FaClock } from 'react-icons/fa';
 import { useSession } from 'next-auth/react';
+import { io, Socket } from 'socket.io-client';
 import { 
   generateKeyPair, 
   encryptMessage, 
@@ -130,9 +131,31 @@ export default function MessagesPage() {
   const [groupDescription, setGroupDescription] = useState('');
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   
+  // WebSocket state
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [typingUsers, setTypingUsers] = useState<{[key: string]: string}>({}); // userId -> userName
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const selectedRecipientRef = useRef<Employee | null>(null);
+  const selectedChannelRef = useRef<Channel | null>(null);
+  const activeTabRef = useRef<'direct' | 'groups'>('direct');
   
   const emojis = ['😊', '😂', '❤️', '👍', '👏', '🎉', '🔥', '💯', '✅', '❌', '🤔', '😎', '🙌', '💪', '👌', '🎯', '📁', '📄', '💼', '⭐'];
+
+  // Keep refs in sync with state for WebSocket listeners
+  useEffect(() => {
+    selectedRecipientRef.current = selectedRecipient;
+  }, [selectedRecipient]);
+
+  useEffect(() => {
+    selectedChannelRef.current = selectedChannel;
+  }, [selectedChannel]);
+
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
 
   // Initialize encryption keys
   useEffect(() => {
@@ -250,20 +273,183 @@ export default function MessagesPage() {
     scrollToBottom();
   }, [messages]);
 
-  // Auto-refresh messages every 10 seconds (reduced from 5s for better performance)
+  // Initialize WebSocket connection
   useEffect(() => {
-    if (selectedRecipient && activeTab === 'direct') {
-      const interval = setInterval(() => {
-        fetchMessages(selectedRecipient.id);
-      }, 10000);
-      return () => clearInterval(interval);
-    } else if (selectedChannel && activeTab === 'groups') {
-      const interval = setInterval(() => {
-        fetchChannelMessages(selectedChannel.id);
-      }, 10000);
-      return () => clearInterval(interval);
+    if (!session?.user?.id) return;
+
+    console.log('🔌 Connecting to WebSocket...');
+    const socketInstance = io({
+      path: '/api/socket',
+    });
+
+    socketInstance.on('connect', () => {
+      console.log('✅ WebSocket connected!');
+      // Join user's personal room
+      socketInstance.emit('join', session.user.id);
+    });
+
+    socketInstance.on('disconnect', () => {
+      console.log('❌ WebSocket disconnected');
+    });
+
+    // Listen for new messages
+    socketInstance.on('new-message', async (message: Message) => {
+      console.log('📨 Received new message via WebSocket:', message);
+      
+      // Decrypt if necessary
+      if (message.isEncrypted && message.encryptedKey && message.iv) {
+        try {
+          const privateKey = await getPrivateKey();
+          if (privateKey) {
+            const decrypted = await decryptMessage(
+              message.content,
+              message.encryptedKey,
+              message.iv,
+              privateKey
+            );
+            setDecryptedMessages(prev => ({ ...prev, [message.id]: decrypted }));
+          }
+        } catch (error) {
+          console.error('Failed to decrypt WebSocket message:', error);
+        }
+      }
+
+      // Add to messages if in the current conversation (using refs for current values)
+      const currentTab = activeTabRef.current;
+      const currentRecipient = selectedRecipientRef.current;
+      const currentChannel = selectedChannelRef.current;
+      
+      if (currentTab === 'direct' && currentRecipient) {
+        // Check if this message belongs to the current conversation
+        const isInConversation = 
+          (message.senderId === session.user.id && message.recipientId === currentRecipient.id) ||
+          (message.senderId === currentRecipient.id && message.recipientId === session.user.id);
+        
+        if (isInConversation) {
+          console.log('✅ Adding message to UI:', message.id);
+          // Avoid duplicates - check if message already exists
+          setMessages(prev => {
+            if (prev.some(m => m.id === message.id)) {
+              console.log('⚠️ Duplicate message, skipping:', message.id);
+              return prev;
+            }
+            console.log('➕ New message added to state');
+            return [...prev, message];
+          });
+          
+          // Mark as read if we're the recipient
+          if (message.recipientId === session.user.id && !message.isRead) {
+            await fetch('/api/messages/mark-read', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ messageIds: [message.id] }),
+            });
+          }
+        } else {
+          console.log('⚠️ Message not for current conversation, skipping');
+        }
+      } else if (currentTab === 'groups' && currentChannel && message.channelId === currentChannel.id) {
+        console.log('✅ Adding group message to UI:', message.id);
+        // Avoid duplicates for group messages too
+        setMessages(prev => {
+          if (prev.some(m => m.id === message.id)) {
+            console.log('⚠️ Duplicate group message, skipping:', message.id);
+            return prev;
+          }
+          return [...prev, message];
+        });
+      } else {
+        console.log('⚠️ Message received but no active conversation:', { currentTab, hasRecipient: !!currentRecipient, hasChannel: !!currentChannel });
+      }
+
+      // Refresh conversations list
+      fetchConversations();
+    });
+
+    // Listen for typing indicators
+    socketInstance.on('user-typing', (data: { userId: string; userName: string; isTyping: boolean }) => {
+      if (data.isTyping) {
+        setTypingUsers(prev => ({ ...prev, [data.userId]: data.userName }));
+      } else {
+        setTypingUsers(prev => {
+          const updated = { ...prev };
+          delete updated[data.userId];
+          return updated;
+        });
+      }
+    });
+
+    // Listen for online status updates
+    socketInstance.on('user-status', (data: { userId: string; status: 'online' | 'offline' }) => {
+      setOnlineUsers(prev => {
+        const updated = new Set(prev);
+        if (data.status === 'online') {
+          updated.add(data.userId);
+        } else {
+          updated.delete(data.userId);
+        }
+        return updated;
+      });
+    });
+
+    setSocket(socketInstance);
+
+    return () => {
+      console.log('🔌 Disconnecting WebSocket...');
+      socketInstance.disconnect();
+    };
+  }, [session?.user?.id]);
+
+  // Join/leave conversation rooms when selection changes
+  useEffect(() => {
+    if (!socket || !session?.user?.id) return;
+
+    if (activeTab === 'direct' && selectedRecipient) {
+      const conversationId = [session.user.id, selectedRecipient.id].sort().join('-');
+      socket.emit('join-conversation', { conversationId });
+      console.log(`💬 Joined conversation room: ${conversationId}`);
+
+      return () => {
+        socket.emit('leave-conversation', { conversationId });
+        console.log(`👋 Left conversation room: ${conversationId}`);
+      };
+    } else if (activeTab === 'groups' && selectedChannel) {
+      socket.emit('join-channel', selectedChannel.id);
+      console.log(`📢 Joined channel: ${selectedChannel.id}`);
     }
-  }, [selectedRecipient, selectedChannel, activeTab]);
+  }, [socket, selectedRecipient, selectedChannel, activeTab, session?.user?.id]);
+
+  // Handle typing indicators
+  const handleTyping = (value: string) => {
+    setMessageContent(value);
+
+    const currentRecipient = selectedRecipientRef.current;
+    if (!socket || !session?.user || !currentRecipient) return;
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Emit typing start
+    const conversationId = [session.user.id, currentRecipient.id].sort().join('-');
+    socket.emit('typing', {
+      conversationId,
+      userId: session.user.id,
+      userName: session.user.name,
+      isTyping: true,
+    });
+
+    // Set timeout to emit typing stop after 2 seconds of inactivity
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit('typing', {
+        conversationId,
+        userId: session.user.id,
+        userName: session.user.name,
+        isTyping: false,
+      });
+    }, 2000);
+  };
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -509,19 +695,18 @@ export default function MessagesPage() {
       });
 
       if (response.ok) {
+        // Clear input fields
         setMessageContent('');
         setSelectedDocuments([]);
         setShowEmojiPicker(false);
         setDisappearAfter(0);
         
-        if (activeTab === 'direct' && selectedRecipient) {
-          await fetchMessages(selectedRecipient.id);
-        } else if (activeTab === 'groups' && selectedChannel) {
-          await fetchChannelMessages(selectedChannel.id);
-        }
-        
+        // No need to fetch messages - WebSocket will deliver it in real-time!
+        // Just refresh the conversations list to update last message preview
         fetchConversations();
-        fetchChannels();
+        if (activeTab === 'groups') {
+          fetchChannels();
+        }
       } else {
         const error = await response.json();
         alert('Failed to send message: ' + (error.error || 'Unknown error'));
@@ -1150,6 +1335,23 @@ export default function MessagesPage() {
                       <p>No messages yet. Start the conversation!</p>
                     </div>
                   )}
+                  
+                  {/* Typing Indicator */}
+                  {Object.keys(typingUsers).length > 0 && (
+                    <div className="typing-indicator">
+                      <div className="typing-bubble">
+                        <div className="typing-dots">
+                          <span></span>
+                          <span></span>
+                          <span></span>
+                        </div>
+                        <span className="typing-text">
+                          {Object.values(typingUsers)[0]} is typing...
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div ref={messagesEndRef} />
                 </div>
 
@@ -1229,7 +1431,7 @@ export default function MessagesPage() {
                       type="text"
                       placeholder="Type a message..."
                       value={messageContent}
-                      onChange={(e) => setMessageContent(e.target.value)}
+                      onChange={(e) => handleTyping(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault();
@@ -4086,6 +4288,65 @@ export default function MessagesPage() {
               padding: 0.65rem 1rem;
               font-size: 0.85rem;
             }
+          }
+
+          /* Typing Indicator */
+          .typing-indicator {
+            padding: 8px 16px;
+            margin-bottom: 8px;
+          }
+
+          .typing-bubble {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #1c2733;
+            padding: 10px 16px;
+            border-radius: 18px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+          }
+
+          .typing-dots {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+          }
+
+          .typing-dots span {
+            width: 6px;
+            height: 6px;
+            background: #667eea;
+            border-radius: 50%;
+            animation: typingDot 1.4s ease-in-out infinite;
+          }
+
+          .typing-dots span:nth-child(1) {
+            animation-delay: 0s;
+          }
+
+          .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+          }
+
+          .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+          }
+
+          @keyframes typingDot {
+            0%, 60%, 100% {
+              transform: translateY(0);
+              opacity: 0.5;
+            }
+            30% {
+              transform: translateY(-8px);
+              opacity: 1;
+            }
+          }
+
+          .typing-text {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.85rem;
+            font-style: italic;
           }
         `}</style>
       </div>

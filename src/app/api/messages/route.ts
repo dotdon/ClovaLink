@@ -260,6 +260,28 @@ export async function POST(request: Request) {
       });
     }
 
+    // Emit WebSocket event for real-time delivery
+    try {
+      const io = (global as any).io;
+      if (io) {
+        if (recipientId) {
+          // Direct message - emit to both sender's and recipient's rooms + conversation room
+          const conversationId = [session.user.id, recipientId].sort().join('-');
+          io.to(`user:${session.user.id}`).emit('new-message', message); // Sender sees their own message
+          io.to(`user:${recipientId}`).emit('new-message', message);      // Recipient gets notified
+          io.to(`conversation:${conversationId}`).emit('new-message', message); // Anyone in the conversation room
+          console.log(`📤 WebSocket: Message delivered to sender ${session.user.id} and recipient ${recipientId}`);
+        } else if (channelId) {
+          // Channel message - emit to channel room
+          io.to(`channel:${channelId}`).emit('new-message', message);
+          console.log(`📤 WebSocket: Channel message delivered to ${channelId}`);
+        }
+      }
+    } catch (wsError) {
+      // WebSocket error shouldn't fail the API call
+      console.error('WebSocket emit error (non-critical):', wsError);
+    }
+
     return NextResponse.json({ message });
   } catch (error) {
     console.error('Error sending message:', error);
