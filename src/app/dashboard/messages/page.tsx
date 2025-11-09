@@ -1104,8 +1104,12 @@ export default function MessagesPage() {
                                       minute: '2-digit',
                                     })}
                                   </span>
-                                  {(message as any).expiresAt && (
-                                    <span className="expires-indicator" title="This message will self-destruct">
+                                  {((message as any).disappearAfter || (message as any).expiresAt) && (
+                                    <span className="expires-indicator" title={
+                                      (message as any).expiresAt 
+                                        ? "Timer started - message will self-destruct" 
+                                        : "Timer starts when recipient reads this message"
+                                    }>
                                       <FaClock /> 🔥
                                     </span>
                                   )}

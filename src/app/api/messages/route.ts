@@ -182,11 +182,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Recipient or channel is required' }, { status: 400 });
     }
 
-    // Calculate expiration time if disappearAfter is provided
-    let expiresAt: Date | null = null;
-    if (disappearAfter && typeof disappearAfter === 'number' && disappearAfter > 0) {
-      expiresAt = new Date(Date.now() + disappearAfter * 1000); // disappearAfter is in seconds
-    }
+    // Store disappearAfter duration (expiration will be set when message is read)
+    const disappearAfterValue = disappearAfter && typeof disappearAfter === 'number' && disappearAfter > 0 
+      ? disappearAfter 
+      : null;
 
     // Create the message
     const message = await prisma.message.create({
@@ -198,7 +197,8 @@ export async function POST(request: Request) {
         senderId: session.user.id,
         recipientId: recipientId || null,
         channelId: channelId || null,
-        expiresAt: expiresAt,
+        disappearAfter: disappearAfterValue,
+        expiresAt: null, // Will be set when message is read
         attachments: documentIds && documentIds.length > 0 ? {
           create: documentIds.map((docId: string) => ({
             documentId: docId,

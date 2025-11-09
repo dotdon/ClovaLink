@@ -285,7 +285,8 @@ model Message {
   channel         MessageChannel?     @relation(fields: [channelId], references: [id], onDelete: Cascade)
   attachments     MessageAttachment[]
   isRead          Boolean             @default(false)
-  expiresAt       DateTime?           // When this message should auto-delete (for disappearing messages)
+  disappearAfter  Int?                // Duration in seconds after which message should disappear (after being read)
+  expiresAt       DateTime?           // When this message should auto-delete (set when message is read)
   deletedFor      String[]            @default([]) // Array of employee IDs who deleted this message on their device
   deletedForEveryone Boolean          @default(false) // If true, message is deleted for all participants
   createdAt       DateTime            @default(now())
