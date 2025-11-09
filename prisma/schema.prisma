@@ -61,6 +61,10 @@ model Employee {
   favoriteFolders     FavoriteFolder[]   // Folders favorited by this employee
   pinnedFolders       PinnedFolder[]     // Folders pinned by this employee
   loginActivities     LoginActivity[] // Login history
+  sentMessages        Message[]       @relation("SentMessages") // Messages sent by this employee
+  receivedMessages    Message[]       @relation("ReceivedMessages") // Messages received by this employee
+  channelMemberships  ChannelMember[] // Channels this employee is a member of
+  notifications       Notification[]  // Notifications for this employee
 
   @@index([companyId])
   @@index([role])
@@ -100,12 +104,13 @@ model Document {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   
-  uploadedBy    Employee      @relation(fields: [employeeId], references: [id])
-  company       Company       @relation(fields: [companyId], references: [id])
-  folder        Folder?       @relation(fields: [folderId], references: [id])
-  activities    Activity[]
-  downloadLinks DownloadLink[]
-  favorites     FavoriteDocument[] // Users who favorited this document
+  uploadedBy       Employee      @relation(fields: [employeeId], references: [id])
+  company          Company       @relation(fields: [companyId], references: [id])
+  folder           Folder?       @relation(fields: [folderId], references: [id])
+  activities       Activity[]
+  downloadLinks    DownloadLink[]
+  favorites        FavoriteDocument[] // Users who favorited this document
+  messageAttachments MessageAttachment[] // Messages this document is attached to
 
   @@index([companyId])
   @@index([employeeId])
@@ -262,6 +267,95 @@ model LoginActivity {
   @@index([employeeId])
   @@index([loginAt])
   @@map("login_activities")
+}
+
+// Messaging system
+model Message {
+  id              String              @id @default(cuid())
+  content         String
+  senderId        String
+  sender          Employee            @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  recipientId     String?             // For direct messages
+  recipient       Employee?           @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
+  channelId       String?             // For channel messages
+  channel         MessageChannel?     @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  attachments     MessageAttachment[]
+  isRead          Boolean             @default(false)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  notifications   Notification[]
+
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([channelId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+// Message channels (group chats, company-wide, etc.)
+model MessageChannel {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  companyId   String
+  isPublic    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  messages    Message[]
+  members     ChannelMember[]
+
+  @@index([companyId])
+  @@map("message_channels")
+}
+
+// Channel membership
+model ChannelMember {
+  id        String         @id @default(cuid())
+  channelId String
+  channel   MessageChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee  Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  joinedAt  DateTime       @default(now())
+  isAdmin   Boolean        @default(false)
+
+  @@unique([channelId, employeeId])
+  @@index([channelId])
+  @@index([employeeId])
+  @@map("channel_members")
+}
+
+// Message attachments (links to documents)
+model MessageAttachment {
+  id         String   @id @default(cuid())
+  messageId  String
+  message    Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@index([messageId])
+  @@index([documentId])
+  @@map("message_attachments")
+}
+
+// Push notifications
+model Notification {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type       String   // 'message', 'document', 'mention', etc.
+  title      String
+  body       String
+  data       Json?    // Additional data (messageId, documentId, etc.)
+  isRead     Boolean  @default(false)
+  messageId  String?
+  message    Message? @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@index([employeeId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
 }
 
 // Favorite documents (like Google Drive starred files)
