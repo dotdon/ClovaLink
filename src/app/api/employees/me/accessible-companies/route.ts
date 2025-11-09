@@ -38,21 +38,42 @@ export async function GET() {
       return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
     }
 
-    // Build list of accessible companies
-    const companies = [
-      {
-        id: employee.company.id,
-        name: employee.company.name,
-        isPrimary: true,
-      },
-      ...employee.crossCompanyAccess.map((access) => ({
-        id: access.company.id,
-        name: access.company.name,
-        isPrimary: false,
-      })),
-    ];
+    let companies;
 
-    return NextResponse.json(companies);
+    // If admin, return ALL companies
+    if (session.user.role === 'ADMIN') {
+      const allCompanies = await prisma.company.findMany({
+        select: {
+          id: true,
+          name: true,
+        },
+        orderBy: {
+          name: 'asc',
+        },
+      });
+
+      companies = allCompanies.map((company) => ({
+        id: company.id,
+        name: company.name,
+        isPrimary: company.id === employee.companyId,
+      }));
+    } else {
+      // Build list of accessible companies for non-admins
+      companies = [
+        {
+          id: employee.company.id,
+          name: employee.company.name,
+          isPrimary: true,
+        },
+        ...employee.crossCompanyAccess.map((access) => ({
+          id: access.company.id,
+          name: access.company.name,
+          isPrimary: false,
+        })),
+      ];
+    }
+
+    return NextResponse.json({ companies });
   } catch (error) {
     console.error('Error fetching accessible companies:', error);
     return NextResponse.json(

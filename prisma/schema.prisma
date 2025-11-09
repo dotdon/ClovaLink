@@ -56,6 +56,7 @@ model Employee {
   totpEnabled         Boolean       @default(false) // Whether 2FA is enabled
   backupCodes         String[]      @default([]) // Backup codes for 2FA (encrypted)
   mustChangePassword  Boolean       @default(false) // Force password change on next login
+  publicKey           String?       // RSA public key for E2E encryption
   crossCompanyAccess  EmployeeCompanyAccess[] // Additional companies this employee can access
   favoriteDocuments   FavoriteDocument[] // Documents favorited by this employee
   favoriteFolders     FavoriteFolder[]   // Folders favorited by this employee
@@ -272,7 +273,10 @@ model LoginActivity {
 // Messaging system
 model Message {
   id              String              @id @default(cuid())
-  content         String
+  content         String              // Encrypted content
+  encryptedKey    String?             // Encrypted AES key (for recipient)
+  iv              String?             // Initialization vector for AES
+  isEncrypted     Boolean             @default(true) // Whether message is encrypted
   senderId        String
   sender          Employee            @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
   recipientId     String?             // For direct messages
@@ -281,6 +285,9 @@ model Message {
   channel         MessageChannel?     @relation(fields: [channelId], references: [id], onDelete: Cascade)
   attachments     MessageAttachment[]
   isRead          Boolean             @default(false)
+  expiresAt       DateTime?           // When this message should auto-delete (for disappearing messages)
+  deletedFor      String[]            @default([]) // Array of employee IDs who deleted this message on their device
+  deletedForEveryone Boolean          @default(false) // If true, message is deleted for all participants
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
   notifications   Notification[]

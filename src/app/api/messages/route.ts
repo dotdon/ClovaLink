@@ -129,7 +129,32 @@ export async function GET(request: Request) {
       return NextResponse.json({ conversations });
     }
 
-    return NextResponse.json({ messages });
+    // Filter out deleted and expired messages
+    const now = new Date();
+    const filteredMessages = messages.filter((message: any) => {
+      // Delete for everyone check
+      if (message.deletedForEveryone) {
+        return false;
+      }
+
+      // Delete for me check
+      if (message.deletedFor && message.deletedFor.includes(session.user.id)) {
+        return false;
+      }
+
+      // Check if message has expired
+      if (message.expiresAt && new Date(message.expiresAt) < now) {
+        // Delete expired message in background (don't await to not slow down response)
+        prisma.message.delete({ where: { id: message.id } }).catch(err => 
+          console.error('Error deleting expired message:', err)
+        );
+        return false;
+      }
+
+      return true;
+    });
+
+    return NextResponse.json({ messages: filteredMessages });
   } catch (error) {
     console.error('Error fetching messages:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -146,23 +171,34 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { content, recipientId, channelId, documentIds } = body;
+    const { content, recipientId, channelId, documentIds, encryptedKey, iv, isEncrypted, disappearAfter } = body;
 
-    if (!content || content.trim() === '') {
-      return NextResponse.json({ error: 'Message content is required' }, { status: 400 });
+    // Allow empty content if there are attachments
+    if ((!content || content.trim() === '') && (!documentIds || documentIds.length === 0)) {
+      return NextResponse.json({ error: 'Message content or attachments are required' }, { status: 400 });
     }
 
     if (!recipientId && !channelId) {
       return NextResponse.json({ error: 'Recipient or channel is required' }, { status: 400 });
     }
 
+    // Calculate expiration time if disappearAfter is provided
+    let expiresAt: Date | null = null;
+    if (disappearAfter && typeof disappearAfter === 'number' && disappearAfter > 0) {
+      expiresAt = new Date(Date.now() + disappearAfter * 1000); // disappearAfter is in seconds
+    }
+
     // Create the message
     const message = await prisma.message.create({
       data: {
-        content,
+        content: content || '📎 Attachment',
+        encryptedKey: encryptedKey || null,
+        iv: iv || null,
+        isEncrypted: isEncrypted !== undefined ? isEncrypted : true,
         senderId: session.user.id,
         recipientId: recipientId || null,
         channelId: channelId || null,
+        expiresAt: expiresAt,
         attachments: documentIds && documentIds.length > 0 ? {
           create: documentIds.map((docId: string) => ({
             documentId: docId,

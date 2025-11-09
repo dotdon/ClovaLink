@@ -20,17 +20,38 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
 
-  // Scroll to top on route change and initial load
+  // Aggressive scroll fix for Bootstrap issue
   useEffect(() => {
-    window.scrollTo(0, 0);
+    // Force scroll to top immediately
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
   }, [pathname]);
 
-  // Prevent scroll restoration on page refresh
+  // Prevent scroll restoration on page refresh and force top
   useEffect(() => {
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
     }
-    window.scrollTo(0, 0);
+    
+    // Multiple scroll fixes for Bootstrap
+    const forceScrollTop = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+    
+    forceScrollTop();
+    setTimeout(forceScrollTop, 0);
+    setTimeout(forceScrollTop, 100);
+    
+    // Also listen for scroll restoration attempts
+    const handleBeforeUnload = () => {
+      window.scrollTo({ top: 0, left: 0 });
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
   // Check password change requirement FIRST (takes precedence over 2FA)
