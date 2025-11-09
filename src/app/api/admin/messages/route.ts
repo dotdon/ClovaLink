@@ -29,7 +29,7 @@ export async function GET(request: Request) {
 
     if (conversationWith) {
       // Fetch conversation between two specific users
-      messages = await prisma.message.findMany({
+      const rawMessages = await prisma.message.findMany({
         where: {
           OR: [
             { senderId: employeeId, recipientId: conversationWith },
@@ -74,6 +74,15 @@ export async function GET(request: Request) {
         },
         take: 100, // Limit to last 100 messages
       });
+
+      // Sanitize ALL message content - admins cannot read user messages for privacy
+      messages = rawMessages.map((msg: any) => ({
+        ...msg,
+        content: '[Message Content Hidden for Privacy]',
+        encryptedKey: null, // Don't send encryption keys
+        iv: null, // Don't send IVs
+        isEncrypted: true, // Mark as encrypted for UI consistency
+      }));
     } else {
       // Fetch all conversations for the employee
       const conversations = await prisma.message.findMany({
@@ -114,15 +123,25 @@ export async function GET(request: Request) {
       // Group conversations by participant
       const conversationMap = new Map();
       
-      conversations.forEach((message) => {
+      conversations.forEach((message: any) => {
         const otherUserId = message.senderId === employeeId ? message.recipientId : message.senderId;
         if (!otherUserId) return;
 
         if (!conversationMap.has(otherUserId)) {
           const otherUser = message.senderId === employeeId ? message.recipient : message.sender;
+          
+          // Sanitize ALL message content for privacy
+          const sanitizedMessage = {
+            ...message,
+            content: '[Hidden]',
+            encryptedKey: null,
+            iv: null,
+            isEncrypted: true,
+          };
+          
           conversationMap.set(otherUserId, {
             participant: otherUser,
-            lastMessage: message,
+            lastMessage: sanitizedMessage,
             messageCount: 1,
           });
         } else {

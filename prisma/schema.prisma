@@ -297,6 +297,9 @@ model Message {
   @@index([recipientId])
   @@index([channelId])
   @@index([createdAt])
+  @@index([isRead])
+  @@index([expiresAt])
+  @@index([deletedForEveryone])
   @@map("messages")
 }
 

@@ -126,7 +126,10 @@ export async function GET(request: Request) {
         take: 50,
       });
 
-      return NextResponse.json({ conversations });
+      const convResponse = NextResponse.json({ conversations });
+      // Cache conversations list for 10 seconds
+      convResponse.headers.set('Cache-Control', 'private, max-age=10, stale-while-revalidate=20');
+      return convResponse;
     }
 
     // Filter out deleted and expired messages
@@ -154,7 +157,10 @@ export async function GET(request: Request) {
       return true;
     });
 
-    return NextResponse.json({ messages: filteredMessages });
+    const response = NextResponse.json({ messages: filteredMessages });
+    // Cache messages for 5 seconds to reduce load on frequent polling
+    response.headers.set('Cache-Control', 'private, max-age=5, stale-while-revalidate=10');
+    return response;
   } catch (error) {
     console.error('Error fetching messages:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

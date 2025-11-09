@@ -250,17 +250,17 @@ export default function MessagesPage() {
     scrollToBottom();
   }, [messages]);
 
-  // Auto-refresh messages every 5 seconds
+  // Auto-refresh messages every 10 seconds (reduced from 5s for better performance)
   useEffect(() => {
     if (selectedRecipient && activeTab === 'direct') {
       const interval = setInterval(() => {
         fetchMessages(selectedRecipient.id);
-      }, 5000);
+      }, 10000);
       return () => clearInterval(interval);
     } else if (selectedChannel && activeTab === 'groups') {
       const interval = setInterval(() => {
         fetchChannelMessages(selectedChannel.id);
-      }, 5000);
+      }, 10000);
       return () => clearInterval(interval);
     }
   }, [selectedRecipient, selectedChannel, activeTab]);
@@ -914,7 +914,9 @@ export default function MessagesPage() {
                             alt={employee.name}
                           />
                         ) : (
-                          <FaUser className="avatar-icon" />
+                          <div className="avatar-initial">
+                            {employee.name.charAt(0).toUpperCase()}
+                          </div>
                         )}
                         {employee.isActive && <span className="online-indicator"></span>}
                       </div>
@@ -977,7 +979,9 @@ export default function MessagesPage() {
                               alt={selectedRecipient.name}
                             />
                           ) : (
-                            <FaUser className="avatar-icon" />
+                            <div className="avatar-initial">
+                              {selectedRecipient.name.charAt(0).toUpperCase()}
+                            </div>
                           )}
                         </div>
                         <div>
@@ -1040,7 +1044,9 @@ export default function MessagesPage() {
                                       alt={message.sender.name}
                                     />
                                   ) : (
-                                    <FaUser className="avatar-icon-small" />
+                                    <div className="avatar-initial-small">
+                                      {message.sender.name.charAt(0).toUpperCase()}
+                                    </div>
                                   )}
                                 </div>
                               )}
@@ -1981,6 +1987,19 @@ export default function MessagesPage() {
             padding: 0.75rem;
           }
 
+          .avatar-initial {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-transform: uppercase;
+          }
+
           .online-indicator {
             position: absolute;
             bottom: 0;
@@ -2220,6 +2239,19 @@ export default function MessagesPage() {
             color: white;
             font-size: 0.8rem;
             padding: 0.5rem;
+          }
+
+          .avatar-initial-small {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
           }
 
           .message-bubble {

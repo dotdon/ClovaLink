@@ -6,7 +6,7 @@ services:
   app:
     image: node:20-bullseye
     working_dir: /app
-    command: sh -c "npm install && npx prisma db push --skip-generate && npm run dev"
+    command: sh -c "if [ ! -d 'node_modules' ] || [ ! -f 'node_modules/.installed' ]; then npm install && touch node_modules/.installed; fi && npx prisma db push --skip-generate && npm run dev"
     ports:
       - "3000:3000"
     environment:
@@ -22,7 +22,7 @@ services:
       - UPLOAD_DIR=/app/uploads
     volumes:
       - .:/app
-      - /app/node_modules
+      - node_modules_cache:/app/node_modules
       - ./uploads:/app/uploads
     depends_on:
       - db
@@ -52,4 +52,5 @@ services:
       retries: 5
 
 volumes:
-  postgres_data: 
+  postgres_data:
+  node_modules_cache: 

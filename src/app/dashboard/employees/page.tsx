@@ -1128,13 +1128,18 @@ export default function EmployeesPage() {
         {/* Messages Modal */}
         <Modal show={showMessagesModal} onHide={() => setShowMessagesModal(false)} size="xl" centered className="messages-audit-modal">
           <Modal.Header closeButton className="messages-modal-header">
-            <Modal.Title className="d-flex align-items-center gap-2">
+            <Modal.Title className="d-flex align-items-center gap-3">
               <div className="messages-modal-icon">
                 <FaComments />
               </div>
-              <div>
-                <div>Message History</div>
-                <div className="employee-name-subtitle">{messagesEmployee?.name}</div>
+              <div className="flex-grow-1">
+                <div className="d-flex align-items-center gap-2">
+                  <span style={{ fontSize: '1.25rem', fontWeight: '600' }}>Message Audit</span>
+                  <Badge bg="danger" style={{ fontSize: '0.7rem' }}>ADMIN</Badge>
+                </div>
+                <div className="employee-name-subtitle" style={{ fontSize: '0.95rem', marginTop: '4px', opacity: '0.9' }}>
+                  Viewing messages for: <strong>{messagesEmployee?.name}</strong> ({messagesEmployee?.email})
+                </div>
               </div>
             </Modal.Title>
           </Modal.Header>
@@ -1247,14 +1252,10 @@ export default function EmployeesPage() {
                                   </div>
                                 </div>
                                 <div className="message-content-audit">
-                                  {isEncrypted ? (
-                                    <div className="encrypted-message">
-                                      <FaShieldAlt className="encrypted-icon" />
-                                      <span>[End-to-End Encrypted - Content Not Accessible]</span>
-                                    </div>
-                                  ) : (
-                                    <div className="message-text-audit">{message.content}</div>
-                                  )}
+                                  <div className="encrypted-message">
+                                    <FaShieldAlt className="encrypted-icon" />
+                                    <span>{message.content}</span>
+                                  </div>
                                   {message.attachments && message.attachments.length > 0 && (
                                     <div className="message-attachments-audit">
                                       {message.attachments.map((att: any) => (
@@ -2777,12 +2778,32 @@ export default function EmployeesPage() {
             border-radius: 12px;
             overflow: hidden;
             flex-shrink: 0;
+            background: rgba(102, 126, 234, 0.2);
+            position: relative;
           }
 
           .conversation-avatar img {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            display: block;
+            position: relative;
+            z-index: 1;
+          }
+
+          .conversation-avatar .avatar-placeholder {
+            width: 100% !important;
+            height: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            color: #ffffff !important;
+            font-weight: 600 !important;
+            font-size: 1.2rem !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
           }
 
           .conversation-details {
@@ -2837,12 +2858,33 @@ export default function EmployeesPage() {
             height: 40px;
             border-radius: 10px;
             overflow: hidden;
+            flex-shrink: 0;
+            background: rgba(102, 126, 234, 0.2);
+            position: relative;
           }
 
           .conversation-avatar-small img {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            display: block;
+            position: relative;
+            z-index: 1;
+          }
+
+          .conversation-avatar-small .avatar-placeholder {
+            width: 100% !important;
+            height: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            color: #ffffff !important;
+            font-weight: 600 !important;
+            font-size: 1rem !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
           }
 
           .conversation-name-header {

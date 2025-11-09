@@ -134,10 +134,13 @@ export async function GET(request: Request) {
       isFavorite: doc.favorites.length > 0
     }));
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       folders: foldersWithFlags,
       unorganizedDocuments: documentsWithFlags,
     });
+    // Cache documents for 15 seconds to reduce database load
+    response.headers.set('Cache-Control', 'private, max-age=15, stale-while-revalidate=30');
+    return response;
   } catch (error) {
     console.error('Error fetching documents:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
