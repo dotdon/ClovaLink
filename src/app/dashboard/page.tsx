@@ -37,6 +37,7 @@ export default function DashboardPage() {
   });
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false); // For background refreshes
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState({
@@ -47,9 +48,15 @@ export default function DashboardPage() {
     hasMore: false
   });
 
-  const fetchDashboardData = async (page = 1) => {
+  const fetchDashboardData = async (page = 1, isBackgroundRefresh = false) => {
     try {
-      setIsLoading(true);
+      // Only show loading spinner on initial load, not on background refreshes
+      if (!isBackgroundRefresh) {
+        setIsLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
+
       const [statsResponse, activitiesResponse] = await Promise.all([
         // Only fetch stats if user is admin
         session?.user?.role === 'ADMIN' ? fetch('/api/admin/stats') : null,
@@ -85,6 +92,7 @@ export default function DashboardPage() {
       setError(error instanceof Error ? error.message : 'Failed to fetch dashboard data');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -95,9 +103,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (session?.user) {
-      fetchDashboardData();
-      // Refresh data every 30 seconds
-      const interval = setInterval(fetchDashboardData, 30000);
+      fetchDashboardData(); // Initial load
+      // Refresh data every 30 seconds (background refresh - no loading spinner)
+      const interval = setInterval(() => fetchDashboardData(currentPage, true), 30000);
       return () => clearInterval(interval);
     }
   }, [session]);
@@ -184,12 +192,21 @@ export default function DashboardPage() {
             <Card.Header>
               <div className="card-header-content">
                 <h2>Recent Activity</h2>
-                <small>
-                  {pagination.total > 0 
-                    ? `Showing ${((pagination.page - 1) * pagination.limit) + 1}-${Math.min(pagination.page * pagination.limit, pagination.total)} of ${pagination.total} activities`
-                    : '30-day retention'
-                  }
-                </small>
+                <div className="d-flex align-items-center gap-2">
+                  {isRefreshing && (
+                    <div className="refresh-indicator" title="Updating...">
+                      <div className="spinner-border spinner-border-sm text-primary" role="status">
+                        <span className="visually-hidden">Refreshing...</span>
+                      </div>
+                    </div>
+                  )}
+                  <small>
+                    {pagination.total > 0 
+                      ? `Showing ${((pagination.page - 1) * pagination.limit) + 1}-${Math.min(pagination.page * pagination.limit, pagination.total)} of ${pagination.total} activities`
+                      : '30-day retention'
+                    }
+                  </small>
+                </div>
               </div>
             </Card.Header>
             <Card.Body className="p-0">
@@ -391,7 +408,25 @@ export default function DashboardPage() {
           padding: 1.5rem 2rem;
           border-bottom: 1px solid #ecf0f1;
           align-items: flex-start;
-          transition: background 0.2s ease;
+          transition: all 0.3s ease;
+          animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-5px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        :global(.refresh-indicator) {
+          display: flex;
+          align-items: center;
+          opacity: 0.7;
         }
         
         :global(.activity-item:hover) {
