@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Button, Badge, Modal, Alert } from 'react-bootstrap';
+import { Card, Table, Button, Badge, Modal, Alert, Dropdown } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
-import { FaPlus, FaBuilding, FaEnvelope, FaUserTag, FaChevronRight, FaEdit, FaFileDownload, FaTrash, FaShieldAlt, FaKey, FaUser, FaUserShield, FaExclamationTriangle, FaUserSlash, FaHistory, FaFileAlt, FaCheckCircle, FaTimesCircle, FaInfoCircle, FaTh, FaThList, FaFilter, FaSearch, FaComments, FaFile as FaFileIcon } from 'react-icons/fa';
+import { FaPlus, FaBuilding, FaEnvelope, FaUserTag, FaChevronRight, FaEdit, FaFileDownload, FaTrash, FaShieldAlt, FaKey, FaUser, FaUserShield, FaExclamationTriangle, FaUserSlash, FaHistory, FaFileAlt, FaCheckCircle, FaTimesCircle, FaInfoCircle, FaTh, FaThList, FaFilter, FaSearch, FaComments, FaFile as FaFileIcon, FaEllipsisV } from 'react-icons/fa';
 import AddEmployeeModal from '@/components/modals/AddEmployeeModal';
 import EditEmployeeModal from '@/components/modals/EditEmployeeModal';
 import { useSession } from 'next-auth/react';
@@ -316,65 +316,68 @@ export default function EmployeesPage() {
             </div>
           </div>
           <div className="employee-actions">
-            {canEditEmployee(employee.companyId, employee.role) && (
-              <>
-                <Button
-                  variant="link"
-                  className="action-btn edit-btn"
-                  onClick={() => {
-                    setSelectedEmployee(employee);
-                    setShowEditModal(true);
-                  }}
-                >
-                  <FaEdit />
-                </Button>
-                {canDeleteEmployee(employee.role) && (
+            <Dropdown align="end">
+              <Dropdown.Toggle variant="link" className="action-menu-btn" id={`dropdown-${employee.id}`}>
+                <FaEllipsisV />
+              </Dropdown.Toggle>
+
+              <Dropdown.Menu className="action-dropdown-menu">
+                {canEditEmployee(employee.companyId, employee.role) && (
                   <>
-                    <Button
-                      variant="link"
-                      className="action-btn"
+                    <Dropdown.Item
                       onClick={() => {
                         setSelectedEmployee(employee);
-                        setShow2FAModal(true);
+                        setShowEditModal(true);
                       }}
-                      title="Manage 2FA"
                     >
-                      <FaKey />
-                    </Button>
-                    <Button
-                      variant="link"
-                      className="action-btn"
-                      onClick={() => {
-                        setSelectedEmployee(employee);
-                        setShowDeleteModal(true);
-                      }}
-                      title="Delete Employee"
-                    >
-                      <FaTrash />
-                    </Button>
+                      <FaEdit className="me-2" /> Edit Employee
+                    </Dropdown.Item>
+                    {canDeleteEmployee(employee.role) && (
+                      <>
+                        <Dropdown.Item
+                          onClick={() => {
+                            setSelectedEmployee(employee);
+                            setShow2FAModal(true);
+                          }}
+                        >
+                          <FaKey className="me-2" /> Manage 2FA
+                        </Dropdown.Item>
+                        <Dropdown.Divider />
+                        <Dropdown.Item
+                          onClick={() => {
+                            setSelectedEmployee(employee);
+                            setShowDeleteModal(true);
+                          }}
+                          className="text-danger"
+                        >
+                          <FaTrash className="me-2" /> Delete Employee
+                        </Dropdown.Item>
+                      </>
+                    )}
                   </>
                 )}
-              </>
-            )}
-            {session?.user?.role === 'ADMIN' && (
-              <Button
-                variant="link"
-                className="action-btn messages-btn"
-                onClick={() => handleViewMessages(employee)}
-                title="View Messages"
-              >
-                <FaComments />
-              </Button>
-            )}
-            {canExportActivities(employee.id, employee.companyId, employee.role) && (
-              <Button
-                variant="link"
-                className="action-btn export-btn"
-                onClick={() => handleExportActivities(employee.id)}
-              >
-                <FaFileDownload />
-              </Button>
-            )}
+                {session?.user?.role === 'ADMIN' && (
+                  <>
+                    <Dropdown.Divider />
+                    <Dropdown.Item
+                      onClick={() => handleViewMessages(employee)}
+                    >
+                      <FaComments className="me-2" /> View Messages
+                    </Dropdown.Item>
+                  </>
+                )}
+                {canExportActivities(employee.id, employee.companyId, employee.role) && (
+                  <>
+                    <Dropdown.Divider />
+                    <Dropdown.Item
+                      onClick={() => handleExportActivities(employee.id)}
+                    >
+                      <FaFileDownload className="me-2" /> Export Activities
+                    </Dropdown.Item>
+                  </>
+                )}
+              </Dropdown.Menu>
+            </Dropdown>
           </div>
         </div>
       </Card.Body>
@@ -560,67 +563,68 @@ export default function EmployeesPage() {
                             </div>
                           </div>
                           <div className="employee-actions-desktop">
-                            {canEditEmployee(employee.companyId, employee.role) && (
-                              <>
-                                <Button
-                                  variant="link"
-                                  className="action-btn-desktop edit"
-                                  onClick={() => {
-                                    setSelectedEmployee(employee);
-                                    setShowEditModal(true);
-                                  }}
-                                  title="Edit Employee"
-                                >
-                                  <FaEdit />
-                                </Button>
-                                {canDeleteEmployee(employee.role) && (
+                            <Dropdown align="end">
+                              <Dropdown.Toggle variant="link" className="action-menu-btn-desktop" id={`dropdown-desktop-${employee.id}`}>
+                                <FaEllipsisV />
+                              </Dropdown.Toggle>
+
+                              <Dropdown.Menu className="action-dropdown-menu">
+                                {canEditEmployee(employee.companyId, employee.role) && (
                                   <>
-                                    <Button
-                                      variant="link"
-                                      className="action-btn-desktop security"
+                                    <Dropdown.Item
                                       onClick={() => {
                                         setSelectedEmployee(employee);
-                                        setShow2FAModal(true);
+                                        setShowEditModal(true);
                                       }}
-                                      title="Manage 2FA"
                                     >
-                                      <FaKey />
-                                    </Button>
-                                    <Button
-                                      variant="link"
-                                      className="action-btn-desktop delete"
-                                      onClick={() => {
-                                        setSelectedEmployee(employee);
-                                        setShowDeleteModal(true);
-                                      }}
-                                      title="Delete Employee"
-                                    >
-                                      <FaTrash />
-                                    </Button>
+                                      <FaEdit className="me-2" /> Edit Employee
+                                    </Dropdown.Item>
+                                    {canDeleteEmployee(employee.role) && (
+                                      <>
+                                        <Dropdown.Item
+                                          onClick={() => {
+                                            setSelectedEmployee(employee);
+                                            setShow2FAModal(true);
+                                          }}
+                                        >
+                                          <FaKey className="me-2" /> Manage 2FA
+                                        </Dropdown.Item>
+                                        <Dropdown.Divider />
+                                        <Dropdown.Item
+                                          onClick={() => {
+                                            setSelectedEmployee(employee);
+                                            setShowDeleteModal(true);
+                                          }}
+                                          className="text-danger"
+                                        >
+                                          <FaTrash className="me-2" /> Delete Employee
+                                        </Dropdown.Item>
+                                      </>
+                                    )}
                                   </>
                                 )}
-                              </>
-                            )}
-                            {session?.user?.role === 'ADMIN' && (
-                              <Button
-                                variant="link"
-                                className="action-btn-desktop messages"
-                                onClick={() => handleViewMessages(employee)}
-                                title="View Messages"
-                              >
-                                <FaComments />
-                              </Button>
-                            )}
-                            {canExportActivities(employee.id, employee.companyId, employee.role) && (
-                              <Button
-                                variant="link"
-                                className="action-btn-desktop export"
-                                onClick={() => handleExportActivities(employee.id)}
-                                title="Export Activity"
-                              >
-                                <FaFileDownload />
-                              </Button>
-                            )}
+                                {session?.user?.role === 'ADMIN' && (
+                                  <>
+                                    <Dropdown.Divider />
+                                    <Dropdown.Item
+                                      onClick={() => handleViewMessages(employee)}
+                                    >
+                                      <FaComments className="me-2" /> View Messages
+                                    </Dropdown.Item>
+                                  </>
+                                )}
+                                {canExportActivities(employee.id, employee.companyId, employee.role) && (
+                                  <>
+                                    <Dropdown.Divider />
+                                    <Dropdown.Item
+                                      onClick={() => handleExportActivities(employee.id)}
+                                    >
+                                      <FaFileDownload className="me-2" /> Export Activities
+                                    </Dropdown.Item>
+                                  </>
+                                )}
+                              </Dropdown.Menu>
+                            </Dropdown>
                           </div>
                         </div>
                         
@@ -777,61 +781,68 @@ export default function EmployeesPage() {
                             </td>
                             <td>
                               <div className="table-actions">
-                                {canEditEmployee(employee.companyId, employee.role) && (
-                                  <>
-                                    <Button
-                                      size="sm"
-                                      variant="link"
-                                      className="action-btn-table edit"
-                                      onClick={() => {
-                                        setSelectedEmployee(employee);
-                                        setShowEditModal(true);
-                                      }}
-                                      title="Edit"
-                                    >
-                                      <FaEdit />
-                                    </Button>
-                                    {canDeleteEmployee(employee.role) && (
+                                <Dropdown align="end">
+                                  <Dropdown.Toggle variant="link" className="action-menu-btn-table" id={`dropdown-table-${employee.id}`}>
+                                    <FaEllipsisV />
+                                  </Dropdown.Toggle>
+
+                                  <Dropdown.Menu className="action-dropdown-menu">
+                                    {canEditEmployee(employee.companyId, employee.role) && (
                                       <>
-                                        <Button
-                                          size="sm"
-                                          variant="link"
-                                          className="action-btn-table security"
+                                        <Dropdown.Item
                                           onClick={() => {
                                             setSelectedEmployee(employee);
-                                            setShow2FAModal(true);
+                                            setShowEditModal(true);
                                           }}
-                                          title="Manage 2FA"
                                         >
-                                          <FaKey />
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          variant="link"
-                                          className="action-btn-table delete"
-                                          onClick={() => {
-                                            setSelectedEmployee(employee);
-                                            setShowDeleteModal(true);
-                                          }}
-                                          title="Delete"
-                                        >
-                                          <FaTrash />
-                                        </Button>
+                                          <FaEdit className="me-2" /> Edit Employee
+                                        </Dropdown.Item>
+                                        {canDeleteEmployee(employee.role) && (
+                                          <>
+                                            <Dropdown.Item
+                                              onClick={() => {
+                                                setSelectedEmployee(employee);
+                                                setShow2FAModal(true);
+                                              }}
+                                            >
+                                              <FaKey className="me-2" /> Manage 2FA
+                                            </Dropdown.Item>
+                                            <Dropdown.Divider />
+                                            <Dropdown.Item
+                                              onClick={() => {
+                                                setSelectedEmployee(employee);
+                                                setShowDeleteModal(true);
+                                              }}
+                                              className="text-danger"
+                                            >
+                                              <FaTrash className="me-2" /> Delete Employee
+                                            </Dropdown.Item>
+                                          </>
+                                        )}
                                       </>
                                     )}
-                                  </>
-                                )}
-                                {canExportActivities(employee.id, employee.companyId, employee.role) && (
-                                  <Button
-                                    size="sm"
-                                    variant="link"
-                                    className="action-btn-table export"
-                                    onClick={() => handleExportActivities(employee.id)}
-                                    title="Export"
-                                  >
-                                    <FaFileDownload />
-                                  </Button>
-                                )}
+                                    {session?.user?.role === 'ADMIN' && (
+                                      <>
+                                        <Dropdown.Divider />
+                                        <Dropdown.Item
+                                          onClick={() => handleViewMessages(employee)}
+                                        >
+                                          <FaComments className="me-2" /> View Messages
+                                        </Dropdown.Item>
+                                      </>
+                                    )}
+                                    {canExportActivities(employee.id, employee.companyId, employee.role) && (
+                                      <>
+                                        <Dropdown.Divider />
+                                        <Dropdown.Item
+                                          onClick={() => handleExportActivities(employee.id)}
+                                        >
+                                          <FaFileDownload className="me-2" /> Export Activities
+                                        </Dropdown.Item>
+                                      </>
+                                    )}
+                                  </Dropdown.Menu>
+                                </Dropdown>
                               </div>
                             </td>
                           </tr>
@@ -911,55 +922,68 @@ export default function EmployeesPage() {
                           </div>
                         </div>
                         <div className="employee-actions">
-                          {canEditEmployee(employee.companyId, employee.role) && (
-                            <>
-                              <Button
-                                variant="link"
-                                className="action-btn edit-btn"
-                                onClick={() => {
-                                  setSelectedEmployee(employee);
-                                  setShowEditModal(true);
-                                }}
-                              >
-                                <FaEdit />
-                              </Button>
-                              {canDeleteEmployee(employee.role) && (
+                          <Dropdown align="end">
+                            <Dropdown.Toggle variant="link" className="action-menu-btn" id={`dropdown-mobile-${employee.id}`}>
+                              <FaEllipsisV />
+                            </Dropdown.Toggle>
+
+                            <Dropdown.Menu className="action-dropdown-menu">
+                              {canEditEmployee(employee.companyId, employee.role) && (
                                 <>
-                                  <Button
-                                    variant="link"
-                                    className="action-btn"
+                                  <Dropdown.Item
                                     onClick={() => {
                                       setSelectedEmployee(employee);
-                                      setShow2FAModal(true);
+                                      setShowEditModal(true);
                                     }}
-                                    title="Manage 2FA"
                                   >
-                                    <FaKey />
-                                  </Button>
-                                  <Button
-                                    variant="link"
-                                    className="action-btn"
-                                    onClick={() => {
-                                      setSelectedEmployee(employee);
-                                      setShowDeleteModal(true);
-                                    }}
-                                    title="Delete Employee"
-                                  >
-                                    <FaTrash />
-                                  </Button>
+                                    <FaEdit className="me-2" /> Edit Employee
+                                  </Dropdown.Item>
+                                  {canDeleteEmployee(employee.role) && (
+                                    <>
+                                      <Dropdown.Item
+                                        onClick={() => {
+                                          setSelectedEmployee(employee);
+                                          setShow2FAModal(true);
+                                        }}
+                                      >
+                                        <FaKey className="me-2" /> Manage 2FA
+                                      </Dropdown.Item>
+                                      <Dropdown.Divider />
+                                      <Dropdown.Item
+                                        onClick={() => {
+                                          setSelectedEmployee(employee);
+                                          setShowDeleteModal(true);
+                                        }}
+                                        className="text-danger"
+                                      >
+                                        <FaTrash className="me-2" /> Delete Employee
+                                      </Dropdown.Item>
+                                    </>
+                                  )}
                                 </>
                               )}
-                            </>
-                          )}
-                          {canExportActivities(employee.id, employee.companyId, employee.role) && (
-                            <Button
-                              variant="link"
-                              className="action-btn export-btn"
-                              onClick={() => handleExportActivities(employee.id)}
-                            >
-                              <FaFileDownload />
-                            </Button>
-                          )}
+                              {session?.user?.role === 'ADMIN' && (
+                                <>
+                                  <Dropdown.Divider />
+                                  <Dropdown.Item
+                                    onClick={() => handleViewMessages(employee)}
+                                  >
+                                    <FaComments className="me-2" /> View Messages
+                                  </Dropdown.Item>
+                                </>
+                              )}
+                              {canExportActivities(employee.id, employee.companyId, employee.role) && (
+                                <>
+                                  <Dropdown.Divider />
+                                  <Dropdown.Item
+                                    onClick={() => handleExportActivities(employee.id)}
+                                  >
+                                    <FaFileDownload className="me-2" /> Export Activities
+                                  </Dropdown.Item>
+                                </>
+                              )}
+                            </Dropdown.Menu>
+                          </Dropdown>
                         </div>
                       </div>
                     </Card.Body>
@@ -1752,35 +1776,7 @@ export default function EmployeesPage() {
             display: flex;
             gap: 0.25rem;
             align-items: center;
-          }
-
-          :global(.action-btn-table) {
-            background: transparent !important;
-            border: none !important;
-            color: rgba(255, 255, 255, 0.7) !important;
-            padding: 0.5rem !important;
-            transition: all 0.3s ease !important;
-            font-size: 1rem !important;
-          }
-
-          :global(.action-btn-table:hover) {
-            transform: scale(1.1) !important;
-          }
-
-          :global(.action-btn-table.edit:hover) {
-            color: #17a2b8 !important;
-          }
-
-          :global(.action-btn-table.security:hover) {
-            color: #ffc107 !important;
-          }
-
-          :global(.action-btn-table.delete:hover) {
-            color: #dc3545 !important;
-          }
-
-          :global(.action-btn-table.export:hover) {
-            color: #28a745 !important;
+            justify-content: center;
           }
 
           /* Last Login Column */
@@ -1919,15 +1915,19 @@ export default function EmployeesPage() {
           }
 
           /* Action Buttons */
+          .employee-actions,
           .employee-actions-desktop {
             display: flex;
             gap: 0.35rem;
             flex-shrink: 0;
           }
 
-          :global(.action-btn-desktop) {
-            width: 32px !important;
-            height: 32px !important;
+          /* 3-Dot Menu Button */
+          :global(.action-menu-btn),
+          :global(.action-menu-btn-desktop),
+          :global(.action-menu-btn-table) {
+            width: 36px !important;
+            height: 36px !important;
             border-radius: 8px !important;
             display: flex !important;
             align-items: center !important;
@@ -1936,29 +1936,67 @@ export default function EmployeesPage() {
             background: rgba(255, 255, 255, 0.05) !important;
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
             transition: all 0.2s ease !important;
-            font-size: 0.85rem !important;
+            font-size: 1rem !important;
+            color: rgba(255, 255, 255, 0.9) !important;
           }
 
-          :global(.action-btn-desktop:hover) {
+          :global(.action-menu-btn:hover),
+          :global(.action-menu-btn-desktop:hover),
+          :global(.action-menu-btn-table:hover),
+          :global(.action-menu-btn:focus),
+          :global(.action-menu-btn-desktop:focus),
+          :global(.action-menu-btn-table:focus) {
             transform: translateY(-1px) !important;
-            border-color: currentColor !important;
-            background: rgba(255, 255, 255, 0.1) !important;
-          }
-
-          :global(.action-btn-desktop.edit) {
+            border-color: rgba(102, 126, 234, 0.6) !important;
+            background: rgba(102, 126, 234, 0.15) !important;
             color: #667eea !important;
+            box-shadow: none !important;
           }
 
-          :global(.action-btn-desktop.security) {
-            color: #17a2b8 !important;
+          :global(.action-menu-btn::after),
+          :global(.action-menu-btn-desktop::after),
+          :global(.action-menu-btn-table::after) {
+            display: none !important;
           }
 
-          :global(.action-btn-desktop.delete) {
+          /* Dropdown Menu */
+          :global(.action-dropdown-menu) {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
+            border: 1px solid rgba(102, 126, 234, 0.3) !important;
+            border-radius: 10px !important;
+            padding: 0.5rem !important;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
+            min-width: 220px !important;
+          }
+
+          :global(.action-dropdown-menu .dropdown-item) {
+            color: rgba(255, 255, 255, 0.9) !important;
+            padding: 0.65rem 1rem !important;
+            border-radius: 6px !important;
+            font-size: 0.95rem !important;
+            transition: all 0.2s ease !important;
+            display: flex !important;
+            align-items: center !important;
+          }
+
+          :global(.action-dropdown-menu .dropdown-item:hover) {
+            background: rgba(102, 126, 234, 0.2) !important;
+            color: #ffffff !important;
+            transform: translateX(3px) !important;
+          }
+
+          :global(.action-dropdown-menu .dropdown-item.text-danger) {
             color: #ff6b6b !important;
           }
 
-          :global(.action-btn-desktop.export) {
-            color: #51cf66 !important;
+          :global(.action-dropdown-menu .dropdown-item.text-danger:hover) {
+            background: rgba(255, 107, 107, 0.15) !important;
+            color: #ff6b6b !important;
+          }
+
+          :global(.action-dropdown-menu .dropdown-divider) {
+            border-color: rgba(255, 255, 255, 0.1) !important;
+            margin: 0.5rem 0 !important;
           }
 
           /* Info Grid */
@@ -3045,24 +3083,6 @@ export default function EmployeesPage() {
             transform: translateY(-1px) !important;
           }
 
-          .action-btn.messages-btn {
-            color: #17a2b8 !important;
-          }
-
-          .action-btn.messages-btn:hover {
-            color: #138496 !important;
-            transform: scale(1.2) !important;
-          }
-
-          :global(.action-btn-desktop.messages) {
-            color: #17a2b8 !important;
-          }
-
-          :global(.action-btn-desktop.messages:hover) {
-            background: rgba(23, 162, 184, 0.2) !important;
-            border-color: rgba(23, 162, 184, 0.4) !important;
-            transform: scale(1.1) !important;
-          }
         `}</style>
       </div>
     </DashboardLayout>
