@@ -50,20 +50,31 @@ export async function GET(request: Request) {
       targetCompanyId = requestedCompanyId;
     }
 
-    // Build where clause based on target company
-    const where = { companyId: targetCompanyId };
+    // Build where clause based on target company - exclude deleted items
+    const where = { 
+      companyId: targetCompanyId,
+      deletedAt: null  // Exclude soft-deleted folders
+    };
 
     // Fetch folders with their documents - recursively include all levels
     const folders = await prisma.folder.findMany({
       where,
       include: {
-        documents: true,
+        documents: {
+          where: { deletedAt: null }  // Exclude soft-deleted documents
+        },
         children: {
+          where: { deletedAt: null },
           include: {
-            documents: true,
+            documents: {
+              where: { deletedAt: null }
+            },
             children: {
+              where: { deletedAt: null },
               include: {
-                documents: true,
+                documents: {
+                  where: { deletedAt: null }
+                },
                 favorites: {
                   where: { employeeId: session.user.id },
                   select: { id: true }

@@ -69,6 +69,8 @@ model Employee {
   createdEvents       CalendarEvent[] @relation("CreatedEvents") // Events created by this employee
   eventAttendances    EventAttendee[] // Events this employee is attending
   memos               Memo[]          // Memos created by this employee
+  deletedDocuments    Document[]      @relation("DocumentDeletedBy") // Documents deleted by this employee
+  deletedFolders      Folder[]        @relation("FolderDeletedBy") // Folders deleted by this employee
 
   @@index([companyId])
   @@index([role])
@@ -111,12 +113,16 @@ model Document {
   encryptionSalt    String?        // Salt for key derivation (base64)
   encryptionAlgorithm String?      // Algorithm used (aes-256-gcm)
   isEncrypted       Boolean        @default(false) // Whether file is encrypted
+  // Soft delete fields
+  deletedAt         DateTime?      // Timestamp when document was moved to trash
+  deletedById       String?        // Employee who deleted the document
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   
   uploadedBy       Employee      @relation(fields: [employeeId], references: [id])
   company          Company       @relation(fields: [companyId], references: [id])
   folder           Folder?       @relation(fields: [folderId], references: [id])
+  deletedBy        Employee?     @relation("DocumentDeletedBy", fields: [deletedById], references: [id])
   activities       Activity[]
   downloadLinks    DownloadLink[]
   favorites        FavoriteDocument[] // Users who favorited this document
@@ -129,6 +135,7 @@ model Document {
   @@index([createdAt])
   @@index([expiresAt])
   @@index([isEncrypted])
+  @@index([deletedAt])
   @@map("documents")
 }
 
@@ -140,6 +147,9 @@ model Folder {
   createdById   String
   color         String?       // Optional color for folder (Google Drive style)
   password      String?       // Encrypted password for folder access
+  // Soft delete fields
+  deletedAt     DateTime?     // Timestamp when folder was moved to trash
+  deletedById   String?       // Employee who deleted the folder
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   
@@ -147,6 +157,7 @@ model Folder {
   children      Folder[]      @relation("FolderHierarchy")
   company       Company       @relation(fields: [companyId], references: [id])
   createdBy     Employee      @relation(fields: [createdById], references: [id])
+  deletedBy     Employee?     @relation("FolderDeletedBy", fields: [deletedById], references: [id])
   documents     Document[]
   downloadLinks DownloadLink[]
   favorites     FavoriteFolder[] // Users who favorited this folder
@@ -158,6 +169,7 @@ model Folder {
   @@index([companyId])
   @@index([parentId])
   @@index([createdById])
+  @@index([deletedAt])
   @@map("folders")
 }
 

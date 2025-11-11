@@ -26,6 +26,9 @@ export enum Permission {
   VIEW_MEMOS = 'VIEW_MEMOS',
   EDIT_MEMOS = 'EDIT_MEMOS',
   DELETE_MEMOS = 'DELETE_MEMOS',
+  VIEW_TRASH = 'VIEW_TRASH',
+  RESTORE_TRASH = 'RESTORE_TRASH',
+  PERMANENTLY_DELETE = 'PERMANENTLY_DELETE',
 }
 
 // Define permissions for each role
@@ -49,6 +52,13 @@ const rolePermissions: { [key: string]: Permission[] } = {
     Permission.EDIT_EVENTS,
     Permission.DELETE_EVENTS,
     Permission.MANAGE_COMPANY_EVENTS,
+    Permission.VIEW_TRASH,
+    Permission.RESTORE_TRASH,
+    Permission.PERMANENTLY_DELETE,
+    Permission.CREATE_MEMOS,
+    Permission.VIEW_MEMOS,
+    Permission.EDIT_MEMOS,
+    Permission.DELETE_MEMOS,
   ],
   USER: [
     Permission.VIEW_DOCUMENTS,
@@ -61,6 +71,8 @@ const rolePermissions: { [key: string]: Permission[] } = {
     Permission.VIEW_MEMOS,
     Permission.EDIT_MEMOS, // Users can edit their own memos
     Permission.DELETE_MEMOS, // Users can delete their own memos
+    Permission.VIEW_TRASH, // Users can view trash
+    Permission.RESTORE_TRASH, // Users can restore their own deleted items
   ],
 };
 

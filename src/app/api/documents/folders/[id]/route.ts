@@ -32,6 +32,42 @@ async function deleteDocumentsInFolder(folderId: string, companyId: string) {
   }
 }
 
+// Soft delete folder and all its contents recursively
+async function softDeleteFolderRecursive(folderId: string, deletedById: string) {
+  const folder = await prisma.folder.findUnique({
+    where: { id: folderId },
+    include: {
+      children: true,
+      documents: true
+    }
+  });
+
+  if (!folder) return;
+
+  // Soft delete all child folders recursively
+  for (const child of folder.children) {
+    await softDeleteFolderRecursive(child.id, deletedById);
+  }
+
+  // Soft delete all documents in this folder
+  await prisma.document.updateMany({
+    where: { folderId: folder.id },
+    data: {
+      deletedAt: new Date(),
+      deletedById: deletedById
+    }
+  });
+
+  // Soft delete the folder itself
+  await prisma.folder.update({
+    where: { id: folderId },
+    data: {
+      deletedAt: new Date(),
+      deletedById: deletedById
+    }
+  });
+}
+
 async function recursivelyDeleteFolder(folderId: string, companyId: string) {
   const folder = await prisma.folder.findFirst({
     where: { id: folderId, companyId },
@@ -134,25 +170,25 @@ export async function DELETE(
       }, { status: 404 });
     }
 
-    // Recursively delete the folder and its contents from the database
-    console.log('Starting recursive folder deletion in database');
-    await recursivelyDeleteFolder(folder.id, employee.company.id);
-    console.log('Completed recursive folder deletion in database');
+    // Soft delete the folder and its contents
+    console.log('Starting soft delete of folder');
+    await softDeleteFolderRecursive(folder.id, employee.id);
+    console.log('Completed soft delete of folder');
 
     // Log the activity
     await prisma.activity.create({
       data: {
         type: 'DELETE_FOLDER',
-        description: `Deleted folder: ${folder.name}`,
+        description: `Moved folder to trash: ${folder.name}`,
         employeeId: employee.id,
         companyId: employee.company.id,
       }
     });
 
-    console.log('Successfully completed folder deletion process');
+    console.log('Successfully moved folder to trash');
     return NextResponse.json({ 
       success: true,
-      message: `Successfully deleted folder: ${folder.name} and all its contents`
+      message: `Successfully moved folder to trash: ${folder.name}`
     });
   } catch (error) {
     console.error('Error in DELETE handler:', {

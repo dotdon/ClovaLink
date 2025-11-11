@@ -9,6 +9,7 @@ import { hasPermission, Permission, canAccessFolder, canManageFolder, canManageD
 import DocumentViewerModal from '@/components/viewers/DocumentViewerModal';
 import ActiveUsers from '@/components/ActiveUsers';
 import MemoModal from '@/components/modals/MemoModal';
+import TrashModal from '@/components/modals/TrashModal';
 
 interface Document {
   id: string;
@@ -300,6 +301,7 @@ export default function DocumentsPage() {
   const [unlockedFolders, setUnlockedFolders] = useState<Set<string>>(new Set());
   const [showMemoModal, setShowMemoModal] = useState(false);
   const [selectedMemoItem, setSelectedMemoItem] = useState<{ item: Document | Folder; type: 'document' | 'folder' } | null>(null);
+  const [showTrashModal, setShowTrashModal] = useState(false);
   
   // Document password states
   const [showDocPasswordModal, setShowDocPasswordModal] = useState(false);
@@ -925,13 +927,42 @@ export default function DocumentsPage() {
         handleNavigateBack();
       }
 
-      await fetchDocuments();
+      // Optimistically update UI instead of fetching
+      if (isFolder) {
+        // Remove folder from state
+        if (currentFolderId === null) {
+          // Remove from root folders
+          setFolders(prevFolders => prevFolders.filter(f => f.id !== itemToDelete.id));
+        } else {
+          // Remove from nested folders - use the same recursive function as move
+          const removeFolderFromState = (folders: Folder[]): Folder[] => {
+            return folders.map(folder => {
+              if (folder.id === currentFolderId) {
+                return {
+                  ...folder,
+                  children: folder.children.filter(child => child.id !== itemToDelete.id)
+                };
+              }
+              return {
+                ...folder,
+                children: removeFolderFromState(folder.children)
+              };
+            });
+          };
+          setFolders(removeFolderFromState(folders));
+        }
+      } else {
+        // Remove document from state
+        setCurrentDocuments(prev => prev.filter(doc => doc.id !== itemToDelete.id));
+      }
       
-      setSuccessMessage(result.message || `Successfully deleted ${itemType}`);
+      setSuccessMessage(result.message || `Successfully moved ${itemType} to trash`);
       setShowSuccessModal(true);
     } catch (error) {
       console.error('Error deleting item:', error);
       setError(error instanceof Error ? error.message : 'Failed to delete item');
+      // Refetch on error to ensure UI is in sync
+      await fetchDocuments();
     } finally {
       setIsDeleting(null);
       setShowDeleteModal(false);
@@ -1803,6 +1834,15 @@ export default function DocumentsPage() {
               <FaFolderPlus className="me-2" />
               New Folder
             </Button>
+            {hasPermission(session, Permission.VIEW_TRASH) && (
+              <Button
+                variant="outline-secondary"
+                onClick={() => setShowTrashModal(true)}
+              >
+                <FaTrash className="me-2" />
+                Trash
+              </Button>
+            )}
           </div>
         </div>
 
@@ -2811,9 +2851,10 @@ export default function DocumentsPage() {
         />
 
         {/* Info Modal */}
-        <Modal show={showInfoModal} onHide={() => setShowInfoModal(false)}>
+        <Modal show={showInfoModal} onHide={() => setShowInfoModal(false)} centered className="info-modal">
           <Modal.Header closeButton>
             <Modal.Title>
+              <FaInfo className="me-2" />
               {selectedInfo && 'children' in selectedInfo ? 'Folder' : 'Document'} Information
             </Modal.Title>
           </Modal.Header>
@@ -2837,7 +2878,7 @@ export default function DocumentsPage() {
                 {!('children' in selectedInfo) && (selectedInfo as Document).path && (
                   <div className="info-row">
                     <strong>Path:</strong>
-                    <span>{(selectedInfo as Document).path}</span>
+                    <span className="path-text">{(selectedInfo as Document).path}</span>
                   </div>
                 )}
                 {selectedInfo.createdAt && (
@@ -2869,7 +2910,7 @@ export default function DocumentsPage() {
                 {selectedInfo.id && (
                   <div className="info-row">
                     <strong>ID:</strong>
-                    <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{selectedInfo.id}</span>
+                    <span className="id-text">{selectedInfo.id}</span>
                   </div>
                 )}
               </div>
@@ -3323,6 +3364,66 @@ export default function DocumentsPage() {
             </Button>
           </Modal.Footer>
         </Modal>
+
+        <style jsx global>{`
+          .info-modal .modal-content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
+            border: 2px solid rgba(102, 126, 234, 0.3) !important;
+            border-radius: 20px !important;
+            color: #ffffff !important;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5) !important;
+          }
+
+          .info-modal .modal-header {
+            background: #667eea !important;
+            border: none !important;
+            border-radius: 20px 20px 0 0 !important;
+            padding: 1.5rem !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+          }
+
+          .info-modal .modal-header .btn-close {
+            filter: brightness(0) invert(1) !important;
+            opacity: 0.8 !important;
+          }
+
+          .info-modal .modal-header .btn-close:hover {
+            opacity: 1 !important;
+          }
+
+          .info-modal .modal-title {
+            color: #ffffff !important;
+            font-weight: 600 !important;
+            font-size: 1.25rem !important;
+            display: flex;
+            align-items: center;
+          }
+
+          .info-modal .modal-body {
+            background: transparent !important;
+            padding: 2rem !important;
+            color: #ffffff !important;
+          }
+
+          .info-modal .modal-footer {
+            background: transparent !important;
+            border: none !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+            padding: 1.5rem !important;
+          }
+
+          .info-modal .btn-secondary {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            color: #fff !important;
+            transition: all 0.3s ease !important;
+          }
+
+          .info-modal .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15) !important;
+            border-color: rgba(255, 255, 255, 0.3) !important;
+          }
+        `}</style>
 
         <style jsx>{`
           .active-users-container {
@@ -4611,17 +4712,34 @@ export default function DocumentsPage() {
             justify-content: space-between;
             align-items: start;
             gap: 1rem;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            border: 1px solid rgba(102, 126, 234, 0.15);
           }
 
           .info-row strong {
             min-width: 100px;
             color: rgba(255, 255, 255, 0.8);
+            font-weight: 600;
           }
 
           .info-row span {
             color: rgba(255, 255, 255, 0.9);
             text-align: right;
             word-break: break-word;
+          }
+
+          .info-row .path-text {
+            font-family: monospace;
+            font-size: 0.85rem;
+            opacity: 0.8;
+          }
+
+          .info-row .id-text {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            font-family: monospace;
           }
 
           @media (max-width: 768px) {
@@ -5340,6 +5458,14 @@ export default function DocumentsPage() {
           itemType={selectedMemoItem.type}
         />
       )}
+
+      {/* Trash Modal */}
+      <TrashModal
+        show={showTrashModal}
+        onHide={() => setShowTrashModal(false)}
+        onRestore={fetchDocuments}
+        onDelete={fetchDocuments}
+      />
       </div>
     </DashboardLayout>
   );

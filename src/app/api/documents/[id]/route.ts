@@ -207,23 +207,20 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Delete physical file
-    try {
-      await unlink(join(UPLOAD_DIR, document.path));
-    } catch (error) {
-      console.error('Error deleting physical file:', error);
-    }
-
-    // Delete from database
-    await prisma.document.delete({
-      where: { id }
+    // Soft delete - move to trash
+    await prisma.document.update({
+      where: { id },
+      data: {
+        deletedAt: new Date(),
+        deletedById: employee.id
+      }
     });
 
     // Create activity log for document deletion
     await prisma.activity.create({
       data: {
         type: 'DELETE',
-        description: `Deleted document: ${document.name}`,
+        description: `Moved document to trash: ${document.name}`,
         employeeId: employee.id,
         companyId: document.companyId,
       },
