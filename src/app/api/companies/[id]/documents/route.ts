@@ -15,6 +15,32 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Fetch all folders for the company with nested structure
+    const folders = await prisma.folder.findMany({
+      where: { 
+        companyId: id,
+        parentId: null // Get root folders
+      },
+      include: {
+        children: {
+          include: {
+            children: {
+              include: {
+                children: {
+                  include: {
+                    children: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        name: 'asc',
+      },
+    });
+
     const documents = await prisma.document.findMany({
       where: { companyId: id },
       select: {
@@ -33,7 +59,7 @@ export async function GET(
       take: 10, // Limit to 10 most recent documents
     });
 
-    return NextResponse.json(documents);
+    return NextResponse.json({ folders, documents });
   } catch (error) {
     console.error('Error fetching documents:', error);
     return NextResponse.json(

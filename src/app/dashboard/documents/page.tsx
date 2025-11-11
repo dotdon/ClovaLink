@@ -1455,12 +1455,54 @@ export default function DocumentsPage() {
 
       const result = await response.json();
       
+      // Optimistically update the UI
+      if (isFolder) {
+        // Remove the folder from its current location
+        const removeFolderFromState = (folderList: Folder[]): Folder[] => {
+          return folderList.filter(f => f.id !== itemToMove.id).map(folder => ({
+            ...folder,
+            children: folder.children ? removeFolderFromState(folder.children) : []
+          }));
+        };
+
+        // Add the folder to its new location
+        const addFolderToState = (folderList: Folder[]): Folder[] => {
+          if (!moveTargetFolderId) {
+            // Moving to root
+            return [...folderList, { ...itemToMove as Folder, parentId: null }];
+          }
+          return folderList.map(folder => {
+            if (folder.id === moveTargetFolderId) {
+              return {
+                ...folder,
+                children: [...(folder.children || []), { ...itemToMove as Folder, parentId: moveTargetFolderId }]
+              };
+            }
+            if (folder.children && folder.children.length > 0) {
+              return {
+                ...folder,
+                children: addFolderToState(folder.children)
+              };
+            }
+            return folder;
+          });
+        };
+
+        let updatedFolders = removeFolderFromState(folders);
+        updatedFolders = addFolderToState(updatedFolders);
+        setFolders(updatedFolders);
+      } else {
+        // Remove document from current location and add to new location
+        const removeDocFromState = (docs: Document[]): Document[] => {
+          return docs.filter(d => d.id !== itemToMove.id);
+        };
+
+        setCurrentDocuments(removeDocFromState(currentDocuments));
+      }
+      
       setSuccessMessage(result.message || `${isFolder ? 'Folder' : 'Document'} moved successfully`);
       setShowSuccessModal(true);
       setShowMoveModal(false);
-      
-      // Refresh the documents list
-      await fetchDocuments();
       
       // If we moved a folder that we're currently inside, navigate back
       if (isFolder && currentFolderId === itemToMove.id) {
@@ -1469,6 +1511,8 @@ export default function DocumentsPage() {
     } catch (error) {
       console.error('Error moving item:', error);
       alert(error instanceof Error ? error.message : 'Failed to move item');
+      // Refresh on error to ensure consistency
+      await fetchDocuments();
     }
   };
 
