@@ -1623,6 +1623,8 @@ export default function EmployeesPage() {
             border-radius: 16px;
             padding: 1.5rem;
             overflow-x: auto;
+            overflow-y: visible;
+            min-height: 600px;
           }
 
           .employees-table {
@@ -1801,7 +1803,7 @@ export default function EmployeesPage() {
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
             border-radius: 12px !important;
             transition: all 0.2s ease !important;
-            overflow: hidden !important;
+            overflow: visible !important;
           }
 
           :global(.employee-card-desktop:hover) {
@@ -1812,6 +1814,14 @@ export default function EmployeesPage() {
 
           :global(.employee-card-desktop .card-body) {
             padding: 1rem !important;
+          }
+
+          :global(.employee-card) {
+            overflow: visible !important;
+          }
+
+          :global(.employee-card .card-body) {
+            overflow: visible !important;
           }
 
           .employee-card-header {
@@ -2173,6 +2183,8 @@ export default function EmployeesPage() {
             .employees-table-container {
               padding: 0.75rem;
               overflow-x: scroll;
+              overflow-y: visible;
+              min-height: 400px;
             }
 
             .employees-table {
