@@ -22,6 +22,10 @@ export enum Permission {
   EDIT_EVENTS = 'EDIT_EVENTS',
   DELETE_EVENTS = 'DELETE_EVENTS',
   MANAGE_COMPANY_EVENTS = 'MANAGE_COMPANY_EVENTS', // Create events for entire company
+  CREATE_MEMOS = 'CREATE_MEMOS',
+  VIEW_MEMOS = 'VIEW_MEMOS',
+  EDIT_MEMOS = 'EDIT_MEMOS',
+  DELETE_MEMOS = 'DELETE_MEMOS',
 }
 
 // Define permissions for each role
@@ -53,6 +57,10 @@ const rolePermissions: { [key: string]: Permission[] } = {
     Permission.CREATE_EVENTS,
     Permission.EDIT_EVENTS, // Users can edit their own events
     Permission.DELETE_EVENTS, // Users can delete their own events
+    Permission.CREATE_MEMOS,
+    Permission.VIEW_MEMOS,
+    Permission.EDIT_MEMOS, // Users can edit their own memos
+    Permission.DELETE_MEMOS, // Users can delete their own memos
   ],
 };
 
@@ -129,6 +137,22 @@ export function canExportActivities(session: any, targetEmployee: any): boolean 
   if (session.user.role === 'MANAGER' && session.user.companyId === targetEmployee.companyId) {
     return targetEmployee.role !== 'ADMIN';
   }
+  
+  return false;
+}
+
+// Check if user can manage a memo
+export function canManageMemo(session: any, memo: any): boolean {
+  if (!session?.user) return false;
+  
+  // User owns the memo
+  if (memo.employeeId === session.user.id) return true;
+  
+  // Admins can manage any memo
+  if (session.user.role === 'ADMIN') return true;
+  
+  // Managers can manage memos in their company
+  if (session.user.role === 'MANAGER' && session.user.companyId === memo.companyId) return true;
   
   return false;
 } 

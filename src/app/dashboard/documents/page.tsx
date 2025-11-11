@@ -3,11 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Form, Modal, Alert, Dropdown, ButtonGroup } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
-import { FaDownload, FaTrash, FaFolder, FaEye, FaUpload, FaFolderPlus, FaFile, FaEdit, FaArrowLeft, FaEllipsisV, FaSearch, FaCheckCircle, FaShare, FaFilePdf, FaFileWord, FaFileImage, FaInfo, FaTh, FaList, FaSortAlphaDown, FaSortAmountDown, FaCalendarAlt, FaStar, FaRegStar, FaThumbtack, FaBuilding, FaLock, FaClipboardList, FaArrowsAlt, FaInfoCircle } from 'react-icons/fa';
+import { FaDownload, FaTrash, FaFolder, FaEye, FaUpload, FaFolderPlus, FaFile, FaEdit, FaArrowLeft, FaEllipsisV, FaSearch, FaCheckCircle, FaShare, FaFilePdf, FaFileWord, FaFileImage, FaInfo, FaTh, FaList, FaSortAlphaDown, FaSortAmountDown, FaCalendarAlt, FaStar, FaRegStar, FaThumbtack, FaBuilding, FaLock, FaClipboardList, FaArrowsAlt, FaInfoCircle, FaStickyNote } from 'react-icons/fa';
 import { useSession } from 'next-auth/react';
 import { hasPermission, Permission, canAccessFolder, canManageFolder, canManageDocument } from '@/lib/permissions';
 import DocumentViewerModal from '@/components/viewers/DocumentViewerModal';
 import ActiveUsers from '@/components/ActiveUsers';
+import MemoModal from '@/components/modals/MemoModal';
 
 interface Document {
   id: string;
@@ -297,6 +298,8 @@ export default function DocumentsPage() {
   const [folderToVerify, setFolderToVerify] = useState<Folder | null>(null);
   const [verifyPassword, setVerifyPassword] = useState('');
   const [unlockedFolders, setUnlockedFolders] = useState<Set<string>>(new Set());
+  const [showMemoModal, setShowMemoModal] = useState(false);
+  const [selectedMemoItem, setSelectedMemoItem] = useState<{ item: Document | Folder; type: 'document' | 'folder' } | null>(null);
   
   // Document password states
   const [showDocPasswordModal, setShowDocPasswordModal] = useState(false);
@@ -960,11 +963,59 @@ export default function DocumentsPage() {
         throw new Error(result.error || 'Failed to create folder');
       }
 
+      const result = await response.json();
+      const newFolder = result.data; // API returns { success: true, data: folder }
+
+      console.log('New folder created:', newFolder);
+      console.log('Current folder ID:', currentFolderId);
+      console.log('Current folders state:', folders);
+
       setShowCreateFolderModal(false);
       setNewFolderName('');
       setSuccessMessage('Folder created successfully');
       setShowSuccessModal(true);
-      await fetchDocuments();
+
+      // Immediately add the new folder to state for instant UI update
+      if (currentFolderId) {
+        // If we're inside a folder, update that folder's children recursively
+        const updateFolderChildren = (folderList: Folder[]): Folder[] => {
+          return folderList.map(folder => {
+            if (folder.id === currentFolderId) {
+              console.log('Found parent folder, adding child:', folder.name);
+              return {
+                ...folder,
+                children: [...(folder.children || []), {
+                  ...newFolder,
+                  children: [],
+                  documents: []
+                }]
+              };
+            }
+            if (folder.children && folder.children.length > 0) {
+              return {
+                ...folder,
+                children: updateFolderChildren(folder.children)
+              };
+            }
+            return folder;
+          });
+        };
+        const updatedFolders = updateFolderChildren(folders);
+        console.log('Updated folders after adding child:', updatedFolders);
+        setFolders(updatedFolders);
+      } else {
+        // If we're at root level, add to folders array
+        const normalizedFolder = {
+          ...newFolder,
+          parentId: null, // Ensure parentId is explicitly null for root folders
+          children: [],
+          documents: []
+        };
+        console.log('Adding folder to root:', normalizedFolder);
+        const updatedFolders = [...folders, normalizedFolder];
+        console.log('Updated folders array:', updatedFolders);
+        setFolders(updatedFolders);
+      }
     } catch (error) {
       console.error('Error creating folder:', error);
       alert(error instanceof Error ? error.message : 'Failed to create folder');
@@ -1445,7 +1496,7 @@ export default function DocumentsPage() {
     ...currentFolders,
     ...currentDocuments
   ].filter(item => 
-    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+    item && item.name && item.name.toLowerCase().includes(searchQuery.toLowerCase())
   ));
 
   const renderStarButton = (item: Document | Folder) => {
@@ -1728,7 +1779,7 @@ export default function DocumentsPage() {
                     <div className="starred-section mb-4">
                       <h4 className="mb-3">Starred Folders</h4>
                       <div className={viewMode === 'grid' ? 'items-grid' : 'items-list'}>
-                        {favoriteFolders.map(item => {
+                        {favoriteFolders.filter(item => item && item.folder).map(item => {
                           const folder = { 
                             ...item.folder, 
                             isFavorite: true,
@@ -1831,7 +1882,7 @@ export default function DocumentsPage() {
                     <div className="starred-section">
                       <h4 className="mb-3">Starred Documents</h4>
                       <div className={viewMode === 'grid' ? 'items-grid' : 'items-list'}>
-                        {favoriteDocuments.map(item => {
+                        {favoriteDocuments.filter(item => item && item.document).map(item => {
                           const doc = { ...item.document, isFavorite: true };
                           return viewMode === 'grid' ? (
                             <div key={item.id} className="grid-item">
@@ -2147,6 +2198,15 @@ export default function DocumentsPage() {
                           >
                             <FaClipboardList className="me-2" /> Activity Log
                           </Dropdown.Item>
+                          <Dropdown.Item 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedMemoItem({ item, type: isFolder ? 'folder' : 'document' });
+                              setShowMemoModal(true);
+                            }}
+                          >
+                            <FaStickyNote className="me-2" style={{ color: '#ffc107' }} /> Memos
+                          </Dropdown.Item>
                           {canRenameDocuments && (
                             <Dropdown.Item 
                               onClick={(e) => {
@@ -2376,6 +2436,15 @@ export default function DocumentsPage() {
                             }}
                           >
                             <FaClipboardList className="me-2" /> Activity Log
+                          </Dropdown.Item>
+                          <Dropdown.Item 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedMemoItem({ item, type: isFolder ? 'folder' : 'document' });
+                              setShowMemoModal(true);
+                            }}
+                          >
+                            <FaStickyNote className="me-2" style={{ color: '#ffc107' }} /> Memos
                           </Dropdown.Item>
                           {canRenameDocuments && (
                             <Dropdown.Item 
@@ -5212,6 +5281,21 @@ export default function DocumentsPage() {
             cursor: not-allowed !important;
           }
         `}</style>
+
+      {/* Memo Modal */}
+      {selectedMemoItem && (
+        <MemoModal
+          show={showMemoModal}
+          onHide={() => {
+            setShowMemoModal(false);
+            setSelectedMemoItem(null);
+          }}
+          documentId={selectedMemoItem.type === 'document' ? selectedMemoItem.item.id : undefined}
+          folderId={selectedMemoItem.type === 'folder' ? selectedMemoItem.item.id : undefined}
+          itemName={selectedMemoItem.item.name}
+          itemType={selectedMemoItem.type}
+        />
+      )}
       </div>
     </DashboardLayout>
   );

@@ -6,7 +6,7 @@ import DashboardLayout from '@/components/ui/DashboardLayout';
 import { 
   FaCalendar, FaPlus, FaChevronLeft, FaChevronRight, 
   FaClock, FaMapMarkerAlt, FaUsers, FaTasks, FaFlag,
-  FaCheck, FaTimes, FaEdit, FaTrash, FaBell, FaAlignLeft
+  FaCheck, FaTimes, FaEdit, FaTrash, FaBell, FaAlignLeft, FaDownload
 } from 'react-icons/fa';
 import { useSession } from 'next-auth/react';
 import { hasPermission, Permission } from '@/lib/permissions';
@@ -55,6 +55,7 @@ export default function CalendarPage() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [showEventModal, setShowEventModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -205,6 +206,94 @@ export default function CalendarPage() {
       console.error('Error deleting event:', error);
       alert('Failed to delete event');
     }
+  };
+
+  const handleEditEvent = () => {
+    if (!selectedEvent) return;
+    
+    // Populate form with selected event data
+    setFormData({
+      title: selectedEvent.title,
+      description: selectedEvent.description || '',
+      startDate: selectedEvent.startDate.slice(0, 16), // Format for datetime-local input
+      endDate: selectedEvent.endDate.slice(0, 16),
+      allDay: selectedEvent.allDay,
+      location: selectedEvent.location || '',
+      color: selectedEvent.color || '#667eea',
+      type: selectedEvent.type,
+      priority: selectedEvent.priority,
+      status: selectedEvent.status,
+      isPrivate: selectedEvent.isPrivate,
+    });
+    
+    setShowEventModal(false);
+    setShowEditModal(true);
+  };
+
+  const handleUpdateEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEvent) return;
+
+    try {
+      const response = await fetch('/api/calendar', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedEvent.id,
+          ...formData,
+          companyId: !formData.isPrivate ? session?.user?.companyId : null,
+        }),
+      });
+
+      if (response.ok) {
+        setShowEditModal(false);
+        resetForm();
+        fetchEvents();
+      } else {
+        const error = await response.json();
+        alert('Failed to update event: ' + (error.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error updating event:', error);
+      alert('Failed to update event');
+    }
+  };
+
+  const exportToICal = (event: CalendarEvent) => {
+    const startDate = new Date(event.startDate);
+    const endDate = new Date(event.endDate);
+    
+    const formatDate = (date: Date) => {
+      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    };
+    
+    const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//ClovaLink//Calendar//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+DTSTART:${formatDate(startDate)}
+DTEND:${formatDate(endDate)}
+DTSTAMP:${formatDate(new Date())}
+UID:${event.id}@clovalink
+SUMMARY:${event.title}
+DESCRIPTION:${event.description || ''}
+LOCATION:${event.location || ''}
+STATUS:${event.status}
+PRIORITY:${event.priority === 'HIGH' ? '1' : event.priority === 'MEDIUM' ? '5' : '9'}
+END:VEVENT
+END:VCALENDAR`;
+
+    const blob = new Blob([icsContent], { type: 'text/calendar' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${event.title.replace(/[^a-z0-9]/gi, '_')}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleUpdateEventStatus = async (eventId: string, newStatus: string) => {
@@ -518,10 +607,18 @@ export default function CalendarPage() {
               </div>
             </Modal.Body>
             <Modal.Footer>
+              <Button variant="info" onClick={() => exportToICal(selectedEvent)}>
+                <FaDownload /> Export to iCal
+              </Button>
               {selectedEvent.createdById === session?.user?.id && (
-                <Button variant="danger" onClick={() => handleDeleteEvent(selectedEvent.id)}>
-                  <FaTrash /> Delete
-                </Button>
+                <>
+                  <Button variant="primary" onClick={handleEditEvent}>
+                    <FaEdit /> Edit
+                  </Button>
+                  <Button variant="danger" onClick={() => handleDeleteEvent(selectedEvent.id)}>
+                    <FaTrash /> Delete
+                  </Button>
+                </>
               )}
               <Button variant="secondary" onClick={() => setShowEventModal(false)}>
                 Close
@@ -670,6 +767,153 @@ export default function CalendarPage() {
                   </Button>
                   <Button type="submit" className="gradient-btn">
                     <FaPlus /> Create Event
+                  </Button>
+                </div>
+              </Form>
+            </Modal.Body>
+          </Modal>
+        )}
+
+        {/* Edit Event Modal */}
+        {showEditModal && selectedEvent && (
+          <Modal show={showEditModal} onHide={() => setShowEditModal(false)} size="lg" centered className="create-event-modal">
+            <Modal.Header closeButton>
+              <Modal.Title>
+                <FaEdit /> Edit Event
+              </Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <Form onSubmit={handleUpdateEvent}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Title *</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    required
+                    placeholder="Event title"
+                  />
+                </Form.Group>
+
+                <Form.Group className="mb-3">
+                  <Form.Label>Description</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={3}
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Event description"
+                  />
+                </Form.Group>
+
+                <div className="row">
+                  <div className="col-md-6">
+                    <Form.Group className="mb-3">
+                      <Form.Label>Start Date & Time *</Form.Label>
+                      <Form.Control
+                        type="datetime-local"
+                        value={formData.startDate}
+                        onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                        required
+                      />
+                    </Form.Group>
+                  </div>
+                  <div className="col-md-6">
+                    <Form.Group className="mb-3">
+                      <Form.Label>End Date & Time *</Form.Label>
+                      <Form.Control
+                        type="datetime-local"
+                        value={formData.endDate}
+                        onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                        required
+                      />
+                    </Form.Group>
+                  </div>
+                </div>
+
+                <Form.Group className="mb-3">
+                  <Form.Check
+                    type="checkbox"
+                    label="All day event"
+                    checked={formData.allDay}
+                    onChange={(e) => setFormData({ ...formData, allDay: e.target.checked })}
+                  />
+                </Form.Group>
+
+                <Form.Group className="mb-3">
+                  <Form.Label>Location</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    placeholder="Event location"
+                  />
+                </Form.Group>
+
+                <div className="row">
+                  <div className="col-md-4">
+                    <Form.Group className="mb-3">
+                      <Form.Label>Type</Form.Label>
+                      <Form.Select
+                        value={formData.type}
+                        onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                      >
+                        <option value="TASK">Task</option>
+                        <option value="MEETING">Meeting</option>
+                        <option value="REMINDER">Reminder</option>
+                        <option value="DEADLINE">Deadline</option>
+                        <option value="APPOINTMENT">Appointment</option>
+                        <option value="OTHER">Other</option>
+                      </Form.Select>
+                    </Form.Group>
+                  </div>
+                  <div className="col-md-4">
+                    <Form.Group className="mb-3">
+                      <Form.Label>Priority</Form.Label>
+                      <Form.Select
+                        value={formData.priority}
+                        onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                      >
+                        <option value="LOW">Low</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="HIGH">High</option>
+                        <option value="URGENT">Urgent</option>
+                      </Form.Select>
+                    </Form.Group>
+                  </div>
+                  <div className="col-md-4">
+                    <Form.Group className="mb-3">
+                      <Form.Label>Color</Form.Label>
+                      <Form.Control
+                        type="color"
+                        value={formData.color}
+                        onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                      />
+                    </Form.Group>
+                  </div>
+                </div>
+
+                <Form.Group className="mb-3">
+                  <Form.Check
+                    type="checkbox"
+                    label={canManageCompanyEvents ? "Private (only you can see)" : "Private event"}
+                    checked={formData.isPrivate}
+                    onChange={(e) => setFormData({ ...formData, isPrivate: e.target.checked })}
+                    disabled={!canManageCompanyEvents}
+                  />
+                  {canManageCompanyEvents && !formData.isPrivate && (
+                    <Form.Text className="text-warning">
+                      This event will be visible to everyone in your company
+                    </Form.Text>
+                  )}
+                </Form.Group>
+
+                <div className="d-flex gap-2 justify-content-end mt-4">
+                  <Button variant="secondary" onClick={() => setShowEditModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="gradient-btn">
+                    <FaCheck /> Update Event
                   </Button>
                 </div>
               </Form>

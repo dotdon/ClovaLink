@@ -68,6 +68,7 @@ model Employee {
   notifications       Notification[]  // Notifications for this employee
   createdEvents       CalendarEvent[] @relation("CreatedEvents") // Events created by this employee
   eventAttendances    EventAttendee[] // Events this employee is attending
+  memos               Memo[]          // Memos created by this employee
 
   @@index([companyId])
   @@index([role])
@@ -120,6 +121,7 @@ model Document {
   downloadLinks    DownloadLink[]
   favorites        FavoriteDocument[] // Users who favorited this document
   messageAttachments MessageAttachment[] // Messages this document is attached to
+  memos            Memo[]        // Memos attached to this document
 
   @@index([companyId])
   @@index([employeeId])
@@ -150,6 +152,7 @@ model Folder {
   favorites     FavoriteFolder[] // Users who favorited this folder
   pinnedBy      PinnedFolder[]   // Users who pinned this folder
   activities    Activity[]
+  memos         Memo[]        // Memos attached to this folder
 
   @@unique([name, companyId])
   @@index([companyId])
@@ -519,4 +522,26 @@ model EventReminder {
   @@index([eventId])
   @@index([sent])
   @@map("event_reminders")
+}
+
+// Memos for documents and folders
+model Memo {
+  id          String    @id @default(cuid())
+  content     String    // Memo text content
+  documentId  String?   // Link to document (nullable)
+  folderId    String?   // Link to folder (nullable)
+  employeeId  String    // Creator of the memo
+  companyId   String    // For permission isolation
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  document    Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  folder      Folder?   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  @@index([documentId])
+  @@index([folderId])
+  @@index([employeeId])
+  @@index([companyId])
+  @@map("memos")
 } 
