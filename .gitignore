@@ -35,20 +35,25 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# uploads directory (contains user documents)
-/uploads/*
-!/uploads/.gitkeep
+# uploads
+uploads/
 
-# Prisma
+# prisma
+prisma/migrations/dev.db
 prisma/dev.db
-prisma/dev.db-journal
 
-# direnv
-.envrc
-
-# IDEs
+# IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
+
+# Podman volumes
+postgres-data/
+
+# Deployment files (keep out of repo)
+deploy/
+
+# Logs
+*.log
+
+# OS files
+Thumbs.db

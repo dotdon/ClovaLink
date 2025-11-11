@@ -93,6 +93,13 @@ Additional documentation:
 - **Podman** (recommended for containerized deployment)
 - Modern web browser with WebAuthn support (for passkey authentication)
 
+## Deployment
+
+ClovaLink supports multiple deployment options:
+
+- **Local Development**: Use Podman Compose for development and testing (see [PODMAN_SETUP.md](PODMAN_SETUP.md))
+- **Production**: Multi-client deployment infrastructure available in the `deploy/` folder (gitignored, not in public repo)
+
 ## Quick Start
 
 ### Local Development
@@ -245,13 +252,14 @@ File Encryption = AES-256-GCM(File Data, Company Key)
 
 **Security Properties:**
 - Each company's documents are encrypted with a unique derived key
-- Master key is stored in environment variables (Kubernetes Secrets in production)
+- Master key stored in environment variables
 - Encryption metadata (IV, auth tag, salt) stored per-file in database
-- Cross-company access requires both master key and correct company ID
-- Protects against disk theft and provides multi-tenant data isolation
+- Multi-tenant isolation: Each company has cryptographically distinct encryption keys
+- Protects against disk theft and unauthorized filesystem access
+- Authorization layer prevents cross-company access at application level
 
 **Deployment:**
-- Designed for containerized environments (Podman/Docker/Kubernetes)
+- Designed for containerized environments with Podman
 - Horizontal scaling supported with shared encryption key
 - All app replicas can encrypt/decrypt with proper authorization
 - Suitable for SaaS multi-tenant deployments
