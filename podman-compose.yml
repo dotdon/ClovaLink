@@ -1,6 +1,6 @@
-# ClovaLink Development Environment
-# IMPORTANT: Use "docker-compose down" (WITHOUT -v) to keep database data
-# Use "docker-compose down -v" only if you want to reset everything including database
+# ClovaLink Podman Development Environment
+# IMPORTANT: Use "podman compose down" (WITHOUT -v) to keep database data
+# Use "podman compose down -v" only if you want to reset everything including database
 
 services:
   app:
@@ -20,10 +20,12 @@ services:
       - SMTP_FROM=${SMTP_FROM}
       - NODE_ENV=development
       - UPLOAD_DIR=/app/uploads
+      - WATCHPACK_POLLING=true
     volumes:
-      - .:/app
+      - .:/app:delegated
       - node_modules_cache:/app/node_modules
-      - ./uploads:/app/uploads
+      - ./uploads:/app/uploads:delegated
+      - next_cache:/app/.next
     depends_on:
       - db
     restart: unless-stopped
@@ -53,4 +55,6 @@ services:
 
 volumes:
   postgres_data:
-  node_modules_cache: 
+  node_modules_cache:
+  next_cache:
+

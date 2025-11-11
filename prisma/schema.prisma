@@ -66,6 +66,8 @@ model Employee {
   receivedMessages    Message[]       @relation("ReceivedMessages") // Messages received by this employee
   channelMemberships  ChannelMember[] // Channels this employee is a member of
   notifications       Notification[]  // Notifications for this employee
+  createdEvents       CalendarEvent[] @relation("CreatedEvents") // Events created by this employee
+  eventAttendances    EventAttendee[] // Events this employee is attending
 
   @@index([companyId])
   @@index([role])
@@ -416,4 +418,98 @@ model PinnedFolder {
   @@index([employeeId])
   @@index([folderId])
   @@map("pinned_folders")
+}
+
+// Calendar Events and Tasks
+model CalendarEvent {
+  id              String    @id @default(cuid())
+  title           String
+  description     String?
+  startDate       DateTime
+  endDate         DateTime
+  allDay          Boolean   @default(false)
+  location        String?
+  color           String?   // For calendar color coding
+  type            EventType @default(TASK) // Task, Meeting, Reminder, etc.
+  priority        Priority  @default(MEDIUM)
+  status          EventStatus @default(PENDING)
+  isRecurring     Boolean   @default(false)
+  recurrenceRule  String?   // RRULE format for recurring events
+  createdById     String
+  createdBy       Employee  @relation("CreatedEvents", fields: [createdById], references: [id], onDelete: Cascade)
+  companyId       String?   // Null for personal events, set for company events
+  isPrivate       Boolean   @default(true) // Private events only visible to creator
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  attendees       EventAttendee[]
+  reminders       EventReminder[]
+  
+  @@index([createdById])
+  @@index([companyId])
+  @@index([startDate])
+  @@index([endDate])
+  @@index([status])
+  @@index([type])
+  @@map("calendar_events")
+}
+
+enum EventType {
+  TASK
+  MEETING
+  REMINDER
+  DEADLINE
+  APPOINTMENT
+  OTHER
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum EventStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+// Event attendees (for meetings/shared events)
+model EventAttendee {
+  id        String       @id @default(cuid())
+  eventId   String
+  event     CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee  Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  status    AttendeeStatus @default(PENDING) // Accepted, Declined, Tentative
+  createdAt DateTime      @default(now())
+  
+  @@unique([eventId, employeeId])
+  @@index([eventId])
+  @@index([employeeId])
+  @@map("event_attendees")
+}
+
+enum AttendeeStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  TENTATIVE
+}
+
+// Event reminders
+model EventReminder {
+  id        String       @id @default(cuid())
+  eventId   String
+  event     CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  minutesBefore Int        // Minutes before event to send reminder
+  sent      Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  
+  @@index([eventId])
+  @@index([sent])
+  @@map("event_reminders")
 } 

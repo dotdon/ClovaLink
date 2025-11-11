@@ -1,53 +1,54 @@
-# OS / Editor
-.DS_Store
-Thumbs.db
-.idea/
-.vscode/
-*.swp
-*.swo
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Node
-node_modules/
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
 
-# Next.js build outputs
-.next/
-.next-cache/
-out/
-dist/
-build/
-.turbo/
-
-# Testing / coverage
-coverage/
-.nyc_output/
-
-# Env & secrets
+# local env files
 .env
-.env.*
-!.env.example
-!.env.prod.example
+.env*.local
 
-# Prisma (local sqlite if ever used)
-prisma/*.db
-prisma/*.sqlite
+# vercel
+.vercel
 
-# Uploads & generated assets
-uploads/
+# typescript
+*.tsbuildinfo
+next-env.d.ts
 
-# Docker / Certbot
-certbot/
-certbot.conf
-certbot.log
+# uploads directory (contains user documents)
+/uploads/*
+!/uploads/.gitkeep
 
-# Logs
-logs/
-*.log
+# Prisma
+prisma/dev.db
+prisma/dev.db-journal
 
-# Misc
-*.local
-*.bak
-*.tmp
+# direnv
+.envrc
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

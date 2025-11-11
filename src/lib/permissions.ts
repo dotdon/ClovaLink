@@ -17,6 +17,11 @@ export enum Permission {
   CREATE_UPLOAD_LINKS = 'CREATE_UPLOAD_LINKS',
   VIEW_UPLOAD_LINKS = 'VIEW_UPLOAD_LINKS',
   VIEW_STATS = 'VIEW_STATS',
+  VIEW_CALENDAR = 'VIEW_CALENDAR',
+  CREATE_EVENTS = 'CREATE_EVENTS',
+  EDIT_EVENTS = 'EDIT_EVENTS',
+  DELETE_EVENTS = 'DELETE_EVENTS',
+  MANAGE_COMPANY_EVENTS = 'MANAGE_COMPANY_EVENTS', // Create events for entire company
 }
 
 // Define permissions for each role
@@ -35,10 +40,19 @@ const rolePermissions: { [key: string]: Permission[] } = {
     Permission.VIEW_DOCUMENTS,
     Permission.CREATE_UPLOAD_LINKS,
     Permission.VIEW_UPLOAD_LINKS,
+    Permission.VIEW_CALENDAR,
+    Permission.CREATE_EVENTS,
+    Permission.EDIT_EVENTS,
+    Permission.DELETE_EVENTS,
+    Permission.MANAGE_COMPANY_EVENTS,
   ],
   USER: [
     Permission.VIEW_DOCUMENTS,
     Permission.CREATE_DOCUMENTS,
+    Permission.VIEW_CALENDAR,
+    Permission.CREATE_EVENTS,
+    Permission.EDIT_EVENTS, // Users can edit their own events
+    Permission.DELETE_EVENTS, // Users can delete their own events
   ],
 };
 

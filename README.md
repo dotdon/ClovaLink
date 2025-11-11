@@ -82,8 +82,8 @@ Additional documentation:
 ## Prerequisites
 
 - Node.js 20.x or later
-- PostgreSQL 15.x or later
-- Docker and Docker Compose (optional)
+- PostgreSQL 15.x or later (or use Podman for containerized setup)
+- **Podman** (recommended for containerized deployment)
 - Modern web browser with WebAuthn support (for passkey authentication)
 
 ## Quick Start
@@ -118,30 +118,58 @@ Additional documentation:
    npm run dev
    ```
 
-### Docker Deployment
+### Podman Deployment (Recommended)
 
-1. Clone the repository:
+1. **Install Podman** (if not already installed):
+   ```bash
+   # macOS
+   brew install podman
+   
+   # Linux
+   # See https://podman.io/getting-started/installation
+   ```
+
+2. Clone the repository:
    ```bash
    git clone https://github.com/dotdon/clovalink.git
    cd clovalink
    ```
 
-2. Set up environment variables:
+3. Set up environment variables:
    ```bash
-   cp .env.prod.example .env
+   cp .env.example .env
    ```
    Edit `.env` with your configuration.
 
-3. Build and start the containers:
+4. **Initialize Podman machine** (first time only):
    ```bash
-   docker-compose up -d
+   podman machine init
+   podman machine start
    ```
 
-4. Initialize the database:
+5. **Start ClovaLink**:
    ```bash
-   docker-compose exec app npx prisma db push
-   docker-compose exec app npx prisma db seed
+   ./podman-start.sh
    ```
+
+6. Initialize the database:
+   ```bash
+   podman compose exec app npx prisma db push
+   podman compose exec app npx prisma db seed
+   ```
+
+### Podman Commands
+
+```bash
+./podman-start.sh                        # Start all containers
+./podman-stop.sh                         # Stop all containers
+podman compose logs -f                   # View live logs
+podman compose logs -f app               # View app logs only
+podman compose ps                        # Check container status
+podman compose restart                   # Restart containers
+podman compose exec app bash             # Enter app container
+podman compose exec app npx prisma studio # Open Prisma Studio
+```
 
 ## Available Scripts
 
@@ -165,7 +193,7 @@ Additional documentation:
 - **Database**: PostgreSQL 15.x with Prisma ORM
 - **Authentication**: NextAuth.js with multi-factor authentication
 - **File Storage**: Local file system (configurable)
-- **Containerization**: Docker and Docker Compose
+- **Containerization**: Podman with compose support
 
 ### Document Viewing
 - **react-pdf**: PDF.js integration for PDF rendering

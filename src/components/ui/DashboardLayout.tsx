@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
-import { FaHome, FaBuilding, FaUsers, FaFolder, FaLink, FaSignOutAlt, FaQuestionCircle, FaBars, FaTimes, FaCog, FaUserCircle, FaComments } from 'react-icons/fa';
+import { FaHome, FaBuilding, FaUsers, FaFolder, FaLink, FaSignOutAlt, FaQuestionCircle, FaBars, FaTimes, FaCog, FaUserCircle, FaComments, FaCalendar } from 'react-icons/fa';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -143,6 +143,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { path: '/dashboard/employees', label: 'Employees', icon: FaUsers },
     { path: '/dashboard/documents', label: 'Documents', icon: FaFolder },
     { path: '/dashboard/messages', label: 'Messages', icon: FaComments },
+    { path: '/dashboard/calendar', label: 'Calendar', icon: FaCalendar },
     { path: '/dashboard/upload-links', label: 'Upload Links', icon: FaLink },
     { path: '/dashboard/account', label: 'My Account', icon: FaUserCircle },
     { path: '/dashboard/settings', label: 'Settings', icon: FaCog, adminOnly: true },
