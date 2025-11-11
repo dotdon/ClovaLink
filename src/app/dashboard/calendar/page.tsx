@@ -1076,12 +1076,13 @@ export default function CalendarPage() {
           /* Global Modal Styles */
           :global(.event-modal .modal-content),
           :global(.create-event-modal .modal-content) {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
             border: 2px solid rgba(102, 126, 234, 0.3);
             border-radius: 20px;
             color: #ffffff;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
             overflow: hidden;
+            opacity: 1 !important;
           }
 
           :global(.event-modal .modal-header),

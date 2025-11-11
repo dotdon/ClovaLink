@@ -197,13 +197,30 @@
   -webkit-backdrop-filter: none !important;
 }
 
+/* Exclude calendar modals from white background */
+.event-modal .modal-content,
+.create-event-modal .modal-content {
+  background: none !important;
+}
+
 .modal-header {
   border-bottom: 1px solid #ecf0f1 !important;
   background: #ffffff !important;
 }
 
+.event-modal .modal-header,
+.create-event-modal .modal-header {
+  background: none !important;
+  border-bottom: none !important;
+}
+
 .modal-body {
   background: #ffffff !important;
+}
+
+.event-modal .modal-body,
+.create-event-modal .modal-body {
+  background: none !important;
 }
 
 .modal-title {
@@ -211,9 +228,20 @@
   font-weight: 700 !important;
 }
 
+.event-modal .modal-title,
+.create-event-modal .modal-title {
+  color: #ffffff !important;
+}
+
 .modal-footer {
   border-top: 1px solid #ecf0f1 !important;
   background: #ffffff !important;
+}
+
+.event-modal .modal-footer,
+.create-event-modal .modal-footer {
+  background: none !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 /* Links */
