@@ -198,7 +198,7 @@ export default function AddEmployeeModal({ show, onHide, onSubmit }: AddEmployee
         }
 
         .add-employee-modal :global(.modal-header-custom) {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+          background: #667eea !important;
           border-bottom: none !important;
           padding: 1.5rem 2rem !important;
           color: white !important;
@@ -318,7 +318,7 @@ export default function AddEmployeeModal({ show, onHide, onSubmit }: AddEmployee
         }
 
         .add-employee-modal :global(.submit-btn) {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+          background: #667eea !important;
           border: none !important;
           color: white !important;
           padding: 0.65rem 1.75rem !important;

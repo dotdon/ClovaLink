@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Form, Modal, Alert, Dropdown, ButtonGroup } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
-import { FaDownload, FaTrash, FaFolder, FaEye, FaUpload, FaFolderPlus, FaFile, FaEdit, FaArrowLeft, FaEllipsisV, FaSearch, FaCheckCircle, FaShare, FaFilePdf, FaFileWord, FaFileImage, FaInfo, FaTh, FaList, FaSortAlphaDown, FaSortAmountDown, FaCalendarAlt, FaStar, FaRegStar, FaThumbtack, FaBuilding, FaLock, FaClipboardList, FaArrowsAlt } from 'react-icons/fa';
+import { FaDownload, FaTrash, FaFolder, FaEye, FaUpload, FaFolderPlus, FaFile, FaEdit, FaArrowLeft, FaEllipsisV, FaSearch, FaCheckCircle, FaShare, FaFilePdf, FaFileWord, FaFileImage, FaInfo, FaTh, FaList, FaSortAlphaDown, FaSortAmountDown, FaCalendarAlt, FaStar, FaRegStar, FaThumbtack, FaBuilding, FaLock, FaClipboardList, FaArrowsAlt, FaInfoCircle } from 'react-icons/fa';
 import { useSession } from 'next-auth/react';
 import { hasPermission, Permission, canAccessFolder, canManageFolder, canManageDocument } from '@/lib/permissions';
 import DocumentViewerModal from '@/components/viewers/DocumentViewerModal';
@@ -2450,14 +2450,28 @@ export default function DocumentsPage() {
           onDownload={handleDownload}
         />
 
-        <Modal show={showUploadModal} onHide={() => setShowUploadModal(false)}>
-          <Modal.Header closeButton>
-            <Modal.Title>Upload Documents</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <Form onSubmit={handleUpload}>
+        <Modal show={showUploadModal} onHide={() => setShowUploadModal(false)} centered className="upload-modal">
+          <div className="modal-header-custom">
+            <div className="d-flex align-items-center gap-3">
+              <div className="modal-icon-wrapper">
+                <FaUpload />
+              </div>
+              <Modal.Title>Upload Documents</Modal.Title>
+            </div>
+            <button
+              type="button"
+              className="btn-close"
+              onClick={() => setShowUploadModal(false)}
+              aria-label="Close"
+            />
+          </div>
+          <Form onSubmit={handleUpload}>
+            <div className="modal-body-custom">
               <Form.Group>
-                <Form.Label>Select Files</Form.Label>
+                <Form.Label className="form-label-custom">
+                  <FaFile className="label-icon" />
+                  Select Files
+                </Form.Label>
                 <Form.Control
                   type="file"
                   multiple
@@ -2466,49 +2480,78 @@ export default function DocumentsPage() {
                     setUploadFiles(files);
                   }}
                   required
+                  className="form-control-custom"
                 />
+                {uploadFiles.length > 0 && (
+                  <div className="selected-files-info">
+                    <FaCheckCircle />
+                    <span>{uploadFiles.length} file{uploadFiles.length !== 1 ? 's' : ''} selected</span>
+                  </div>
+                )}
               </Form.Group>
-              <div className="mt-3 d-flex justify-content-end">
-                <Button variant="secondary" onClick={() => {
-                  setShowUploadModal(false);
-                  setUploadFiles([]);
-                }} className="me-2">
-                  Cancel
-                </Button>
-                <Button variant="primary" type="submit" disabled={!uploadFiles.length}>
-                  Upload {uploadFiles.length > 0 ? `(${uploadFiles.length} files)` : ''}
-                </Button>
-              </div>
-            </Form>
-          </Modal.Body>
+            </div>
+            <div className="modal-footer-custom">
+              <Button variant="secondary" onClick={() => {
+                setShowUploadModal(false);
+                setUploadFiles([]);
+              }} className="cancel-btn">
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit" disabled={!uploadFiles.length} className="submit-btn">
+                <FaUpload className="me-2" />
+                Upload {uploadFiles.length > 0 ? `(${uploadFiles.length})` : ''}
+              </Button>
+            </div>
+          </Form>
         </Modal>
 
-        <Modal show={showCreateFolderModal} onHide={() => setShowCreateFolderModal(false)}>
-          <Modal.Header closeButton>
-            <Modal.Title>Create New Folder</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <Form onSubmit={handleCreateFolder}>
+        <Modal show={showCreateFolderModal} onHide={() => setShowCreateFolderModal(false)} centered className="create-folder-modal">
+          <div className="modal-header-custom">
+            <div className="d-flex align-items-center gap-3">
+              <div className="modal-icon-wrapper">
+                <FaFolderPlus />
+              </div>
+              <Modal.Title>Create New Folder</Modal.Title>
+            </div>
+            <button
+              type="button"
+              className="btn-close"
+              onClick={() => setShowCreateFolderModal(false)}
+              aria-label="Close"
+            />
+          </div>
+          <Form onSubmit={handleCreateFolder}>
+            <div className="modal-body-custom">
               <Form.Group>
-                <Form.Label>Folder Name</Form.Label>
+                <Form.Label className="form-label-custom">
+                  <FaFolder className="label-icon" />
+                  Folder Name
+                </Form.Label>
                 <Form.Control
                   type="text"
                   value={newFolderName}
                   onChange={(e) => setNewFolderName(e.target.value)}
                   placeholder="Enter folder name"
                   required
+                  className="form-control-custom"
+                  autoFocus
                 />
               </Form.Group>
-              <div className="mt-3 d-flex justify-content-end">
-                <Button variant="secondary" onClick={() => setShowCreateFolderModal(false)} className="me-2">
-                  Cancel
-                </Button>
-                <Button variant="primary" type="submit">
-                  Create
-                </Button>
+              <div className="folder-hint">
+                <FaInfoCircle />
+                <span>Create a folder to organize your documents</span>
               </div>
-            </Form>
-          </Modal.Body>
+            </div>
+            <div className="modal-footer-custom">
+              <Button variant="secondary" onClick={() => setShowCreateFolderModal(false)} className="cancel-btn">
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit" className="submit-btn">
+                <FaFolderPlus className="me-2" />
+                Create Folder
+              </Button>
+            </div>
+          </Form>
         </Modal>
 
         <RenameModal
@@ -4994,6 +5037,179 @@ export default function DocumentsPage() {
 
           :global(.move-modal .btn-close:hover) {
             opacity: 1 !important;
+          }
+
+          /* Upload Modal Styles */
+          :global(.upload-modal .modal-content),
+          :global(.create-folder-modal .modal-content) {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
+            border: 1px solid rgba(102, 126, 234, 0.3) !important;
+            border-radius: 16px !important;
+            overflow: hidden !important;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5) !important;
+          }
+
+          :global(.upload-modal .modal-header-custom),
+          :global(.create-folder-modal .modal-header-custom) {
+            background: #667eea !important;
+            border-bottom: none !important;
+            padding: 1.5rem 2rem !important;
+            color: white !important;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+
+          :global(.upload-modal .modal-header-custom .btn-close),
+          :global(.create-folder-modal .modal-header-custom .btn-close) {
+            filter: brightness(0) invert(1) !important;
+            opacity: 0.8 !important;
+          }
+
+          :global(.upload-modal .modal-header-custom .btn-close:hover),
+          :global(.create-folder-modal .modal-header-custom .btn-close:hover) {
+            opacity: 1 !important;
+          }
+
+          :global(.upload-modal .modal-title),
+          :global(.create-folder-modal .modal-title) {
+            font-size: 1.5rem !important;
+            font-weight: 600 !important;
+            color: white !important;
+          }
+
+          :global(.upload-modal .modal-icon-wrapper),
+          :global(.create-folder-modal .modal-icon-wrapper) {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            font-size: 1.2rem;
+          }
+
+          :global(.upload-modal .modal-body-custom),
+          :global(.create-folder-modal .modal-body-custom) {
+            padding: 2rem !important;
+            background: transparent !important;
+          }
+
+          :global(.upload-modal .form-label-custom),
+          :global(.create-folder-modal .form-label-custom) {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: rgba(255, 255, 255, 0.9) !important;
+            font-weight: 500 !important;
+            font-size: 0.95rem !important;
+            margin-bottom: 0.75rem !important;
+          }
+
+          :global(.upload-modal .label-icon),
+          :global(.create-folder-modal .label-icon) {
+            color: #667eea;
+            font-size: 1rem;
+          }
+
+          :global(.upload-modal .form-control-custom),
+          :global(.create-folder-modal .form-control-custom) {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            border-radius: 10px !important;
+            color: #ffffff !important;
+            padding: 0.75rem 1rem !important;
+            font-size: 0.95rem !important;
+            transition: all 0.3s ease !important;
+          }
+
+          :global(.upload-modal .form-control-custom:focus),
+          :global(.create-folder-modal .form-control-custom:focus) {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: #667eea !important;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2) !important;
+            color: #ffffff !important;
+          }
+
+          :global(.upload-modal .form-control-custom::placeholder),
+          :global(.create-folder-modal .form-control-custom::placeholder) {
+            color: rgba(255, 255, 255, 0.4) !important;
+          }
+
+          :global(.upload-modal .selected-files-info),
+          :global(.create-folder-modal .folder-hint) {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding: 0.75rem 1rem;
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 8px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.85rem;
+          }
+
+          :global(.upload-modal .selected-files-info svg),
+          :global(.create-folder-modal .folder-hint svg) {
+            color: #667eea;
+            flex-shrink: 0;
+          }
+
+          :global(.upload-modal .modal-footer-custom),
+          :global(.create-folder-modal .modal-footer-custom) {
+            background: rgba(255, 255, 255, 0.03) !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+            padding: 1.5rem 2rem !important;
+            gap: 1rem !important;
+            display: flex;
+            justify-content: flex-end;
+          }
+
+          :global(.upload-modal .cancel-btn),
+          :global(.create-folder-modal .cancel-btn) {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            color: #ffffff !important;
+            padding: 0.65rem 1.5rem !important;
+            border-radius: 10px !important;
+            font-weight: 500 !important;
+            transition: all 0.3s ease !important;
+          }
+
+          :global(.upload-modal .cancel-btn:hover),
+          :global(.create-folder-modal .cancel-btn:hover) {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border-color: rgba(255, 255, 255, 0.3) !important;
+            transform: translateY(-1px) !important;
+          }
+
+          :global(.upload-modal .submit-btn),
+          :global(.create-folder-modal .submit-btn) {
+            background: #667eea !important;
+            border: none !important;
+            color: white !important;
+            padding: 0.65rem 1.75rem !important;
+            border-radius: 10px !important;
+            font-weight: 500 !important;
+            transition: all 0.3s ease !important;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+          }
+
+          :global(.upload-modal .submit-btn:hover:not(:disabled)),
+          :global(.create-folder-modal .submit-btn:hover:not(:disabled)) {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6) !important;
+          }
+
+          :global(.upload-modal .submit-btn:disabled),
+          :global(.create-folder-modal .submit-btn:disabled) {
+            opacity: 0.6 !important;
+            cursor: not-allowed !important;
           }
         `}</style>
       </div>

@@ -589,7 +589,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         }
         
         .nav-item.active {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: #667eea;
           color: #ffffff !important;
           box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5), inset 0 1px 0 rgba(255,255,255,0.2);
           transform: translateX(8px) scale(1.05);
@@ -804,7 +804,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         }
         
         .side-menu-item.active {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: #667eea;
           color: #ffffff !important;
           box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5), inset 0 1px 0 rgba(255,255,255,0.2);
           transform: translateX(8px) scale(1.05);
