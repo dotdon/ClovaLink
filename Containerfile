@@ -3,12 +3,20 @@ FROM node:20-bullseye AS builder
 
 WORKDIR /app
 
+# Install Rust for building rust-core
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
 # Copy package files
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies
+# Copy rust-core directory
+COPY rust-core ./rust-core/
+
+# Install dependencies and build Rust library
 RUN npm ci
+RUN cd rust-core && npm install && npm run build
 
 # Copy source code
 COPY . .
@@ -36,6 +44,8 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/next.config.js ./
 COPY --from=builder /app/server.js ./
 COPY --from=builder /app/copy-pdf-worker.js ./
+COPY --from=builder /app/rust-core ./rust-core
+COPY --from=builder /app/src ./src
 
 # Create uploads directory
 RUN mkdir -p uploads

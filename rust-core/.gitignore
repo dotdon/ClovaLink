@@ -1,0 +1,11 @@
+# Rust
+target/
+Cargo.lock
+
+# Node
+node_modules/
+*.node
+
+# Build artifacts
+*.tsbuildinfo
+

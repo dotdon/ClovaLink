@@ -1,16 +1,29 @@
 import crypto from 'crypto';
+import {
+  generateEncryptionKey as generateKey,
+  generateNonce,
+  encryptChunk,
+  decryptChunk,
+  deriveKey as rustDeriveKey,
+  getCryptoImplementation
+} from './cryptoAdapter';
 
 // Encryption configuration
-const ALGORITHM = 'aes-256-gcm';
+const USE_RUST = process.env.USE_RUST_CRYPTO === 'true';
+const ALGORITHM = USE_RUST ? 'xchacha20-poly1305' : 'aes-256-gcm';
 const KEY_LENGTH = 32; // 256 bits
-const IV_LENGTH = 16; // 128 bits
+const IV_LENGTH = USE_RUST ? 24 : 16; // XChaCha20 uses 24-byte nonce, AES-GCM uses 16-byte IV
 const AUTH_TAG_LENGTH = 16; // 128 bits
 const SALT_LENGTH = 64; // 512 bits
 
 /**
  * Generate a random encryption key from the master key and salt
+ * Uses Rust BLAKE3 KDF if available, falls back to PBKDF2
  */
 function deriveKey(masterKey: string, salt: Buffer): Buffer {
+  if (USE_RUST) {
+    return rustDeriveKey(masterKey, salt, 'clovalink-file-encryption');
+  }
   return crypto.pbkdf2Sync(masterKey, salt, 100000, KEY_LENGTH, 'sha512');
 }
 
@@ -22,11 +35,15 @@ function deriveKey(masterKey: string, salt: Buffer): Buffer {
 function deriveCompanyKey(masterKey: string, companyId: string): Buffer {
   // Use company ID as additional entropy for key derivation
   const companySalt = Buffer.from(`company:${companyId}:salt`, 'utf-8');
+  
+  if (USE_RUST) {
+    return rustDeriveKey(`${masterKey}:${companyId}`, companySalt, 'clovalink-company-encryption');
+  }
   return crypto.pbkdf2Sync(masterKey, companySalt, 100000, KEY_LENGTH, 'sha512');
 }
 
 /**
- * Encrypt a buffer using AES-256-GCM
+ * Encrypt a buffer using XChaCha20-Poly1305 (Rust) or AES-256-GCM (JS fallback)
  * @param buffer - The data to encrypt
  * @param masterKey - The master encryption key from environment
  * @returns Object containing encrypted data, IV, auth tag, and salt
@@ -41,37 +58,48 @@ export function encryptBuffer(buffer: Buffer, masterKey: string): {
     throw new Error('Invalid master key: must be at least 32 characters');
   }
 
-  // Generate random salt and IV
+  // Generate random salt and IV/nonce
   const salt = crypto.randomBytes(SALT_LENGTH);
-  const iv = crypto.randomBytes(IV_LENGTH);
+  const iv = USE_RUST ? generateNonce() : crypto.randomBytes(IV_LENGTH);
   
   // Derive encryption key from master key and salt
   const key = deriveKey(masterKey, salt);
   
-  // Create cipher
-  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
-  
-  // Encrypt data
-  const encryptedData = Buffer.concat([
-    cipher.update(buffer),
-    cipher.final()
-  ]);
-  
-  // Get authentication tag
-  const authTag = cipher.getAuthTag();
-  
-  return {
-    encryptedData,
-    iv,
-    authTag,
-    salt
-  };
+  if (USE_RUST) {
+    // Use Rust crypto (XChaCha20-Poly1305)
+    const encryptedWithTag = encryptChunk(buffer, key, iv);
+    // Rust returns encrypted data with auth tag appended (last 16 bytes)
+    const encryptedData = encryptedWithTag.slice(0, -16);
+    const authTag = encryptedWithTag.slice(-16);
+    
+    return {
+      encryptedData,
+      iv,
+      authTag,
+      salt
+    };
+  } else {
+    // Use JavaScript crypto (AES-256-GCM)
+    const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+    const encryptedData = Buffer.concat([
+      cipher.update(buffer),
+      cipher.final()
+    ]);
+    const authTag = cipher.getAuthTag();
+    
+    return {
+      encryptedData,
+      iv,
+      authTag,
+      salt
+    };
+  }
 }
 
 /**
- * Decrypt a buffer using AES-256-GCM
+ * Decrypt a buffer using XChaCha20-Poly1305 (Rust) or AES-256-GCM (JS fallback)
  * @param encryptedData - The encrypted data
- * @param iv - The initialization vector
+ * @param iv - The initialization vector or nonce
  * @param authTag - The authentication tag
  * @param salt - The salt used for key derivation
  * @param masterKey - The master encryption key from environment
@@ -91,17 +119,23 @@ export function decryptBuffer(
   // Derive the same encryption key
   const key = deriveKey(masterKey, salt);
   
-  // Create decipher
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-  decipher.setAuthTag(authTag);
-  
-  // Decrypt data
-  const decryptedData = Buffer.concat([
-    decipher.update(encryptedData),
-    decipher.final()
-  ]);
-  
-  return decryptedData;
+  if (USE_RUST) {
+    // Use Rust crypto (XChaCha20-Poly1305)
+    // Rust expects encrypted data with auth tag appended
+    const encryptedWithTag = Buffer.concat([encryptedData, authTag]);
+    return decryptChunk(encryptedWithTag, key, iv);
+  } else {
+    // Use JavaScript crypto (AES-256-GCM)
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    decipher.setAuthTag(authTag);
+    
+    const decryptedData = Buffer.concat([
+      decipher.update(encryptedData),
+      decipher.final()
+    ]);
+    
+    return decryptedData;
+  }
 }
 
 /**
@@ -191,5 +225,15 @@ export function isDocumentEncrypted(document: any): boolean {
  * Use this to generate the ENCRYPTION_KEY for your .env file
  */
 export function generateEncryptionKey(): string {
+  if (USE_RUST) {
+    return generateKey().toString('base64');
+  }
   return crypto.randomBytes(32).toString('base64');
+}
+
+// Log which crypto implementation is being used
+if (USE_RUST) {
+  console.log(`🦀 Document encryption using Rust crypto (${getCryptoImplementation()}): ${ALGORITHM}`);
+} else {
+  console.log(`📦 Document encryption using JavaScript crypto: ${ALGORITHM}`);
 }

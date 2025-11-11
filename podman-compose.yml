@@ -6,7 +6,7 @@ services:
   app:
     image: node:20-bullseye
     working_dir: /app
-    command: sh -c "if [ ! -d 'node_modules' ] || [ ! -f 'node_modules/.installed' ]; then npm install && touch node_modules/.installed; fi && npx prisma db push --skip-generate && npm run dev"
+    command: sh -c "if [ ! -d 'node_modules' ] || [ ! -f 'node_modules/.installed' ]; then npm install && touch node_modules/.installed; fi && if [ ! -f 'rust-core/.rust-installed' ]; then curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && touch rust-core/.rust-installed; fi && if [ -f /root/.cargo/env ]; then . /root/.cargo/env && cd rust-core && npm install && npm run build && cd ..; fi && npx prisma db push --skip-generate && npm run dev"
     ports:
       - "3000:3000"
     environment:
@@ -22,6 +22,7 @@ services:
       - UPLOAD_DIR=/app/uploads
       - WATCHPACK_POLLING=true
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - USE_RUST_CRYPTO=${USE_RUST_CRYPTO:-false}
     volumes:
       - .:/app:delegated
       - node_modules_cache:/app/node_modules

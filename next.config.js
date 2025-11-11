@@ -13,6 +13,30 @@ const nextConfig = {
       };
     }
 
+    // Externalize rust-core native module completely
+    if (isServer) {
+      // Don't bundle rust-core or .node files on server
+      if (!config.externals) {
+        config.externals = [];
+      }
+      if (!Array.isArray(config.externals)) {
+        config.externals = [config.externals];
+      }
+      
+      // Externalize the entire rust-core directory
+      config.externals.push('../../rust-core');
+      config.externals.push('../rust-core');
+      config.externals.push('./rust-core');
+      
+      // Externalize any .node files
+      config.externals.push(({ request }, callback) => {
+        if (request && (request.includes('rust-core') || /\.node$/.test(request))) {
+          return callback(null, `commonjs ${request}`);
+        }
+        callback();
+      });
+    }
+
     return config;
   },
   // Security headers

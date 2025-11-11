@@ -4284,10 +4284,13 @@ export default function DocumentsPage() {
             align-items: center;
             min-height: 140px;
             background: rgba(255, 255, 255, 0.02);
+            position: relative;
+            z-index: 1;
           }
 
           .item-icon-wrapper {
             position: relative;
+            z-index: 1;
           }
 
           .folder-icon,
@@ -4441,6 +4444,8 @@ export default function DocumentsPage() {
           .item-info {
             padding: 1rem;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            z-index: 2;
           }
 
           .item-name-row {
@@ -4448,6 +4453,8 @@ export default function DocumentsPage() {
             justify-content: space-between;
             align-items: start;
             gap: 0.5rem;
+            position: relative;
+            z-index: 2;
           }
 
           .item-name {
@@ -4522,7 +4529,7 @@ export default function DocumentsPage() {
                 position: absolute;
                 top: 0.5rem;
                 right: 0.5rem;
-                z-index: 100;
+                z-index: 10;
               }
 
               .item-dropdown :global(.dropdown-toggle) {

@@ -1,0 +1,44 @@
+{
+  "name": "clovalink-rust-core",
+  "version": "0.1.0",
+  "description": "High-performance Rust core for ClovaLink encryption and hashing",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "prepublishOnly": "napi prepublish -t npm",
+    "test": "cargo test",
+    "artifacts": "napi artifacts",
+    "version": "napi version"
+  },
+  "napi": {
+    "name": "clovalink-rust-core",
+    "triples": {
+      "defaults": true,
+      "additional": [
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-gnu",
+        "armv7-unknown-linux-gnueabihf",
+        "aarch64-apple-darwin",
+        "aarch64-linux-android"
+      ]
+    }
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^2.18.0"
+  },
+  "engines": {
+    "node": ">= 16"
+  },
+  "keywords": [
+    "rust",
+    "napi",
+    "encryption",
+    "hashing",
+    "performance",
+    "xchacha20poly1305",
+    "blake3"
+  ]
+}
+
