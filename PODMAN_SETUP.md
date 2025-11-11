@@ -1,199 +1,321 @@
-# Podman Setup for ClovaLink
+# ClovaLink Podman Setup Guide
 
-ClovaLink uses **Podman** as its container runtime. This document covers installation, usage, and troubleshooting.
+This guide covers setting up and running ClovaLink using Podman for containerized deployment.
 
-## Why Podman?
+## Prerequisites
 
-Podman is a daemonless container engine with several advantages:
-- **Better security** - Rootless containers by default
-- **No daemon required** - Simpler architecture
-- **OCI compliant** - Works with standard container images
-- **Docker compatible** - Uses same commands and compose files
-- **Better performance** - Especially on macOS
+- Podman installed on your system
+- Basic understanding of container technology
+- 4GB+ RAM available
+- 10GB+ disk space
 
-## Quick Start
+## Installation
 
-### 1. Start ClovaLink with Podman
+### macOS
+
+```bash
+brew install podman
+```
+
+### Linux
+
+Follow the official installation guide at [podman.io](https://podman.io/getting-started/installation)
+
+## Initial Setup
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/dotdon/clovalink.git
+cd clovalink
+```
+
+### 2. Configure Environment Variables
+
+Create your `.env` file:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and configure:
+
+```env
+# Database
+DATABASE_URL=postgresql://postgres:postgres@db:5432/clovalink?schema=public
+
+# NextAuth
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-secret-here
+
+# SMTP (Optional)
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your-email@example.com
+SMTP_PASSWORD=your-password
+SMTP_FROM=noreply@example.com
+
+# Document Encryption
+ENCRYPTION_KEY=your-generated-key-here
+```
+
+### 3. Generate Encryption Key
+
+```bash
+node generate-encryption-key.js
+```
+
+Copy the generated key and add it to your `.env` file as `ENCRYPTION_KEY`.
+
+### 4. Initialize Podman Machine (First Time Only)
+
+```bash
+podman machine init
+podman machine start
+```
+
+### 5. Start ClovaLink
 
 ```bash
 ./podman-start.sh
 ```
 
 This script will:
-- Start the Podman machine if not running
-- Launch all ClovaLink containers
-- Display the access URL and useful commands
+- Start PostgreSQL database container
+- Start the Next.js application container
+- Run database migrations
+- Seed initial data
 
-### 2. Stop ClovaLink
+### 6. Access the Application
+
+Open your browser and navigate to: `http://localhost:3000`
+
+Default admin credentials:
+- Email: `admin@example.com`
+- Password: `admin123`
+
+## Container Management
+
+### Start Containers
+
+```bash
+./podman-start.sh
+```
+
+### Stop Containers
 
 ```bash
 ./podman-stop.sh
 ```
 
-## Manual Commands
-
-If you prefer manual control:
+### View Logs
 
 ```bash
-# Start Podman machine (first time only)
-podman machine init
-podman machine start
+# All containers
+podman compose -f podman-compose.yml logs -f
 
-# Set Docker socket environment variable
-export DOCKER_HOST='unix:///var/folders/z0/69n2_wrs087g82y3gzhfl0240000gn/T/podman/podman-machine-default-api.sock'
+# App container only
+podman compose -f podman-compose.yml logs -f app
 
-# Start containers
-podman compose up -d
-
-# View logs
-podman compose logs -f
-
-# Stop containers
-podman compose down
-
-# Stop Podman machine (optional)
-podman machine stop
+# Database container only
+podman compose -f podman-compose.yml logs -f db
 ```
 
-## Persistent Configuration
-
-To avoid setting `DOCKER_HOST` every time, add this to your shell profile:
-
-### For Zsh (default on macOS):
-
-Add to `~/.zshrc`:
-```bash
-# Podman Docker compatibility
-export DOCKER_HOST='unix:///var/folders/z0/69n2_wrs087g82y3gzhfl0240000gn/T/podman/podman-machine-default-api.sock'
-
-# Optional: Create docker alias to use podman
-alias docker='podman'
-```
-
-### For Bash:
-
-Add to `~/.bash_profile` or `~/.bashrc`:
-```bash
-# Podman Docker compatibility
-export DOCKER_HOST='unix:///var/folders/z0/69n2_wrs087g82y3gzhfl0240000gn/T/podman/podman-machine-default-api.sock'
-
-# Optional: Create docker alias to use podman
-alias docker='podman'
-```
-
-Then reload your shell:
-```bash
-source ~/.zshrc  # or source ~/.bash_profile
-```
-
-## Useful Commands
+### Check Container Status
 
 ```bash
-# Check Podman machine status
-podman machine ls
-
-# View container status
-podman compose ps
-
-# View all logs
-podman compose logs -f
-
-# View specific service logs
-podman compose logs -f app
-podman compose logs -f db
-
-# Restart containers
-podman compose restart
-
-# Rebuild containers
-podman compose up -d --build
-
-# Enter app container shell
-podman compose exec app bash
-
-# Run Prisma commands
-podman compose exec app npx prisma studio
-podman compose exec app npx prisma db push
+podman compose -f podman-compose.yml ps
 ```
 
-## Compose File
+### Restart Containers
 
-ClovaLink uses `podman-compose.yml` for its configuration. Key features:
+```bash
+podman compose -f podman-compose.yml restart
+```
 
-- **Optimized volumes**: Dedicated cache volumes prevent filesystem conflicts
-- **Delegated mounting**: Better performance on macOS
-- **File watching**: Enabled via `WATCHPACK_POLLING`
-- **Health checks**: Automatic container health monitoring
+### Access Container Shell
+
+```bash
+# App container
+podman compose -f podman-compose.yml exec app bash
+
+# Database container
+podman compose -f podman-compose.yml exec db psql -U postgres -d clovalink
+```
+
+## Database Management
+
+### Run Migrations
+
+```bash
+podman compose -f podman-compose.yml exec app npx prisma db push
+```
+
+### Seed Database
+
+```bash
+podman compose -f podman-compose.yml exec app npx prisma db seed
+```
+
+### Open Prisma Studio
+
+```bash
+podman compose -f podman-compose.yml exec app npx prisma studio
+```
+
+Access Prisma Studio at: `http://localhost:5555`
+
+### Backup Database
+
+```bash
+podman compose -f podman-compose.yml exec db pg_dump -U postgres clovalink > backup.sql
+```
+
+### Restore Database
+
+```bash
+cat backup.sql | podman compose -f podman-compose.yml exec -T db psql -U postgres -d clovalink
+```
+
+## File Encryption Migration
+
+If you have existing unencrypted files, run the migration:
+
+```bash
+podman compose -f podman-compose.yml exec app npm run encrypt:migrate
+```
+
+This will:
+- Find all unencrypted documents
+- Encrypt each file with company-specific keys
+- Update database records with encryption metadata
+- Provide a summary report
 
 ## Troubleshooting
 
-### Machine not starting
+### Containers Won't Start
+
+Check if Podman machine is running:
+
 ```bash
-podman machine stop
-podman machine rm
-podman machine init
+podman machine list
 podman machine start
 ```
 
-### Containers not accessible
-Make sure the `DOCKER_HOST` environment variable is set (only needed if not using scripts):
-```bash
-export DOCKER_HOST='unix:///var/folders/z0/69n2_wrs087g82y3gzhfl0240000gn/T/podman/podman-machine-default-api.sock'
+### Port Already in Use
+
+If port 3000 or 5432 is already in use, modify `podman-compose.yml`:
+
+```yaml
+ports:
+  - "3001:3000"  # Change host port
 ```
 
-Or add to your shell profile permanently (see instructions above).
+### Database Connection Issues
 
-### Volume permission issues
-The `podman-compose.yml` includes optimizations:
-- Dedicated volume for `.next` cache
-- `delegated` mount option for better macOS performance
-- `WATCHPACK_POLLING=true` for file watching
-- Named volumes for node_modules and postgres data
+Ensure the database container is healthy:
 
-### Port already in use
-If port 3000 or 5432 is already in use:
 ```bash
-# Find process using port
-lsof -i :3000
-lsof -i :5432
-
-# Kill the process or change ports in podman-compose.yml
+podman compose -f podman-compose.yml exec db pg_isready -U postgres
 ```
 
-### Slow startup
-First startup is slow due to npm install. Subsequent startups are faster thanks to:
-- Volume caching for node_modules
-- `.installed` flag to skip reinstalls
+### Permission Denied Errors
 
-## Performance Tips
+Check file permissions in uploads directory:
 
-1. **Keep Podman machine running** - Starting/stopping frequently is slow
-2. **Allocate adequate resources**:
-   ```bash
-   podman machine stop
-   podman machine set --cpus 4 --memory 4096
-   podman machine start
-   ```
-3. **Clean up old containers/volumes** periodically:
-   ```bash
-   podman system prune -a
-   ```
-
-## Advanced Configuration
-
-### Production Deployment
-
-Use `podman-compose.prod.yml` for production:
 ```bash
-export DOCKER_HOST='unix:///var/folders/z0/69n2_wrs087g82y3gzhfl0240000gn/T/podman/podman-machine-default-api.sock'
-podman compose -f podman-compose.prod.yml up -d
+chmod -R 755 uploads/
 ```
 
-### Custom Podman Machine
+### Out of Memory
 
-Create a machine with specific resources:
+Increase Podman machine resources:
+
 ```bash
-podman machine init --cpus 4 --memory 8192 --disk-size 100 clovalink-machine
-podman machine start clovalink-machine
+podman machine stop
+podman machine set --memory 4096
+podman machine start
 ```
+
+### View Container Resource Usage
+
+```bash
+podman stats
+```
+
+## Production Deployment
+
+### Environment Variables
+
+In production, use environment-specific values:
+
+```env
+NEXTAUTH_URL=https://your-domain.com
+NEXTAUTH_SECRET=<strong-random-secret>
+DATABASE_URL=postgresql://user:password@host:5432/dbname
+ENCRYPTION_KEY=<strong-random-key>
+```
+
+### SSL/TLS
+
+Configure a reverse proxy (nginx/traefik) for HTTPS:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name your-domain.com;
+    
+    ssl_certificate /path/to/cert.pem;
+    ssl_certificate_key /path/to/key.pem;
+    
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+### Data Persistence
+
+Ensure volumes are configured for data persistence:
+
+```yaml
+volumes:
+  postgres_data:    # Database data persists
+  uploads:          # Uploaded files persist
+```
+
+### Scaling
+
+For horizontal scaling, see README.md Security Architecture section for Kubernetes deployment.
+
+## Maintenance
+
+### Update Application
+
+```bash
+git pull
+podman compose -f podman-compose.yml down
+podman compose -f podman-compose.yml up -d --build
+```
+
+### Clean Up Unused Resources
+
+```bash
+podman system prune -a
+```
+
+### View Podman Machine Info
+
+```bash
+podman machine info
+```
+
+## Support
+
+For issues or questions:
+- Check the main README.md
+- Review container logs
+- Open an issue on GitHub
 

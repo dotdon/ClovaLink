@@ -7,6 +7,7 @@ import { join } from 'path';
 import { existsSync } from 'fs';
 import prisma from '@/lib/prisma';
 import { validateFile } from '@/lib/fileValidation';
+import { encryptFile } from '@/lib/documentEncryption';
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
 
@@ -85,12 +86,30 @@ export async function POST(request: Request) {
       const filename = `${timestamp}-${validation.sanitizedFilename}`;
       const filePath = join(UPLOAD_DIR, filename);
 
-      // Save the file
+      // Get file buffer
       const bytes = await file.arrayBuffer();
-      const buffer = new Uint8Array(bytes);
+      const buffer = Buffer.from(bytes);
+      
+      // Encrypt the file with company-specific key
+      let encryptedBuffer: Buffer;
+      let encryptionMetadata: any = null;
       
       try {
-        await writeFile(filePath, buffer);
+        const encryptionResult = encryptFile(buffer, targetCompanyId);
+        encryptedBuffer = encryptionResult.encryptedBuffer;
+        encryptionMetadata = encryptionResult.encryptionMetadata;
+        console.log(`🔒 File "${validation.sanitizedFilename}" encrypted for company ${targetCompanyId}`);
+      } catch (error) {
+        console.error('Error encrypting file:', error);
+        return NextResponse.json(
+          { error: 'Failed to encrypt file' },
+          { status: 500 }
+        );
+      }
+      
+      // Save the encrypted file
+      try {
+        await writeFile(filePath, encryptedBuffer);
       } catch (error) {
         console.error('Error saving file:', error);
         return NextResponse.json(
@@ -99,7 +118,7 @@ export async function POST(request: Request) {
         );
       }
 
-      // Create document record
+      // Create document record with encryption metadata
       const document = await prisma.document.create({
         data: {
           name: validation.sanitizedFilename,
@@ -109,11 +128,18 @@ export async function POST(request: Request) {
           employeeId: session.user.id,
           companyId: targetCompanyId,
           folderId: folderId,
+          // Store encryption metadata
+          isEncrypted: true,
+          encryptionIv: encryptionMetadata.iv,
+          encryptionAuthTag: encryptionMetadata.authTag,
+          encryptionSalt: encryptionMetadata.salt,
+          encryptionAlgorithm: encryptionMetadata.algorithm,
           metadata: {
             originalName: file.name,
             sanitizedName: validation.sanitizedFilename,
             uploadedAt: new Date().toISOString(),
-            isDirectUpload: true
+            isDirectUpload: true,
+            originalSize: file.size // Store original unencrypted size
           }
         }
       });

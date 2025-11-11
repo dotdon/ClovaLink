@@ -32,6 +32,13 @@ ClovaLink is a comprehensive document management system designed for businesses 
 - **Cross-Company Access**: Grant employees access to multiple companies with proper permissions
 - **Document & Folder Passwords**: Additional layer of security for sensitive files and folders
 
+### Encryption
+- **Document Encryption**: Server-side AES-256-GCM encryption for all uploaded files
+- **Company-Specific Keys**: Each company's documents are encrypted with unique derived keys
+- **Encryption at Rest**: Files are encrypted before being written to disk
+- **Multi-Tenant Isolation**: Cryptographic separation ensures Company A cannot access Company B's files
+- **End-to-End Messaging**: Client-side RSA-2048 encryption for private messages where server cannot decrypt content
+
 ### Sharing & Collaboration
 - **Temporary Sharing Links**: Create time-limited links for document downloads and uploads
 - **Link Expiration**: Configurable expiration times for shared links
@@ -105,7 +112,11 @@ Additional documentation:
    ```bash
    cp .env.example .env
    ```
-   Edit `.env` with your configuration.
+   Edit `.env` with your configuration. Generate an encryption key:
+   ```bash
+   node generate-encryption-key.js
+   ```
+   Add the generated `ENCRYPTION_KEY` to your `.env` file.
 
 4. Set up the database:
    ```bash
@@ -139,7 +150,11 @@ Additional documentation:
    ```bash
    cp .env.example .env
    ```
-   Edit `.env` with your configuration.
+   Edit `.env` with your configuration. Generate an encryption key:
+   ```bash
+   node generate-encryption-key.js
+   ```
+   Add the generated `ENCRYPTION_KEY` to your `.env` file.
 
 4. **Initialize Podman machine** (first time only):
    ```bash
@@ -154,8 +169,8 @@ Additional documentation:
 
 6. Initialize the database:
    ```bash
-   podman compose exec app npx prisma db push
-   podman compose exec app npx prisma db seed
+   podman compose -f podman-compose.yml exec app npx prisma db push
+   podman compose -f podman-compose.yml exec app npx prisma db seed
    ```
 
 ### Podman Commands
@@ -205,6 +220,7 @@ podman compose exec app npx prisma studio # Open Prisma Studio
 - **@simplewebauthn/browser**: WebAuthn client library
 - **otpauth**: TOTP (Time-based One-Time Password) generation
 - **bcryptjs**: Password hashing
+- **Node.js Crypto**: AES-256-GCM encryption for documents and RSA-2048 for messaging
 
 ### UI/UX
 - **React Bootstrap**: UI component library
@@ -215,6 +231,47 @@ podman compose exec app npx prisma studio # Open Prisma Studio
 - **Archiver & JSZip**: File compression and archive handling
 - **Nodemailer**: Email sending functionality
 - **Pino**: Logging framework
+
+## Security Architecture
+
+### Document Encryption
+ClovaLink implements server-side encryption at rest with company-specific key derivation:
+
+**Key Derivation:**
+```
+Company Key = PBKDF2(Master Key, Company ID, 100000 iterations, SHA-512)
+File Encryption = AES-256-GCM(File Data, Company Key)
+```
+
+**Security Properties:**
+- Each company's documents are encrypted with a unique derived key
+- Master key is stored in environment variables (Kubernetes Secrets in production)
+- Encryption metadata (IV, auth tag, salt) stored per-file in database
+- Cross-company access requires both master key and correct company ID
+- Protects against disk theft and provides multi-tenant data isolation
+
+**Deployment:**
+- Designed for containerized environments (Podman/Docker/Kubernetes)
+- Horizontal scaling supported with shared encryption key
+- All app replicas can encrypt/decrypt with proper authorization
+- Suitable for SaaS multi-tenant deployments
+
+### Message Encryption
+End-to-end encrypted messaging uses client-side RSA key pairs:
+
+**Key Management:**
+```
+User Key Pair = RSA-2048 (generated in browser)
+Message Key = AES-256-GCM (per-message)
+Encrypted Message = AES-GCM(Content, Message Key)
+Encrypted Key = RSA-OAEP(Message Key, Recipient Public Key)
+```
+
+**Security Properties:**
+- Private keys never leave the user's browser
+- Server cannot decrypt message content
+- True end-to-end encryption between users
+- Messages encrypted before transmission
 
 ## Project Structure
 
@@ -245,6 +302,8 @@ src/
 │   ├── twoFactor.ts        # 2FA utilities
 │   ├── webauthn.ts         # WebAuthn/Passkey utilities
 │   ├── totp.ts             # TOTP generation
+│   ├── encryption.ts       # End-to-end message encryption (RSA-2048)
+│   ├── documentEncryption.ts # Document encryption at rest (AES-256-GCM)
 │   └── fileValidation.ts   # File upload validation
 └── middleware.ts           # Next.js middleware for auth
 ```
@@ -279,34 +338,35 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Recent Updates
 
 ### Document Management Enhancements (Latest)
-- ✅ **Cross-Company File Moving**: Move documents and folders between companies you have access to
-- ✅ **Advanced Move Modal**: Beautiful, intuitive interface for moving files within or across companies
-- ✅ **Quick Access Pinning**: Pin frequently used folders for instant access
-- ✅ **Favorites System**: Star documents and folders with dedicated Starred view tab
-- ✅ **Password Protection**: Secure documents and folders with individual passwords
-- ✅ **Grid & List Views**: Toggle between viewing modes for optimal browsing experience
-- ✅ **Nested Folder Navigation**: Full path display in move modal (Parent / Child / Grandchild)
-- ✅ **Activity Logs**: Per-item activity tracking accessible from dropdown menu
+- **Cross-Company File Moving**: Move documents and folders between companies you have access to
+- **Advanced Move Modal**: Beautiful, intuitive interface for moving files within or across companies
+- **Quick Access Pinning**: Pin frequently used folders for instant access
+- **Favorites System**: Star documents and folders with dedicated Starred view tab
+- **Password Protection**: Secure documents and folders with individual passwords
+- **Grid & List Views**: Toggle between viewing modes for optimal browsing experience
+- **Nested Folder Navigation**: Full path display in move modal (Parent / Child / Grandchild)
+- **Activity Logs**: Per-item activity tracking accessible from dropdown menu
 
 ### Document Viewing
-- ✅ Embedded PDF viewer with full navigation controls
-- ✅ DOCX document renderer with formatting support
-- ✅ No file size limits for viewing
-- ✅ Local PDF.js worker for offline functionality in Docker
-- ✅ Dark-themed document viewer interface
+- Embedded PDF viewer with full navigation controls
+- DOCX document renderer with formatting support
+- No file size limits for viewing
+- Local PDF.js worker for offline functionality
+- Dark-themed document viewer interface
 
 ### Enhanced Navigation
-- ✅ Breadcrumb navigation with folder icons
-- ✅ Visual folder hierarchy
-- ✅ Improved nested folder support
-- ✅ Drag & drop file organization
+- Breadcrumb navigation with folder icons
+- Visual folder hierarchy
+- Improved nested folder support
+- Drag & drop file organization
 
 ### Security Enhancements
-- ✅ Two-Factor Authentication with TOTP
-- ✅ WebAuthn/Passkey support for passwordless login
-- ✅ Backup codes for 2FA recovery
-- ✅ Document and folder password protection
-- ✅ Cross-company access control
+- Two-Factor Authentication with TOTP
+- WebAuthn/Passkey support for passwordless login
+- Backup codes for 2FA recovery
+- Document and folder password protection
+- Cross-company access control
+- Company-specific document encryption
 
 ## Frequently Asked Questions (FAQ)
 
@@ -387,7 +447,7 @@ A: Use:
 A: Yes! The Move modal displays all folders in a hierarchical list with full paths (e.g., "Parent / Child / Grandchild"), making it easy to select the exact destination.
 
 **Q: How do I move items out of a folder back to root?**
-A: Use the "Move to..." option and select "📁 Root (Top level - no folder)" in the destination dropdown.
+A: Use the "Move to..." option and select "Root (Top level - no folder)" in the destination dropdown.
 
 ### Search & Filtering
 
@@ -416,7 +476,7 @@ A: ClovaLink tracks uploads, downloads, moves, renames, deletions, shares, passw
 2. Ensure PDF.js worker is in `public/pdf-worker/`
 3. Verify `pdfjs-dist` version matches `react-pdf` version (4.8.69)
 4. Clear browser cache and refresh
-5. Try rebuilding: `docker-compose down && docker-compose build && docker-compose up -d`
+5. Try rebuilding: `podman compose -f podman-compose.yml down && podman compose -f podman-compose.yml up -d`
 
 ### DOCX Viewer Issues
 
@@ -457,24 +517,24 @@ A: ClovaLink tracks uploads, downloads, moves, renames, deletions, shares, passw
 3. Try logging out and back in
 4. Contact your administrator to verify permissions
 
-### Docker Issues
+### Container Issues
 
 **Problem**: Containers won't start
 
 **Solutions**:
-1. Check logs: `docker-compose logs app` or `docker logs clovalink-app-1`
+1. Check logs: `podman compose -f podman-compose.yml logs app`
 2. Verify environment variables in `.env`
 3. Ensure ports 3000 and 5432 are available
 4. Check disk space: `df -h`
-5. Try cleaning up: `docker-compose down -v && docker-compose up -d`
+5. Try cleaning up: `podman compose -f podman-compose.yml down -v && podman compose -f podman-compose.yml up -d`
 
 **Problem**: Database connection errors
 
 **Solutions**:
-1. Verify PostgreSQL is running: `docker-compose ps`
+1. Verify PostgreSQL is running: `podman compose -f podman-compose.yml ps`
 2. Check DATABASE_URL in `.env`
-3. Ensure database is initialized: `docker-compose exec app npx prisma db push`
-4. Check database logs: `docker-compose logs db`
+3. Ensure database is initialized: `podman compose -f podman-compose.yml exec app npx prisma db push`
+4. Check database logs: `podman compose -f podman-compose.yml logs db`
 
 ### Performance Issues
 
@@ -483,8 +543,8 @@ A: ClovaLink tracks uploads, downloads, moves, renames, deletions, shares, passw
 **Solutions**:
 1. Check file size - extremely large files may take time
 2. Verify network connection
-3. Check Docker container resources
-4. Monitor disk I/O: `docker stats`
+3. Check container resources: `podman stats`
+4. Monitor disk I/O
 
 **Problem**: Slow folder navigation
 
@@ -492,7 +552,7 @@ A: ClovaLink tracks uploads, downloads, moves, renames, deletions, shares, passw
 1. Reduce number of items in a single folder (consider organizing into subfolders)
 2. Clear browser cache
 3. Check server resources
-4. Restart the app container: `docker-compose restart app`
+4. Restart the app container: `podman compose -f podman-compose.yml restart app`
 
 ## Support
 

@@ -15,7 +15,8 @@
     "prisma:seed": "prisma db seed",
     "prisma:studio": "prisma studio",
     "setup": "node setup.js",
-    "postinstall": "node copy-pdf-worker.js"
+    "postinstall": "node copy-pdf-worker.js",
+    "encrypt:migrate": "ts-node --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} scripts/migrate-encrypt-files.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

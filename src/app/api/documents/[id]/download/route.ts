@@ -5,6 +5,7 @@ import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import prisma from '@/lib/prisma';
+import { decryptFile, isDocumentEncrypted } from '@/lib/documentEncryption';
 
 export const dynamic = 'force-dynamic';
 export const dynamicParams = true;
@@ -42,13 +43,33 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Read and return file
+    // Read the file
     const filePath = join(UPLOAD_DIR, document.path);
     if (!existsSync(filePath)) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
-    const fileContent = await readFile(filePath);
+    let fileContent = await readFile(filePath);
+    
+    // Decrypt file if it's encrypted (using company-specific key)
+    if (isDocumentEncrypted(document)) {
+      try {
+        console.log(`🔓 Decrypting file: ${document.name} for company ${document.companyId}`);
+        fileContent = decryptFile(fileContent, document.companyId, {
+          iv: document.encryptionIv!,
+          authTag: document.encryptionAuthTag!,
+          salt: document.encryptionSalt!,
+          algorithm: document.encryptionAlgorithm!
+        });
+        console.log(`🔓 File "${document.name}" decrypted successfully`);
+      } catch (error) {
+        console.error('Error decrypting file:', error);
+        return NextResponse.json(
+          { error: 'Failed to decrypt file. Possible company key mismatch.' },
+          { status: 500 }
+        );
+      }
+    }
     
     // Log activity for document access
     try {

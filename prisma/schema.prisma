@@ -93,19 +93,25 @@ model EmployeeCompanyAccess {
 }
 
 model Document {
-  id            String         @id @default(cuid())
-  name          String
-  path          String
-  mimeType      String
-  size          Int
-  metadata      Json?
-  employeeId    String
-  companyId     String
-  folderId      String?
-  password      String?        // Encrypted password for document access
-  expiresAt     DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id                String         @id @default(cuid())
+  name              String
+  path              String
+  mimeType          String
+  size              Int
+  metadata          Json?
+  employeeId        String
+  companyId         String
+  folderId          String?
+  password          String?        // Encrypted password for document access
+  expiresAt         DateTime?
+  // Encryption fields for AES-256-GCM
+  encryptionIv      String?        // Initialization vector (base64)
+  encryptionAuthTag String?        // Authentication tag (base64)
+  encryptionSalt    String?        // Salt for key derivation (base64)
+  encryptionAlgorithm String?      // Algorithm used (aes-256-gcm)
+  isEncrypted       Boolean        @default(false) // Whether file is encrypted
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
   
   uploadedBy       Employee      @relation(fields: [employeeId], references: [id])
   company          Company       @relation(fields: [companyId], references: [id])
@@ -120,6 +126,7 @@ model Document {
   @@index([folderId])
   @@index([createdAt])
   @@index([expiresAt])
+  @@index([isEncrypted])
   @@map("documents")
 }
 

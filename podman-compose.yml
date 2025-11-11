@@ -21,6 +21,7 @@ services:
       - NODE_ENV=development
       - UPLOAD_DIR=/app/uploads
       - WATCHPACK_POLLING=true
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
     volumes:
       - .:/app:delegated
       - node_modules_cache:/app/node_modules
