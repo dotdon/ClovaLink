@@ -278,7 +278,7 @@ export default function DashboardPage() {
         
         .header-badge {
           display: inline-block;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: #667eea;
           color: #ffffff;
           padding: 0.5rem 1.5rem;
           border-radius: 50px;
@@ -344,7 +344,7 @@ export default function DashboardPage() {
           font-weight: 800;
           margin: 0.5rem 0 0;
           line-height: 1;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: #667eea;
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
@@ -441,7 +441,7 @@ export default function DashboardPage() {
           width: 40px;
           height: 40px;
           border-radius: 10px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: #667eea;
           color: white;
           display: flex;
           align-items: center;

@@ -516,7 +516,7 @@ export default function CompanyDetailsPage() {
           width: 50px;
           height: 50px;
           border-radius: 12px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: #667eea;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -749,7 +749,7 @@ export default function CompanyDetailsPage() {
           width: 45px;
           height: 45px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: #667eea;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -785,7 +785,7 @@ export default function CompanyDetailsPage() {
         }
 
         :global(.admin-badge) {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+          background: #667eea !important;
           color: white !important;
           border: none !important;
           padding: 0.35rem 0.75rem !important;

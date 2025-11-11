@@ -3385,7 +3385,7 @@ export default function DocumentsPage() {
           }
 
           :global(.activity-modal .modal-body::-webkit-scrollbar-thumb) {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             border-radius: 4px;
           }
 
@@ -3430,7 +3430,7 @@ export default function DocumentsPage() {
             background: linear-gradient(135deg, rgba(102, 126, 234, 0.4) 0%, rgba(118, 75, 162, 0.4) 100%) !important;
             border-color: rgba(102, 126, 234, 0.6) !important;
             color: #ffffff !important;
-            transform: translateY(-2px) !important;
+            transform: translateY(-1px) !important;
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3) !important;
           }
 
@@ -3487,7 +3487,7 @@ export default function DocumentsPage() {
             left: 0;
             width: 3px;
             height: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             opacity: 0;
             transition: opacity 0.3s ease;
           }
@@ -4705,7 +4705,7 @@ export default function DocumentsPage() {
             width: 50px;
             height: 50px;
             border-radius: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            background: #667eea !important;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -4805,7 +4805,7 @@ export default function DocumentsPage() {
           }
 
           :global(.password-modal .submit-btn) {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            background: #667eea !important;
             border: none !important;
             color: #ffffff !important;
             padding: 0.65rem 1.5rem !important;
@@ -4855,7 +4855,7 @@ export default function DocumentsPage() {
             width: 50px;
             height: 50px;
             border-radius: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            background: #667eea !important;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -4962,7 +4962,7 @@ export default function DocumentsPage() {
           }
 
           :global(.move-modal .submit-btn) {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            background: #667eea !important;
             border: none !important;
             color: #ffffff !important;
             padding: 0.65rem 1.5rem !important;

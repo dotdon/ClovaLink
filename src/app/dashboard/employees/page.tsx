@@ -1475,7 +1475,7 @@ export default function EmployeesPage() {
 
           .view-btn.active {
             color: white;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
           }
 
@@ -1515,28 +1515,18 @@ export default function EmployeesPage() {
             width: 56px;
             height: 56px;
             border-radius: 16px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 1.5rem;
             color: white;
             flex-shrink: 0;
-            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
             position: relative;
           }
 
-          .header-icon::after {
-            content: '';
-            position: absolute;
-            inset: -2px;
-            border-radius: 16px;
-            padding: 2px;
-            background: linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1));
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-          }
+          
 
           .header-text {
             flex: 1;
@@ -1560,41 +1550,27 @@ export default function EmployeesPage() {
           }
 
           :global(.add-btn) {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            background: #667eea !important;
             border: none !important;
             padding: 0.75rem 1.75rem !important;
             border-radius: 12px !important;
             font-weight: 600 !important;
             font-size: 0.95rem !important;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.5) !important;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3) !important;
             color: white !important;
             margin-left: auto !important;
             position: relative;
             overflow: hidden;
           }
 
-          :global(.add-btn::before) {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-          }
+          
 
-          :global(.add-btn:hover::before) {
-            width: 300px;
-            height: 300px;
-          }
+          
 
           :global(.add-btn:hover) {
-            transform: translateY(-3px) scale(1.02) !important;
-            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.7) !important;
+            transform: translateY(-1px) !important;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
           }
 
           :global(.add-btn:active) {
@@ -1714,7 +1690,7 @@ export default function EmployeesPage() {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             color: white;
             font-weight: 600;
             font-size: 1rem;
@@ -1829,7 +1805,7 @@ export default function EmployeesPage() {
           }
 
           :global(.employee-card-desktop:hover) {
-            transform: translateY(-2px) !important;
+            transform: translateY(-1px) !important;
             border-color: rgba(102, 126, 234, 0.4) !important;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
           }
@@ -1877,7 +1853,7 @@ export default function EmployeesPage() {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             color: white;
             font-weight: 700;
             font-size: 1.1rem;
@@ -2049,7 +2025,7 @@ export default function EmployeesPage() {
           }
 
           .admin-badge {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             color: white;
             box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
           }
@@ -2512,7 +2488,7 @@ export default function EmployeesPage() {
           }
 
           :global(.delete-confirm-btn:hover) {
-            transform: translateY(-2px) !important;
+            transform: translateY(-1px) !important;
             box-shadow: 0 6px 20px rgba(220, 53, 69, 0.6) !important;
           }
 
@@ -2526,7 +2502,7 @@ export default function EmployeesPage() {
           }
 
           :global(.twofa-modal-header) {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            background: #667eea !important;
             border-bottom: none !important;
             padding: 1.5rem 2rem !important;
             color: white !important;
@@ -2718,7 +2694,7 @@ export default function EmployeesPage() {
           }
 
           :global(.messages-modal-header) {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            background: #667eea !important;
             border-bottom: none !important;
             padding: 1.5rem 2rem !important;
             color: white !important;
@@ -2807,7 +2783,7 @@ export default function EmployeesPage() {
           }
 
           .conversation-item.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
           }
 
           .conversation-avatar {
@@ -2835,7 +2811,7 @@ export default function EmployeesPage() {
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            background: #667eea !important;
             color: #ffffff !important;
             font-weight: 600 !important;
             font-size: 1.2rem !important;
@@ -2916,7 +2892,7 @@ export default function EmployeesPage() {
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            background: #667eea !important;
             color: #ffffff !important;
             font-weight: 600 !important;
             font-size: 1rem !important;

@@ -916,28 +916,18 @@ export default function AccountPage() {
             width: 56px;
             height: 56px;
             border-radius: 16px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 1.5rem;
             color: white;
             flex-shrink: 0;
-            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
             position: relative;
           }
 
-          .header-icon::after {
-            content: '';
-            position: absolute;
-            inset: -2px;
-            border-radius: 16px;
-            padding: 2px;
-            background: linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1));
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-          }
+          
 
           .header-text {
             flex: 1;
@@ -1161,7 +1151,7 @@ export default function AccountPage() {
             width: 36px;
             height: 36px;
             border-radius: 10px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1277,7 +1267,7 @@ export default function AccountPage() {
           }
 
           :global(.role-badge) {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            background: #667eea !important;
             padding: 0.4rem 0.85rem !important;
             font-size: 0.85rem !important;
             font-weight: 600 !important;
@@ -1315,7 +1305,7 @@ export default function AccountPage() {
             width: 32px;
             height: 32px;
             border-radius: 8px;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+            background: rgba(102, 126, 234, 0.2);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1386,7 +1376,7 @@ export default function AccountPage() {
 
           /* Gradient Button */
           :global(.gradient-btn) {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            background: #667eea !important;
             border: none !important;
             padding: 0.65rem 1.25rem !important;
             border-radius: 8px !important;
@@ -1399,26 +1389,12 @@ export default function AccountPage() {
             overflow: hidden;
           }
 
-          :global(.gradient-btn::before) {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-          }
+          
 
-          :global(.gradient-btn:hover::before) {
-            width: 300px;
-            height: 300px;
-          }
+          
 
           :global(.gradient-btn:hover) {
-            transform: translateY(-2px) !important;
+            transform: translateY(-1px) !important;
             box-shadow: 0 6px 18px rgba(102, 126, 234, 0.6) !important;
           }
 
@@ -1451,7 +1427,7 @@ export default function AccountPage() {
           :global(.btn-outline-danger:hover) {
             background: rgba(220, 53, 69, 0.2) !important;
             border-color: rgba(220, 53, 69, 0.6) !important;
-            transform: translateY(-2px) !important;
+            transform: translateY(-1px) !important;
           }
 
           /* Modern Alert */

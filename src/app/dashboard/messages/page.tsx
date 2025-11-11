@@ -1960,13 +1960,13 @@ export default function MessagesPage() {
             width: 56px;
             height: 56px;
             border-radius: 16px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 1.5rem;
             color: white;
-            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
           }
 
           .header-text h1 {
@@ -2122,7 +2122,7 @@ export default function MessagesPage() {
           .create-group-btn {
             width: 100%;
             margin-top: 0.75rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             border: none;
             display: flex;
             align-items: center;
@@ -2165,7 +2165,7 @@ export default function MessagesPage() {
           }
 
           .conversation-avatar.group {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -2183,7 +2183,7 @@ export default function MessagesPage() {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             color: white;
             font-size: 1.2rem;
             padding: 0.75rem;
@@ -2195,7 +2195,7 @@ export default function MessagesPage() {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             color: #ffffff;
             font-size: 1.5rem;
             font-weight: 700;
@@ -2280,7 +2280,7 @@ export default function MessagesPage() {
           }
 
           .recipient-avatar.group {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -2437,7 +2437,7 @@ export default function MessagesPage() {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             color: white;
             font-size: 0.8rem;
             padding: 0.5rem;
@@ -2449,7 +2449,7 @@ export default function MessagesPage() {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             color: #ffffff;
             font-size: 0.9rem;
             font-weight: 700;
@@ -3104,7 +3104,7 @@ export default function MessagesPage() {
           }
 
           .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             color: #ffffff;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
           }
@@ -3169,7 +3169,7 @@ export default function MessagesPage() {
             width: 50px;
             height: 50px;
             border-radius: 10px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -3284,7 +3284,7 @@ export default function MessagesPage() {
             width: 56px;
             height: 56px;
             border-radius: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -3933,7 +3933,7 @@ export default function MessagesPage() {
             width: 100%;
             height: 100%;
             border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -4031,7 +4031,7 @@ export default function MessagesPage() {
           .admin-tag {
             display: inline-block;
             padding: 0.25rem 0.75rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #667eea;
             border-radius: 6px;
             font-size: 0.75rem;
             font-weight: 600;
