@@ -353,8 +353,9 @@ export default function DocumentsPage() {
     try {
       const response = await fetch('/api/employees/me/accessible-companies');
       if (!response.ok) throw new Error('Failed to fetch companies');
-      const companies = await response.json();
-      setAccessibleCompanies(companies || []);
+      const data = await response.json();
+      const companies = data.companies || data || [];
+      setAccessibleCompanies(companies);
       
       // Set initial company
       if (companies && companies.length > 0) {
@@ -953,7 +954,27 @@ export default function DocumentsPage() {
         }
       } else {
         // Remove document from state
-        setCurrentDocuments(prev => prev.filter(doc => doc.id !== itemToDelete.id));
+        if (currentFolderId === null) {
+          // Remove from root unorganized documents
+          setUnorganizedDocuments(prev => prev.filter(doc => doc.id !== itemToDelete.id));
+        } else {
+          // Remove from folder's documents array
+          const removeDocumentFromState = (folders: Folder[]): Folder[] => {
+            return folders.map(folder => {
+              if (folder.id === currentFolderId) {
+                return {
+                  ...folder,
+                  documents: folder.documents.filter(doc => doc.id !== itemToDelete.id)
+                };
+              }
+              return {
+                ...folder,
+                children: removeDocumentFromState(folder.children)
+              };
+            });
+          };
+          setFolders(removeDocumentFromState(folders));
+        }
       }
       
       setSuccessMessage(result.message || `Successfully moved ${itemType} to trash`);

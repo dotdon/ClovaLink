@@ -129,13 +129,16 @@ export default function TrashModal({ show, onHide, onRestore, onDelete }: TrashM
         })
       });
 
-      if (!response.ok) throw new Error('Failed to delete item');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to delete item');
+      }
       
       await fetchTrashItems();
       onDelete();
     } catch (err) {
       console.error('Error deleting item:', err);
-      setError('Failed to permanently delete item');
+      setError(err instanceof Error ? err.message : 'Failed to permanently delete item');
     }
   };
 
@@ -216,7 +219,10 @@ export default function TrashModal({ show, onHide, onRestore, onDelete }: TrashM
         body: JSON.stringify({ items: itemsToDelete })
       });
 
-      if (!response.ok) throw new Error('Failed to empty trash');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to empty trash');
+      }
       
       await fetchTrashItems();
       setSelectedItems(new Set());
@@ -224,7 +230,7 @@ export default function TrashModal({ show, onHide, onRestore, onDelete }: TrashM
       onDelete();
     } catch (err) {
       console.error('Error emptying trash:', err);
-      setError('Failed to empty trash');
+      setError(err instanceof Error ? err.message : 'Failed to empty trash');
     }
   };
 

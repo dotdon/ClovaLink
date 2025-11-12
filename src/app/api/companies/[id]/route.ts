@@ -48,8 +48,8 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    // Get paginated employees
-    const employees = await prisma.employee.findMany({
+    // Get primary employees (where companyId = id)
+    const primaryEmployees = await prisma.employee.findMany({
       where: { companyId: id },
       select: {
         id: true,
@@ -58,12 +58,46 @@ export async function GET(
         role: true,
         createdAt: true,
       },
-      orderBy: {
-        name: 'asc',
-      },
-      skip,
-      take: employeesPerPage,
     });
+
+    // Get employees with cross-company access to this company
+    const crossCompanyAccess = await prisma.employeeCompanyAccess.findMany({
+      where: { companyId: id },
+      include: {
+        employee: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    // Combine both lists, removing duplicates
+    const allEmployeesMap = new Map();
+    
+    // Add primary employees
+    primaryEmployees.forEach(emp => {
+      allEmployeesMap.set(emp.id, emp);
+    });
+    
+    // Add cross-company access employees
+    crossCompanyAccess.forEach(access => {
+      if (!allEmployeesMap.has(access.employee.id)) {
+        allEmployeesMap.set(access.employee.id, access.employee);
+      }
+    });
+
+    // Convert to array, sort, and paginate
+    const allEmployees = Array.from(allEmployeesMap.values()).sort((a, b) => 
+      a.name.localeCompare(b.name)
+    );
+
+    const totalEmployees = allEmployees.length;
+    const paginatedEmployees = allEmployees.slice(skip, skip + employeesPerPage);
 
     // Get recent documents
     const documents = await prisma.document.findMany({
@@ -86,12 +120,12 @@ export async function GET(
 
     return NextResponse.json({
       ...company,
-      employees,
+      employees: paginatedEmployees,
       documents,
       pagination: {
         currentPage: employeePage,
-        totalEmployees: company._count.employees,
-        totalPages: Math.ceil(company._count.employees / employeesPerPage),
+        totalEmployees: totalEmployees,
+        totalPages: Math.ceil(totalEmployees / employeesPerPage),
       },
     });
   } catch (error) {

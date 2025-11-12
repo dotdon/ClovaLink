@@ -23,11 +23,21 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const { searchParams } = new URL(request.url);
-    const itemId = searchParams.get('itemId');
-    const itemType = searchParams.get('itemType'); // 'document' or 'folder'
+    // Get items from request body (supports both single and bulk delete)
+    const body = await request.json().catch(() => ({}));
+    const items = body.items || [];
+    
+    // Support legacy query params for single item
+    if (items.length === 0) {
+      const { searchParams } = new URL(request.url);
+      const itemId = searchParams.get('itemId');
+      const itemType = searchParams.get('itemType');
+      if (itemId && itemType) {
+        items.push({ id: itemId, type: itemType });
+      }
+    }
 
-    if (!itemId || !itemType) {
+    if (items.length === 0) {
       return NextResponse.json(
         { error: 'Item ID and type are required' },
         { status: 400 }
@@ -43,95 +53,112 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
     }
 
-    if (itemType === 'document') {
-      // Get document info before deleting
-      const document = await prisma.document.findUnique({
-        where: { id: itemId },
-        select: { path: true, deletedAt: true, companyId: true }
-      });
+    const results = [];
+    const errors = [];
 
-      if (!document) {
-        return NextResponse.json(
-          { error: 'Document not found' },
-          { status: 404 }
-        );
+    // Process each item
+    for (const item of items) {
+      const { id: itemId, type: itemType } = item;
+
+      if (!itemId || !itemType) {
+        errors.push({ itemId, error: 'Item ID and type are required' });
+        continue;
       }
 
-      // Company-bound check
-      if (document.companyId !== employee.companyId) {
-        return NextResponse.json(
-          { error: 'Access denied. You can only delete items from your company.' },
-          { status: 403 }
-        );
-      }
-
-      // Ensure document is in trash
-      if (!document.deletedAt) {
-        return NextResponse.json(
-          { error: 'Document is not in trash' },
-          { status: 400 }
-        );
-      }
-
-      // Delete the physical file
       try {
-        const filePath = path.join(process.cwd(), 'public', document.path);
-        await unlink(filePath);
-      } catch (fileError) {
-        console.error('Error deleting file:', fileError);
-        // Continue with database deletion even if file deletion fails
+        if (itemType === 'document') {
+          // Get document info before deleting
+          const document = await prisma.document.findUnique({
+            where: { id: itemId },
+            select: { path: true, deletedAt: true, companyId: true }
+          });
+
+          if (!document) {
+            errors.push({ itemId, error: 'Document not found' });
+            continue;
+          }
+
+          // Company-bound check
+          if (document.companyId !== employee.companyId) {
+            errors.push({ itemId, error: 'Access denied. You can only delete items from your company.' });
+            continue;
+          }
+
+          // Ensure document is in trash
+          if (!document.deletedAt) {
+            errors.push({ itemId, error: 'Document is not in trash' });
+            continue;
+          }
+
+          // Delete the physical file
+          try {
+            const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads';
+            const filePath = path.join(process.cwd(), UPLOAD_DIR, document.path);
+            await unlink(filePath);
+          } catch (fileError) {
+            console.error('Error deleting file:', fileError);
+            // Continue with database deletion even if file deletion fails
+          }
+
+          // Delete from database
+          await prisma.document.delete({
+            where: { id: itemId }
+          });
+
+          results.push({ itemId, type: 'document', success: true });
+        } else if (itemType === 'folder') {
+          // Verify folder belongs to user's company and is in trash
+          const folder = await prisma.folder.findUnique({
+            where: { id: itemId },
+            select: { companyId: true, deletedAt: true }
+          });
+
+          if (!folder) {
+            errors.push({ itemId, error: 'Folder not found' });
+            continue;
+          }
+
+          // Company-bound check
+          if (folder.companyId !== employee.companyId) {
+            errors.push({ itemId, error: 'Access denied. You can only delete items from your company.' });
+            continue;
+          }
+
+          // Ensure folder is in trash
+          if (!folder.deletedAt) {
+            errors.push({ itemId, error: 'Folder is not in trash' });
+            continue;
+          }
+
+          // Delete folder and all its contents recursively
+          await deleteFolderRecursive(itemId);
+
+          results.push({ itemId, type: 'folder', success: true });
+        } else {
+          errors.push({ itemId, error: 'Invalid item type' });
+        }
+      } catch (error) {
+        console.error(`Error deleting item ${itemId}:`, error);
+        errors.push({ itemId, error: error instanceof Error ? error.message : 'Failed to delete item' });
       }
+    }
 
-      // Delete from database
-      await prisma.document.delete({
-        where: { id: itemId }
-      });
-
-      return NextResponse.json({
-        message: 'Document permanently deleted'
-      });
-    } else if (itemType === 'folder') {
-      // Verify folder belongs to user's company and is in trash
-      const folder = await prisma.folder.findUnique({
-        where: { id: itemId },
-        select: { companyId: true, deletedAt: true }
-      });
-
-      if (!folder) {
-        return NextResponse.json(
-          { error: 'Folder not found' },
-          { status: 404 }
-        );
-      }
-
-      // Company-bound check
-      if (folder.companyId !== employee.companyId) {
-        return NextResponse.json(
-          { error: 'Access denied. You can only delete items from your company.' },
-          { status: 403 }
-        );
-      }
-
-      // Ensure folder is in trash
-      if (!folder.deletedAt) {
-        return NextResponse.json(
-          { error: 'Folder is not in trash' },
-          { status: 400 }
-        );
-      }
-
-      // Delete folder and all its contents recursively
-      await deleteFolderRecursive(itemId);
-
-      return NextResponse.json({
-        message: 'Folder permanently deleted'
-      });
-    } else {
+    // Return results
+    if (errors.length > 0 && results.length === 0) {
+      // All failed
       return NextResponse.json(
-        { error: 'Invalid item type' },
+        { error: errors[0].error, errors },
         { status: 400 }
       );
     }
+
+    return NextResponse.json({
+      message: results.length === 1 
+        ? `${results[0].type === 'document' ? 'Document' : 'Folder'} permanently deleted`
+        : `${results.length} items permanently deleted`,
+      results,
+      errors: errors.length > 0 ? errors : undefined
+    });
   } catch (error) {
     console.error('Error permanently deleting item:', error);
     return NextResponse.json(
@@ -150,9 +177,10 @@ async function deleteFolderRecursive(folderId: string) {
   });
 
   // Delete document files and database records
+  const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads';
   for (const doc of documents) {
     try {
-      const filePath = path.join(process.cwd(), 'public', doc.path);
+      const filePath = path.join(process.cwd(), UPLOAD_DIR, doc.path);
       await unlink(filePath);
     } catch (fileError) {
       console.error('Error deleting file:', fileError);
