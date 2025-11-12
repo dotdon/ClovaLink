@@ -3,6 +3,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
+// Route segment config to prevent timeouts on fast navigation
+// Shorter timeout to fail fast rather than hang
+export const maxDuration = 15;
+export const dynamic = 'force-dynamic';
+
 // GET: Fetch messages (direct messages or channel messages)
 export async function GET(request: Request) {
   try {
@@ -163,6 +168,7 @@ export async function GET(request: Request) {
     return response;
   } catch (error) {
     console.error('Error fetching messages:', error);
+    // Always return a response, even on error
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

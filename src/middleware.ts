@@ -3,58 +3,65 @@ import { NextResponse } from 'next/server';
 
 export default withAuth(
   async function middleware(req) {
-    const token = req.nextauth.token;
-    const isAuth = !!token;
-    const pathname = req.nextUrl.pathname;
-    const isAuthPage = pathname.startsWith('/auth') || pathname === '/login';
-    const isSettingsPage = pathname.startsWith('/dashboard/settings');
-    const isAccountPage = pathname.startsWith('/dashboard/account');
-    const isChangePasswordPage = pathname === '/auth/change-password';
-    const isAPI = pathname.startsWith('/api');
+    try {
+      const token = req.nextauth.token;
+      const isAuth = !!token;
+      const pathname = req.nextUrl.pathname;
+      const isAuthPage = pathname.startsWith('/auth') || pathname === '/login';
+      const isSettingsPage = pathname.startsWith('/dashboard/settings');
+      const isAccountPage = pathname.startsWith('/dashboard/account');
+      const isChangePasswordPage = pathname === '/auth/change-password';
+      const isAPI = pathname.startsWith('/api');
 
-    // Prevent redirect loop by not redirecting on the signin page
-    if (isAuthPage) {
-      if (isAuth && !isChangePasswordPage) {
+      // Prevent redirect loop by not redirecting on the signin page
+      if (isAuthPage) {
+        if (isAuth && !isChangePasswordPage) {
+          return NextResponse.redirect(new URL('/dashboard', req.url));
+        }
+        return NextResponse.next();
+      }
+
+      // Note: Password change check is handled client-side in DashboardLayout
+      // We can't use Prisma in Edge Runtime middleware, so we rely on client-side redirects
+      // The change-password page itself is protected by client-side checks
+
+      // Note: 2FA requirement is checked client-side in DashboardLayout component
+      // We cannot use Prisma in Edge Runtime middleware, so we rely on client-side enforcement
+      // The DashboardLayout component will redirect users who need 2FA to the account page
+
+      // Protect admin dashboard routes (pages)
+      if (pathname.startsWith('/dashboard/admin') && token?.role !== 'ADMIN') {
         return NextResponse.redirect(new URL('/dashboard', req.url));
       }
+
+      // Protect settings page (admin only)
+      if (pathname.startsWith('/dashboard/settings') && token?.role !== 'ADMIN') {
+        return NextResponse.redirect(new URL('/dashboard', req.url));
+      }
+
+      // Protect admin API routes
+      if (pathname.startsWith('/api/admin') && token?.role !== 'ADMIN') {
+        return new NextResponse(JSON.stringify({ error: 'Forbidden' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Protect settings API (admin only)
+      if (pathname.startsWith('/api/settings') && token?.role !== 'ADMIN') {
+        return new NextResponse(JSON.stringify({ error: 'Forbidden' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      return NextResponse.next();
+    } catch (error) {
+      // Catch any errors in middleware to prevent empty responses
+      console.error('[Middleware] Error:', error);
+      // Return next response even on error to prevent ERR_EMPTY_RESPONSE
       return NextResponse.next();
     }
-
-    // Note: Password change check is handled client-side in DashboardLayout
-    // We can't use Prisma in Edge Runtime middleware, so we rely on client-side redirects
-    // The change-password page itself is protected by client-side checks
-
-    // Note: 2FA requirement is checked client-side in DashboardLayout component
-    // We cannot use Prisma in Edge Runtime middleware, so we rely on client-side enforcement
-    // The DashboardLayout component will redirect users who need 2FA to the account page
-
-    // Protect admin dashboard routes (pages)
-    if (pathname.startsWith('/dashboard/admin') && token?.role !== 'ADMIN') {
-      return NextResponse.redirect(new URL('/dashboard', req.url));
-    }
-
-    // Protect settings page (admin only)
-    if (pathname.startsWith('/dashboard/settings') && token?.role !== 'ADMIN') {
-      return NextResponse.redirect(new URL('/dashboard', req.url));
-    }
-
-    // Protect admin API routes
-    if (pathname.startsWith('/api/admin') && token?.role !== 'ADMIN') {
-      return new NextResponse(JSON.stringify({ error: 'Forbidden' }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Protect settings API (admin only)
-    if (pathname.startsWith('/api/settings') && token?.role !== 'ADMIN') {
-      return new NextResponse(JSON.stringify({ error: 'Forbidden' }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    return NextResponse.next();
   },
   {
     callbacks: {

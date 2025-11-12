@@ -101,6 +101,30 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     fetchProfilePicture();
   }, [session?.user?.id, profilePicture]);
 
+  // Prefetch common routes on mount to prevent empty responses
+  useEffect(() => {
+    if (!session?.user) return;
+    
+    // Prefetch common dashboard routes in the background
+    const commonRoutes = [
+      '/dashboard',
+      '/dashboard/documents',
+      '/dashboard/messages',
+      '/dashboard/calendar',
+      '/dashboard/employees',
+      '/dashboard/account',
+    ];
+    
+    // Prefetch routes after a short delay to not block initial load
+    const prefetchTimer = setTimeout(() => {
+      commonRoutes.forEach(route => {
+        router.prefetch(route);
+      });
+    }, 1000);
+    
+    return () => clearTimeout(prefetchTimer);
+  }, [router, session]);
+
   // Check if user needs 2FA (only if password change is not required)
   useEffect(() => {
     if (mustChangePassword) return; // Skip 2FA check if password change is needed
@@ -205,6 +229,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <Link 
                 key={item.path} 
                 href={item.path}
+                prefetch={true}
+                onMouseEnter={() => {
+                  // Prefetch on hover for faster navigation
+                  if (!isBlocked) {
+                    router.prefetch(item.path);
+                  }
+                }}
                 onClick={(e) => {
                   if (isBlocked) {
                     e.preventDefault();
@@ -306,6 +337,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <Link 
                 key={item.path} 
                 href={item.path}
+                prefetch={true}
+                onMouseEnter={() => {
+                  // Prefetch on hover for faster navigation
+                  if (!isBlocked) {
+                    router.prefetch(item.path);
+                  }
+                }}
                 className={`side-menu-item ${pathname === item.path ? 'active' : ''} ${isBlocked ? 'disabled' : ''}`}
                 style={isBlocked ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                 onClick={(e) => {

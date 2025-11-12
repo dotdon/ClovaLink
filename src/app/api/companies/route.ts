@@ -4,6 +4,11 @@ import { prisma } from '@/lib/prisma';
 import { authOptions } from '@/lib/auth';
 import { hasPermission, Permission } from '@/lib/permissions';
 
+// Route segment config to prevent timeouts on fast navigation
+// Shorter timeout to fail fast rather than hang
+export const maxDuration = 15;
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);

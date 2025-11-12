@@ -4,6 +4,11 @@ import { prisma } from '@/lib/prisma';
 import { authOptions } from '@/lib/auth';
 import { hasPermission, Permission, canAccessCompany } from '@/lib/permissions';
 
+// Route segment config to prevent timeouts on fast navigation
+// Shorter timeout to fail fast rather than hang
+export const maxDuration = 15;
+export const dynamic = 'force-dynamic';
+
 // GET: Fetch all documents and folders
 export async function GET(request: Request) {
   try {

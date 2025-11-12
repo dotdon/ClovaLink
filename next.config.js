@@ -104,6 +104,23 @@ const nextConfig = {
   reactStrictMode: true,
   // Output file tracing for smaller Docker images
   output: 'standalone',
+  // Improve handling of concurrent requests and fast navigation
+  experimental: {
+    // Reduce memory usage and improve stability
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+  },
+  // Better error handling for development
+  onDemandEntries: {
+    // Keep pages in memory longer to prevent empty responses
+    maxInactiveAge: 30 * 1000, // Reduced to 30 seconds to fail faster
+    pagesBufferLength: 5, // Reduced buffer to prevent hanging
+  },
+  // Improve connection handling
+  httpAgentOptions: {
+    keepAlive: true,
+  },
 }
 
 module.exports = nextConfig; 

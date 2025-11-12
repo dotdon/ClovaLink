@@ -3,6 +3,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { userHas2FA, is2FARequired } from '@/lib/twoFactor';
 
+// Route segment config to prevent timeouts on fast navigation
+// Short timeout for quick auth checks
+export const maxDuration = 5;
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
