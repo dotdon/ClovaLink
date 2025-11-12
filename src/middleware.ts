@@ -24,37 +24,9 @@ export default withAuth(
     // We can't use Prisma in Edge Runtime middleware, so we rely on client-side redirects
     // The change-password page itself is protected by client-side checks
 
-    // Check 2FA requirement for authenticated users - BLOCK EVERYTHING except account page
-    // Only check 2FA if password change is not required (password check already passed above)
-    if (isAuth && token && !isAPI && !isChangePasswordPage && pathname.startsWith('/dashboard')) {
-      // If on account page, allow access
-      if (isAccountPage) {
-        return NextResponse.next();
-      }
-      
-      // Check 2FA requirement - BLOCK if user needs it
-      try {
-        // Import the check function
-        const { userNeeds2FA } = await import('@/lib/twoFactor');
-        const needs2FA = await userNeeds2FA(token.id as string, token.companyId as string);
-        
-        console.log(`[Middleware] 2FA check for user ${token.id}: needs2FA=${needs2FA}, path=${pathname}`);
-        
-        if (needs2FA) {
-          console.log(`[Middleware] 🚫 BLOCKING access to ${pathname} - User needs 2FA. Redirecting to account page.`);
-          // Block ALL dashboard pages except account page
-          return NextResponse.redirect(new URL('/dashboard/account?require2fa=true', req.url));
-        } else {
-          console.log(`[Middleware] ✅ User has 2FA - allowing access to ${pathname}`);
-        }
-      } catch (error) {
-        console.error('[Middleware] ❌ Error checking 2FA requirement:', error);
-        // On error, be conservative - still block access to be safe
-        // This prevents users from bypassing 2FA if the check fails
-        console.log(`[Middleware] 🚫 Error during 2FA check - blocking access to ${pathname} as safety measure`);
-        return NextResponse.redirect(new URL('/dashboard/account?require2fa=true', req.url));
-      }
-    }
+    // Note: 2FA requirement is checked client-side in DashboardLayout component
+    // We cannot use Prisma in Edge Runtime middleware, so we rely on client-side enforcement
+    // The DashboardLayout component will redirect users who need 2FA to the account page
 
     // Protect admin dashboard routes (pages)
     if (pathname.startsWith('/dashboard/admin') && token?.role !== 'ADMIN') {
