@@ -477,7 +477,7 @@ export default function SignIn() {
         .auth-header h1 {
           font-size: 2rem;
           font-weight: 800;
-          color: #1a1a2e;
+          color: #000000 !important;
           margin-bottom: 0.5rem;
         }
 
@@ -572,6 +572,7 @@ export default function SignIn() {
 
           .auth-header h1 {
             font-size: 1.75rem;
+            color: #000000 !important;
           }
           
           .logo-wrapper {
