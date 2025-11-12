@@ -288,6 +288,8 @@ export default function SignIn() {
               width={80}
               height={80}
               style={{ filter: 'brightness(0) invert(1)' }}
+              priority
+              unoptimized
             />
           </div>
           <h1>Welcome Back</h1>

@@ -7,6 +7,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { hasPermission, Permission } from '@/lib/permissions';
 import { FaUsers, FaFileAlt, FaCalendar, FaBuilding, FaArrowLeft, FaEnvelope, FaShieldAlt, FaCamera, FaTrash } from 'react-icons/fa';
+import Image from 'next/image';
 
 interface Company {
   id: string;
@@ -245,14 +246,17 @@ export default function CompanyDetailsPage() {
             <div className="header-icon-wrapper">
               <div className="header-icon">
                 {company.logo ? (
-                  <img 
+                  <Image 
                     src={`/api/companies/logo/${company.logo}`} 
                     alt={company.name}
+                    width={120}
+                    height={120}
                     style={{
                       width: '100%',
                       height: '100%',
                       objectFit: 'cover'
                     }}
+                    unoptimized
                   />
                 ) : (
                   <FaBuilding />

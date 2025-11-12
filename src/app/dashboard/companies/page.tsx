@@ -9,6 +9,7 @@ import EditCompanyModal from '@/components/modals/EditCompanyModal';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { hasPermission, Permission, canAccessCompany } from '@/lib/permissions';
+import Image from 'next/image';
 
 interface Company {
   id: string;
@@ -211,14 +212,17 @@ export default function CompaniesPage() {
               boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)'
             }}>
               {company.logo ? (
-                <img 
+                <Image 
                   src={`/api/companies/logo/${company.logo}`} 
                   alt={company.name}
+                  width={48}
+                  height={48}
                   style={{
                     width: '100%',
                     height: '100%',
                     objectFit: 'cover'
                   }}
+                  unoptimized
                 />
               ) : (
                 <div style={{

@@ -49,6 +49,7 @@ export default function LoginPage() {
               height={80}
               style={{ filter: 'brightness(0) invert(1)' }}
               priority
+              unoptimized
             />
           </div>
           <h1>Welcome to ClovaLink</h1>

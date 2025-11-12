@@ -1,8 +1,10 @@
-'use client';
-
 import { Container } from 'react-bootstrap';
 import Link from 'next/link';
 import { FaArrowLeft } from 'react-icons/fa';
+
+// Force static generation
+export const dynamic = 'force-static';
+export const revalidate = 3600; // Revalidate every hour
 
 export default function TermsOfServicePage() {
   return (

@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { Modal, Form, Button } from 'react-bootstrap';
 import { FaEdit, FaBuilding, FaCamera, FaTrash, FaInfoCircle } from 'react-icons/fa';
+import Image from 'next/image';
 
 interface EditCompanyModalProps {
   show: boolean;
@@ -97,10 +98,13 @@ export default function EditCompanyModal({
             <div className="logo-upload-area">
               <div className="logo-preview">
                 {currentLogo ? (
-                  <img 
+                  <Image 
                     src={`/api/companies/logo/${currentLogo}`} 
                     alt="Company logo"
+                    width={120}
+                    height={120}
                     className="logo-image"
+                    unoptimized
                   />
                 ) : (
                   <div className="logo-placeholder">

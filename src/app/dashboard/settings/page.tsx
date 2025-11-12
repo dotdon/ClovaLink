@@ -6,6 +6,7 @@ import DashboardLayout from '@/components/ui/DashboardLayout';
 import ThemedModal from '@/components/ui/ThemedModal';
 import { FaSave, FaSync, FaCog, FaKey, FaTrash, FaPlus, FaShieldAlt, FaQrcode, FaCheck, FaTimes, FaBuilding, FaExclamationTriangle, FaUsers, FaFileAlt, FaHdd } from 'react-icons/fa';
 import { startAttestation } from '@simplewebauthn/browser';
+import Image from 'next/image';
 
 interface Setting {
   id: string;
@@ -1320,9 +1321,11 @@ export default function SettingsPage() {
                             <div className="flex-grow-1">
                               <h6 className="mb-2" style={{ color: '#ffffff', fontWeight: 600 }}>
                                 {company.logo ? (
-                                  <img 
+                                  <Image 
                                     src={`/api/companies/logo/${company.logo}`}
                                     alt={company.name}
+                                    width={32}
+                                    height={32}
                                     style={{
                                       width: '32px',
                                       height: '32px',
@@ -1331,6 +1334,7 @@ export default function SettingsPage() {
                                       objectFit: 'cover',
                                       border: '2px solid #667eea'
                                     }}
+                                    unoptimized
                                   />
                                 ) : (
                                   <FaBuilding className="me-2" style={{ color: '#667eea' }} />

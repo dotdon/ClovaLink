@@ -1,3 +1,5 @@
+'use client';
+
 import { Container, Nav, Navbar, Dropdown } from 'react-bootstrap';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -204,10 +206,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="user-profile-section">
             <div className="profile-avatar">
               {profilePicture ? (
-                <img 
+                <Image 
                   src={`/api/employees/profile-picture/${profilePicture}`}
                   alt={session?.user?.name || 'User'}
+                  width={40}
+                  height={40}
+                  className="profile-picture"
                   loading="lazy"
+                  unoptimized
                 />
               ) : (
                 <FaUserCircle />
@@ -286,10 +292,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </Link>
           <Link href="/dashboard/account" className="mobile-profile-avatar">
             {profilePicture ? (
-              <img 
+              <Image 
                 src={`/api/employees/profile-picture/${profilePicture}`}
                 alt={session?.user?.name || 'User'}
+                width={40}
+                height={40}
+                className="profile-picture"
                 loading="lazy"
+                unoptimized
               />
             ) : (
               <FaUserCircle />
