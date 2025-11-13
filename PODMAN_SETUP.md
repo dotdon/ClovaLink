@@ -26,8 +26,8 @@ Follow the official installation guide at [podman.io](https://podman.io/getting-
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/dotdon/clovalink.git
-cd clovalink
+git clone https://github.com/dotdon/ClovaLink.git
+cd ClovaLink
 ```
 
 ### 2. Configure Environment Variables

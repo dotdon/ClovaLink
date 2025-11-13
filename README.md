@@ -110,8 +110,8 @@ ClovaLink supports multiple deployment options:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/dotdon/clovalink.git
-   cd clovalink
+   git clone https://github.com/dotdon/ClovaLink.git
+   cd ClovaLink
    ```
 
 2. Install dependencies:
@@ -123,7 +123,20 @@ ClovaLink supports multiple deployment options:
    ```bash
    cp .env.example .env
    ```
-   Edit `.env` with your configuration. Generate an encryption key:
+   Edit `.env` with your configuration:
+   
+   **Required Variables:**
+   - `DATABASE_URL`: PostgreSQL connection string
+   - `NEXTAUTH_URL`: Your application URL (e.g., `http://localhost:3000`)
+   - `NEXTAUTH_SECRET`: Generate with `openssl rand -base64 32`
+   - `ENCRYPTION_KEY`: Generate with `node generate-encryption-key.js`
+   
+   **Optional but Recommended:**
+   - `USE_RUST_CRYPTO`: Set to `true` for 5-10x faster encryption (requires Rust)
+   - `REDIS_URL`: Redis connection string for rate limiting
+   - `SMTP_*`: Email configuration for notifications
+   
+   Generate the encryption key:
    ```bash
    node generate-encryption-key.js
    ```
@@ -153,15 +166,23 @@ ClovaLink supports multiple deployment options:
 
 2. Clone the repository:
    ```bash
-   git clone https://github.com/dotdon/clovalink.git
-   cd clovalink
+   git clone https://github.com/dotdon/ClovaLink.git
+   cd ClovaLink
    ```
 
 3. Set up environment variables:
    ```bash
    cp .env.example .env
    ```
-   Edit `.env` with your configuration. Generate an encryption key:
+   Edit `.env` with your configuration (see `.env.example` for all available options):
+   
+   **Key configuration for Podman:**
+   - `DATABASE_URL`: Already configured for Podman in `.env.example`
+   - `NEXTAUTH_URL`: Set to `http://localhost:3000` for local development
+   - `NEXTAUTH_SECRET`: Generate with `openssl rand -base64 32`
+   - `ENCRYPTION_KEY`: Generate with the command below
+   
+   Generate the encryption key:
    ```bash
    node generate-encryption-key.js
    ```
@@ -233,6 +254,44 @@ The Containerfile automatically:
 - `npm run setup` - Run initial setup script
 
 **Note**: The PDF.js worker file is automatically copied to the public folder during `npm install`, `npm run dev`, and `npm run build` to ensure proper PDF viewing functionality.
+
+## Environment Variables
+
+ClovaLink uses environment variables for configuration. Copy `.env.example` to `.env` and configure the following:
+
+### Required Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/clovalink` |
+| `NEXTAUTH_URL` | Application URL | `http://localhost:3000` |
+| `NEXTAUTH_SECRET` | NextAuth.js secret (32+ chars) | Generate with `openssl rand -base64 32` |
+| `ENCRYPTION_KEY` | Document encryption key | Generate with `node generate-encryption-key.js` |
+
+### Optional Variables
+
+| Variable | Description | Default | Example |
+|----------|-------------|---------|---------|
+| `USE_RUST_CRYPTO` | Enable Rust crypto acceleration | `false` | `true` (recommended for production) |
+| `REDIS_URL` | Redis connection string | In-memory | `redis://localhost:6379` |
+| `SMTP_HOST` | SMTP server hostname | - | `smtp.gmail.com` |
+| `SMTP_PORT` | SMTP server port | `587` | `587` |
+| `SMTP_USER` | SMTP username | - | `user@example.com` |
+| `SMTP_PASSWORD` | SMTP password | - | `your-password` |
+| `SMTP_FROM` | From email address | - | `noreply@example.com` |
+| `UPLOAD_DIR` | Upload directory path | `./uploads` | `/app/uploads` |
+| `MAX_FILE_SIZE` | Maximum file size in bytes | `104857600` (100MB) | `52428800` (50MB) |
+| `ALLOWED_MIME_TYPES` | Allowed MIME types | All common types | `application/pdf,image/*` |
+| `LOG_LEVEL` | Logging level | `info` | `debug`, `warn`, `error` |
+| `PORT` | Server port | `3000` | `8080` |
+| `HOSTNAME` | Server hostname | `localhost` | `0.0.0.0` |
+| `CRON_SECRET` | Secret for cron job authentication | - | Generate with `openssl rand -base64 32` |
+
+**Security Notes:**
+- Never commit your `.env` file to version control
+- Back up your `ENCRYPTION_KEY` securely - losing it means permanent data loss
+- Use strong, randomly generated values for all secrets
+- In production, use `USE_RUST_CRYPTO=true` for better performance
 
 ## Technologies Used
 
