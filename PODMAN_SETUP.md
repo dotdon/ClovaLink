@@ -191,6 +191,58 @@ This will:
 - Update database records with encryption metadata
 - Provide a summary report
 
+## Redis Setup (Optional)
+
+Redis is used for rate limiting and caching. While optional, it's recommended for production deployments.
+
+### Using Redis with Podman
+
+1. Add Redis to your `podman-compose.yml`:
+
+```yaml
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: clovalink-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+volumes:
+  redis_data:
+```
+
+2. Add Redis URL to your `.env`:
+
+```env
+REDIS_URL=redis://redis:6379
+```
+
+3. Restart containers:
+
+```bash
+podman compose -f podman-compose.yml down
+podman compose -f podman-compose.yml up -d
+```
+
+### Verifying Redis Connection
+
+Check if Redis is working:
+
+```bash
+podman compose -f podman-compose.yml exec redis redis-cli ping
+# Should respond with: PONG
+```
+
+View Redis logs:
+
+```bash
+podman compose -f podman-compose.yml logs redis
+```
+
 ## Troubleshooting
 
 ### Containers Won't Start

@@ -46,6 +46,21 @@ ClovaLink is a comprehensive document management system designed for businesses 
 - **Temporary Sharing Links**: Create time-limited links for document downloads and uploads
 - **Link Expiration**: Configurable expiration times for shared links
 - **Upload Links**: Allow external users to upload files to specific folders
+- **Private Messaging**: End-to-end encrypted messaging between users
+- **Message Channels**: Organize conversations by channels or direct messages
+- **File Sharing via Messages**: Share documents directly through the messaging system
+- **Memos**: Add notes and comments to documents and folders for team collaboration
+
+### Calendar & Task Management
+- **Integrated Calendar**: Full-featured calendar for scheduling events and meetings
+- **Event Types**: Support for meetings, tasks, reminders, and deadlines
+- **Event Attendees**: Invite team members to events with RSVP tracking
+- **Event Reminders**: Configurable reminders for upcoming events
+- **Priority Levels**: Mark events with priority (low, medium, high, urgent)
+- **Event Status**: Track event status (pending, confirmed, cancelled, completed)
+- **Private Events**: Option to create private events visible only to you
+- **Location & Description**: Add location and detailed descriptions to events
+- **Calendar Export**: Download calendar events (iCal format)
 
 ### Monitoring & Tracking
 - **Activity Tracking**: Comprehensive logging of all user activities with per-item activity logs
@@ -240,6 +255,58 @@ The Containerfile automatically:
 - Compiles the `rust-core` native module
 - Includes it in the production image
 - Enables 5-10x faster encryption when `USE_RUST_CRYPTO=true`
+
+### Rust Crypto Setup (Local Development)
+
+For local development with Rust crypto acceleration:
+
+#### Prerequisites
+- Rust toolchain (install from [rustup.rs](https://rustup.rs/))
+- Node.js build tools
+
+#### Installation Steps
+
+1. **Install Rust** (if not already installed):
+   ```bash
+   # macOS/Linux
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   
+   # Reload PATH
+   source $HOME/.cargo/env
+   ```
+
+2. **Build the Rust core module**:
+   ```bash
+   cd rust-core
+   npm install
+   npm run build
+   cd ..
+   ```
+
+3. **Enable Rust crypto in .env**:
+   ```env
+   USE_RUST_CRYPTO=true
+   ```
+
+4. **Verify the setup**:
+   ```bash
+   node test-rust.js
+   ```
+   You should see performance benchmarks showing the Rust implementation is significantly faster.
+
+#### Performance Comparison
+
+With `USE_RUST_CRYPTO=true`:
+- **Encryption**: 5-10x faster (XChaCha20-Poly1305 vs AES-256-GCM)
+- **Hashing**: 10-20x faster (BLAKE3 vs SHA-256)
+- **Memory**: More efficient for large files
+
+Without Rust (development mode):
+- Uses JavaScript crypto (Node.js built-in)
+- Slower but requires no additional setup
+- Suitable for development and testing
+
+**Production Recommendation**: Always use `USE_RUST_CRYPTO=true` for better performance and reduced server load.
 
 ## Available Scripts
 
@@ -563,6 +630,51 @@ A: Click the three-dot menu on any document or folder and select "Activity Log" 
 
 **Q: What activities are tracked?**
 A: ClovaLink tracks uploads, downloads, moves, renames, deletions, shares, password changes, and access attempts.
+
+### Messaging & Communication
+
+**Q: How do I send a message to another user?**
+A: Navigate to the Messages page from the dashboard sidebar. You can create new channels or send direct messages to individual users. All messages are end-to-end encrypted.
+
+**Q: Are messages secure?**
+A: Yes! Messages use client-side RSA-2048 encryption. Your private key never leaves your browser, and the server cannot decrypt your message content.
+
+**Q: Can I share documents through messages?**
+A: Yes! You can attach documents to messages. The recipient can save them directly to their document storage.
+
+**Q: How do I create a message channel?**
+A: Click the "New Channel" button in the Messages page, give it a name, select participants, and start collaborating.
+
+**Q: What's the difference between channels and direct messages?**
+A: Channels are group conversations for team collaboration, while direct messages are private one-on-one conversations.
+
+### Calendar & Events
+
+**Q: How do I create a calendar event?**
+A: Go to the Calendar page, click "Add Event", fill in the details (title, date, time, attendees), and save. You can create meetings, tasks, or reminders.
+
+**Q: Can I invite others to events?**
+A: Yes! When creating an event, add attendees from your company. They'll receive notifications and can RSVP to the event.
+
+**Q: How do reminders work?**
+A: When creating an event, you can set reminders (e.g., 15 minutes before, 1 hour before). You'll receive notifications at the specified times.
+
+**Q: Can I create private events?**
+A: Yes! Mark an event as "Private" when creating it. Private events are only visible to you in the calendar.
+
+**Q: How do I export my calendar?**
+A: Click the "Download Calendar" button on the Calendar page to export events in iCal format, which can be imported into other calendar applications.
+
+### Memos & Notes
+
+**Q: What are memos?**
+A: Memos are notes you can attach to documents and folders. They're useful for leaving comments, instructions, or reminders for yourself or team members.
+
+**Q: How do I add a memo to a document?**
+A: Click the three-dot menu on any document or folder and select "Memos". You can add, edit, or delete memos from there.
+
+**Q: Can others see my memos?**
+A: Yes, memos are visible to all users who have access to the document or folder. They're great for team collaboration.
 
 ## Troubleshooting
 
