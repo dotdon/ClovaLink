@@ -22,9 +22,12 @@ function getRustCore() {
   if (!rustLoadAttempted && USE_RUST) {
     rustLoadAttempted = true;
     try {
-      // Load at runtime to avoid webpack bundling issues
-      const path = require('path');
-      const fs = require('fs');
+      // Load at runtime to avoid webpack/Turbopack bundling issues
+      // Use dynamic require() with string concatenation to prevent static analysis
+      const pathModule = 'path';
+      const fsModule = 'fs';
+      const path = require(pathModule);
+      const fs = require(fsModule);
       
       // Determine the correct .node file for current platform
       const platform = process.platform;
@@ -41,18 +44,22 @@ function getRustCore() {
         nodeName = 'clovalink-rust-core.darwin-x64.node';
       }
       
-      // Try multiple possible paths
+      // Build paths dynamically to prevent static analysis
+      const rustCoreDir = 'rust-core';
       const possiblePaths = [
-        path.join(process.cwd(), 'rust-core', nodeName),
-        path.join('/app', 'rust-core', nodeName),
-        path.join(__dirname, '../../rust-core', nodeName),
+        path.join(process.cwd(), rustCoreDir, nodeName),
+        path.join('/app', rustCoreDir, nodeName),
+        path.join(__dirname, '..', '..', rustCoreDir, nodeName),
       ];
       
       let loaded = false;
       for (const nodePath of possiblePaths) {
         if (nodeName && fs.existsSync(nodePath)) {
           try {
-            rustCore = require(nodePath);
+            // Use dynamic require with eval to prevent Turbopack static analysis
+            // This ensures the path is only resolved at runtime
+            const requireFunc = eval('require');
+            rustCore = requireFunc(nodePath);
             rustAvailable = true;
             loaded = true;
             console.log(`✓ Rust crypto core loaded: ${nodeName} from ${nodePath}`);

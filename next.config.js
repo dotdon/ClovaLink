@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, webpack }) => {
     // Disable canvas module on the server
     if (isServer) {
       config.resolve.alias.canvas = false;
@@ -16,6 +16,25 @@ const nextConfig = {
     // Externalize rust-core native module completely
     if (isServer) {
       // Don't bundle rust-core or .node files on server
+      // Use webpack.IgnorePlugin to prevent Turbopack from trying to resolve rust-core
+      config.plugins.push(
+        new webpack.IgnorePlugin({
+          resourceRegExp: /^(\.\/)?ROOT\/rust-core$/,
+        }),
+        new webpack.IgnorePlugin({
+          resourceRegExp: /rust-core.*\.node$/,
+        })
+      );
+      
+      // Add resolve alias to prevent resolution attempts
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'rust-core': false,
+        './rust-core': false,
+        '../rust-core': false,
+        '../../rust-core': false,
+      };
+      
       if (!config.externals) {
         config.externals = [];
       }
@@ -23,16 +42,17 @@ const nextConfig = {
         config.externals = [config.externals];
       }
       
-      // Externalize the entire rust-core directory
-      config.externals.push('../../rust-core');
-      config.externals.push('../rust-core');
-      config.externals.push('./rust-core');
-      
-      // Externalize any .node files
+      // Externalize any .node files and rust-core paths
       config.externals.push(({ request }, callback) => {
-        if (request && (request.includes('rust-core') || /\.node$/.test(request))) {
-          return callback(null, `commonjs ${request}`);
+        if (request) {
+          // Handle rust-core imports - externalize them so they're not bundled
+          if (request.includes('rust-core') || /\.node$/.test(request) || request.includes('ROOT/rust-core')) {
+            // Externalize by returning false - tells webpack to not bundle this
+            // The module will be resolved at runtime via require() in cryptoAdapter.ts
+            return callback(null, false);
+          }
         }
+        // Continue with normal resolution for other modules
         callback();
       });
     }
