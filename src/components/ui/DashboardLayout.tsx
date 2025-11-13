@@ -478,16 +478,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           left: 0;
           height: 100vh;
           color: #fff;
-          padding: 1.5rem 1rem;
+          padding: 0;
           z-index: 1000;
           flex-shrink: 0;
           box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+          flex-direction: column;
+          overflow: hidden;
         }
 
         .nav-header {
-          padding: 0.5rem;
+          padding: 1.5rem 1rem 1rem;
           border-bottom: 1px solid rgba(255,255,255,0.15);
-          margin-bottom: 1.5rem;
+          flex-shrink: 0;
         }
 
         .user-profile-section {
@@ -614,6 +616,30 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           display: flex;
           flex-direction: column;
           gap: 0.5rem;
+          flex: 1;
+          overflow-y: auto;
+          overflow-x: hidden;
+          padding: 1rem 1rem 1.5rem;
+          /* Custom scrollbar styling */
+          scrollbar-width: thin;
+          scrollbar-color: rgba(102, 126, 234, 0.5) transparent;
+        }
+
+        .nav-items::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .nav-items::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .nav-items::-webkit-scrollbar-thumb {
+          background: rgba(102, 126, 234, 0.5);
+          border-radius: 3px;
+        }
+
+        .nav-items::-webkit-scrollbar-thumb:hover {
+          background: rgba(102, 126, 234, 0.7);
         }
 
         .nav-item {
@@ -917,7 +943,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           }
 
           .desktop-nav {
-            display: block;
+            display: flex;
           }
 
           .main-content {
