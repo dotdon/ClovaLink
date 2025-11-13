@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment, FormEvent, MouseEvent, DragEvent, ChangeEvent } from 'react';
 import { Button, Form, Modal, Alert, Dropdown, ButtonGroup } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
 import { FaDownload, FaTrash, FaFolder, FaEye, FaUpload, FaFolderPlus, FaFile, FaEdit, FaArrowLeft, FaEllipsisV, FaSearch, FaCheckCircle, FaShare, FaFilePdf, FaFileWord, FaFileImage, FaInfo, FaTh, FaList, FaSortAlphaDown, FaSortAmountDown, FaCalendarAlt, FaStar, FaRegStar, FaThumbtack, FaBuilding, FaLock, FaClipboardList, FaArrowsAlt, FaInfoCircle, FaStickyNote } from 'react-icons/fa';
@@ -207,7 +207,7 @@ function RenameModal({ show, onHide, item, onRename }: RenameModalProps) {
     }
   }, [item]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsRenaming(true);
     try {
@@ -455,7 +455,7 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleToggleFavorite = async (item: Document | Folder, event?: React.MouseEvent) => {
+  const handleToggleFavorite = async (item: Document | Folder, event?: MouseEvent) => {
     if (event) {
       event.stopPropagation();
     }
@@ -483,7 +483,7 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleTogglePin = async (folder: Folder, event?: React.MouseEvent) => {
+  const handleTogglePin = async (folder: Folder, event?: MouseEvent) => {
     if (event) {
       event.stopPropagation();
     }
@@ -1006,7 +1006,7 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleCreateFolder = async (e: React.FormEvent) => {
+  const handleCreateFolder = async (e: FormEvent) => {
     e.preventDefault();
     try {
       if (!selectedCompanyId) {
@@ -1089,7 +1089,7 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleUpload = async (e: React.FormEvent) => {
+  const handleUpload = async (e: FormEvent) => {
     e.preventDefault();
     if (!uploadFiles.length) return;
 
@@ -1327,22 +1327,22 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleDragStart = (e: React.DragEvent, type: 'document' | 'folder', id: string) => {
+  const handleDragStart = (e: DragEvent, type: 'document' | 'folder', id: string) => {
     setDraggedItem({ type, id });
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     e.currentTarget.classList.add('drag-over');
   };
 
-  const handleDragLeave = (e: React.DragEvent) => {
+  const handleDragLeave = (e: DragEvent) => {
     e.currentTarget.classList.remove('drag-over');
   };
 
-  const handleDrop = async (e: React.DragEvent, targetFolderId: string) => {
+  const handleDrop = async (e: DragEvent, targetFolderId: string) => {
     e.preventDefault();
     e.currentTarget.classList.remove('drag-over');
 
@@ -1841,7 +1841,7 @@ export default function DocumentsPage() {
             My Drive
           </button>
           {currentPath.map((pathItem, index) => (
-            <React.Fragment key={pathItem.id}>
+            <Fragment key={pathItem.id}>
               <span className="breadcrumb-separator">/</span>
               <button
                 className={`breadcrumb-item ${index === currentPath.length - 1 ? 'active' : ''}`}
@@ -1849,7 +1849,7 @@ export default function DocumentsPage() {
               >
                 {pathItem.name}
               </button>
-            </React.Fragment>
+            </Fragment>
           ))}
         </div>
 
@@ -2664,7 +2664,7 @@ export default function DocumentsPage() {
                 <Form.Control
                   type="file"
                   multiple
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => {
                     const files = Array.from(e.target.files || []);
                     setUploadFiles(files);
                   }}
