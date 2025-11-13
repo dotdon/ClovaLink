@@ -1,12 +1,18 @@
+'use client';
+
 import { Container } from 'react-bootstrap';
 import Link from 'next/link';
 import { FaArrowLeft } from 'react-icons/fa';
-
-// Force static generation
-export const dynamic = 'force-static';
-export const revalidate = 3600; // Revalidate every hour
+import { useState, useEffect } from 'react';
 
 export default function PrivacyPolicyPage() {
+  const [lastUpdated, setLastUpdated] = useState('');
+
+  useEffect(() => {
+    // Format date on client-side only to avoid hydration mismatch
+    setLastUpdated(new Date().toLocaleDateString());
+  }, []);
+
   return (
     <div className="privacy-page">
       <Container className="py-5">
@@ -16,7 +22,7 @@ export default function PrivacyPolicyPage() {
 
         <div className="content-card">
           <h1>Privacy Policy</h1>
-          <p className="last-updated">Last Updated: {new Date().toLocaleDateString()}</p>
+          <p className="last-updated">Last Updated: {lastUpdated || 'Loading...'}</p>
 
           <section>
             <h2>1. Information We Collect</h2>
