@@ -1,8 +1,34 @@
 # ClovaLink
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16.x-black)](https://nextjs.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15.x-blue)](https://www.postgresql.org/)
+
 A secure document management and sharing platform built with Next.js, Prisma, and PostgreSQL.
 
 ![ClovaLink Logo](public/logo.svg)
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Documentation](#documentation)
+- [Supported File Types](#supported-file-types)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+  - [Local Development](#local-development)
+  - [Podman Deployment](#podman-deployment-recommended)
+- [Available Scripts](#available-scripts)
+- [Environment Variables](#environment-variables)
+- [Technologies Used](#technologies-used)
+- [Security Architecture](#security-architecture)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
+- [License](#license)
+- [FAQ](#frequently-asked-questions-faq)
+- [Troubleshooting](#troubleshooting)
+- [Support](#support)
 
 ## Overview
 
@@ -46,6 +72,21 @@ ClovaLink is a comprehensive document management system designed for businesses 
 - **Temporary Sharing Links**: Create time-limited links for document downloads and uploads
 - **Link Expiration**: Configurable expiration times for shared links
 - **Upload Links**: Allow external users to upload files to specific folders
+- **Private Messaging**: End-to-end encrypted messaging between users
+- **Message Channels**: Organize conversations by channels or direct messages
+- **File Sharing via Messages**: Share documents directly through the messaging system
+- **Memos**: Add notes and comments to documents and folders for team collaboration
+
+### Calendar & Task Management
+- **Integrated Calendar**: Full-featured calendar for scheduling events and meetings
+- **Event Types**: Support for meetings, tasks, reminders, and deadlines
+- **Event Attendees**: Invite team members to events with RSVP tracking
+- **Event Reminders**: Configurable reminders for upcoming events
+- **Priority Levels**: Mark events with priority (low, medium, high, urgent)
+- **Event Status**: Track event status (pending, confirmed, cancelled, completed)
+- **Private Events**: Option to create private events visible only to you
+- **Location & Description**: Add location and detailed descriptions to events
+- **Calendar Export**: Download calendar events (iCal format)
 
 ### Monitoring & Tracking
 - **Activity Tracking**: Comprehensive logging of all user activities with per-item activity logs
@@ -110,8 +151,8 @@ ClovaLink supports multiple deployment options:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/dotdon/clovalink.git
-   cd clovalink
+   git clone https://github.com/dotdon/ClovaLink.git
+   cd ClovaLink
    ```
 
 2. Install dependencies:
@@ -123,7 +164,20 @@ ClovaLink supports multiple deployment options:
    ```bash
    cp .env.example .env
    ```
-   Edit `.env` with your configuration. Generate an encryption key:
+   Edit `.env` with your configuration:
+   
+   **Required Variables:**
+   - `DATABASE_URL`: PostgreSQL connection string
+   - `NEXTAUTH_URL`: Your application URL (e.g., `http://localhost:3000`)
+   - `NEXTAUTH_SECRET`: Generate with `openssl rand -base64 32`
+   - `ENCRYPTION_KEY`: Generate with `node generate-encryption-key.js`
+   
+   **Optional but Recommended:**
+   - `USE_RUST_CRYPTO`: Set to `true` for 5-10x faster encryption (requires Rust)
+   - `REDIS_URL`: Redis connection string for rate limiting
+   - `SMTP_*`: Email configuration for notifications
+   
+   Generate the encryption key:
    ```bash
    node generate-encryption-key.js
    ```
@@ -140,6 +194,13 @@ ClovaLink supports multiple deployment options:
    npm run dev
    ```
 
+6. **Access the application**:
+   - Open your browser and navigate to: `http://localhost:3000`
+   - **Default admin credentials**:
+     - Email: `admin@example.com`
+     - Password: `admin123`
+   - **⚠️ Important**: Change the admin password immediately after first login!
+
 ### Podman Deployment (Recommended)
 
 1. **Install Podman** (if not already installed):
@@ -153,15 +214,23 @@ ClovaLink supports multiple deployment options:
 
 2. Clone the repository:
    ```bash
-   git clone https://github.com/dotdon/clovalink.git
-   cd clovalink
+   git clone https://github.com/dotdon/ClovaLink.git
+   cd ClovaLink
    ```
 
 3. Set up environment variables:
    ```bash
    cp .env.example .env
    ```
-   Edit `.env` with your configuration. Generate an encryption key:
+   Edit `.env` with your configuration (see `.env.example` for all available options):
+   
+   **Key configuration for Podman:**
+   - `DATABASE_URL`: Already configured for Podman in `.env.example`
+   - `NEXTAUTH_URL`: Set to `http://localhost:3000` for local development
+   - `NEXTAUTH_SECRET`: Generate with `openssl rand -base64 32`
+   - `ENCRYPTION_KEY`: Generate with the command below
+   
+   Generate the encryption key:
    ```bash
    node generate-encryption-key.js
    ```
@@ -183,6 +252,13 @@ ClovaLink supports multiple deployment options:
    podman compose -f podman-compose.yml exec app npx prisma db push
    podman compose -f podman-compose.yml exec app npx prisma db seed
    ```
+
+7. **Access the application**:
+   - Open your browser and navigate to: `http://localhost:3000`
+   - **Default admin credentials**:
+     - Email: `admin@example.com`
+     - Password: `admin123`
+   - **⚠️ Important**: Change the admin password immediately after first login!
 
 ### Podman Commands
 
@@ -220,6 +296,58 @@ The Containerfile automatically:
 - Includes it in the production image
 - Enables 5-10x faster encryption when `USE_RUST_CRYPTO=true`
 
+### Rust Crypto Setup (Local Development)
+
+For local development with Rust crypto acceleration:
+
+#### Prerequisites
+- Rust toolchain (install from [rustup.rs](https://rustup.rs/))
+- Node.js build tools
+
+#### Installation Steps
+
+1. **Install Rust** (if not already installed):
+   ```bash
+   # macOS/Linux
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   
+   # Reload PATH
+   source $HOME/.cargo/env
+   ```
+
+2. **Build the Rust core module**:
+   ```bash
+   cd rust-core
+   npm install
+   npm run build
+   cd ..
+   ```
+
+3. **Enable Rust crypto in .env**:
+   ```env
+   USE_RUST_CRYPTO=true
+   ```
+
+4. **Verify the setup**:
+   ```bash
+   node test-rust.js
+   ```
+   You should see performance benchmarks showing the Rust implementation is significantly faster.
+
+#### Performance Comparison
+
+With `USE_RUST_CRYPTO=true`:
+- **Encryption**: 5-10x faster (XChaCha20-Poly1305 vs AES-256-GCM)
+- **Hashing**: 10-20x faster (BLAKE3 vs SHA-256)
+- **Memory**: More efficient for large files
+
+Without Rust (development mode):
+- Uses JavaScript crypto (Node.js built-in)
+- Slower but requires no additional setup
+- Suitable for development and testing
+
+**Production Recommendation**: Always use `USE_RUST_CRYPTO=true` for better performance and reduced server load.
+
 ## Available Scripts
 
 - `npm run dev` - Start development server (includes PDF worker copy)
@@ -233,6 +361,44 @@ The Containerfile automatically:
 - `npm run setup` - Run initial setup script
 
 **Note**: The PDF.js worker file is automatically copied to the public folder during `npm install`, `npm run dev`, and `npm run build` to ensure proper PDF viewing functionality.
+
+## Environment Variables
+
+ClovaLink uses environment variables for configuration. Copy `.env.example` to `.env` and configure the following:
+
+### Required Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/clovalink` |
+| `NEXTAUTH_URL` | Application URL | `http://localhost:3000` |
+| `NEXTAUTH_SECRET` | NextAuth.js secret (32+ chars) | Generate with `openssl rand -base64 32` |
+| `ENCRYPTION_KEY` | Document encryption key | Generate with `node generate-encryption-key.js` |
+
+### Optional Variables
+
+| Variable | Description | Default | Example |
+|----------|-------------|---------|---------|
+| `USE_RUST_CRYPTO` | Enable Rust crypto acceleration | `false` | `true` (recommended for production) |
+| `REDIS_URL` | Redis connection string | In-memory | `redis://localhost:6379` |
+| `SMTP_HOST` | SMTP server hostname | - | `smtp.gmail.com` |
+| `SMTP_PORT` | SMTP server port | `587` | `587` |
+| `SMTP_USER` | SMTP username | - | `user@example.com` |
+| `SMTP_PASSWORD` | SMTP password | - | `your-password` |
+| `SMTP_FROM` | From email address | - | `noreply@example.com` |
+| `UPLOAD_DIR` | Upload directory path | `./uploads` | `/app/uploads` |
+| `MAX_FILE_SIZE` | Maximum file size in bytes | `104857600` (100MB) | `52428800` (50MB) |
+| `ALLOWED_MIME_TYPES` | Allowed MIME types | All common types | `application/pdf,image/*` |
+| `LOG_LEVEL` | Logging level | `info` | `debug`, `warn`, `error` |
+| `PORT` | Server port | `3000` | `8080` |
+| `HOSTNAME` | Server hostname | `localhost` | `0.0.0.0` |
+| `CRON_SECRET` | Secret for cron job authentication | - | Generate with `openssl rand -base64 32` |
+
+**Security Notes:**
+- Never commit your `.env` file to version control
+- Back up your `ENCRYPTION_KEY` securely - losing it means permanent data loss
+- Use strong, randomly generated values for all secrets
+- In production, use `USE_RUST_CRYPTO=true` for better performance
 
 ## Technologies Used
 
@@ -505,6 +671,51 @@ A: Click the three-dot menu on any document or folder and select "Activity Log" 
 **Q: What activities are tracked?**
 A: ClovaLink tracks uploads, downloads, moves, renames, deletions, shares, password changes, and access attempts.
 
+### Messaging & Communication
+
+**Q: How do I send a message to another user?**
+A: Navigate to the Messages page from the dashboard sidebar. You can create new channels or send direct messages to individual users. All messages are end-to-end encrypted.
+
+**Q: Are messages secure?**
+A: Yes! Messages use client-side RSA-2048 encryption. Your private key never leaves your browser, and the server cannot decrypt your message content.
+
+**Q: Can I share documents through messages?**
+A: Yes! You can attach documents to messages. The recipient can save them directly to their document storage.
+
+**Q: How do I create a message channel?**
+A: Click the "New Channel" button in the Messages page, give it a name, select participants, and start collaborating.
+
+**Q: What's the difference between channels and direct messages?**
+A: Channels are group conversations for team collaboration, while direct messages are private one-on-one conversations.
+
+### Calendar & Events
+
+**Q: How do I create a calendar event?**
+A: Go to the Calendar page, click "Add Event", fill in the details (title, date, time, attendees), and save. You can create meetings, tasks, or reminders.
+
+**Q: Can I invite others to events?**
+A: Yes! When creating an event, add attendees from your company. They'll receive notifications and can RSVP to the event.
+
+**Q: How do reminders work?**
+A: When creating an event, you can set reminders (e.g., 15 minutes before, 1 hour before). You'll receive notifications at the specified times.
+
+**Q: Can I create private events?**
+A: Yes! Mark an event as "Private" when creating it. Private events are only visible to you in the calendar.
+
+**Q: How do I export my calendar?**
+A: Click the "Download Calendar" button on the Calendar page to export events in iCal format, which can be imported into other calendar applications.
+
+### Memos & Notes
+
+**Q: What are memos?**
+A: Memos are notes you can attach to documents and folders. They're useful for leaving comments, instructions, or reminders for yourself or team members.
+
+**Q: How do I add a memo to a document?**
+A: Click the three-dot menu on any document or folder and select "Memos". You can add, edit, or delete memos from there.
+
+**Q: Can others see my memos?**
+A: Yes, memos are visible to all users who have access to the document or folder. They're great for team collaboration.
+
 ## Troubleshooting
 
 ### PDF Viewer Issues
@@ -594,6 +805,86 @@ A: ClovaLink tracks uploads, downloads, moves, renames, deletions, shares, passw
 3. Check server resources
 4. Restart the app container: `podman compose -f podman-compose.yml restart app`
 
+### Authentication Issues
+
+**Problem**: Can't login with passkey
+
+**Solutions**:
+1. Ensure your browser supports WebAuthn (Chrome, Firefox, Safari, Edge modern versions)
+2. Check that your authenticator is registered in your account settings
+3. Try using your backup authentication method (password + 2FA)
+4. Verify the authenticator device is connected and working
+
+**Problem**: Lost 2FA device
+
+**Solutions**:
+1. Use backup codes if you saved them during 2FA setup
+2. Contact your administrator to disable 2FA on your account
+3. Administrators can reset 2FA from the employee management page
+
+**Problem**: 2FA code not working
+
+**Solutions**:
+1. Ensure your device time is synchronized (TOTP requires accurate time)
+2. Wait for the next code cycle (codes refresh every 30 seconds)
+3. Check that you're entering the current code, not an expired one
+4. Try using a backup code if available
+
+### Messaging Issues
+
+**Problem**: Can't send messages
+
+**Solutions**:
+1. Ensure you have permission to send messages
+2. Check that the recipient has messaging enabled
+3. Verify your encryption keys are set up (check browser console for errors)
+4. Try refreshing the page to regenerate encryption keys
+
+**Problem**: Messages not appearing
+
+**Solutions**:
+1. Check your internet connection
+2. Refresh the page to reconnect to the WebSocket server
+3. Clear browser cache and local storage
+4. Check browser console for WebSocket connection errors
+
+### Calendar Issues
+
+**Problem**: Events not syncing
+
+**Solutions**:
+1. Refresh the calendar page
+2. Check that events were created in the correct company context
+3. Verify event dates are in the future (past events may be filtered)
+4. Check the calendar view filters (month/week/day view)
+
+**Problem**: Reminders not working
+
+**Solutions**:
+1. Ensure browser notifications are enabled for the site
+2. Check that the reminder time hasn't already passed
+3. Keep the browser tab open or enable background notifications
+4. Verify the event has reminders configured
+
+### Rust Crypto Issues
+
+**Problem**: Rust crypto fails to load
+
+**Solutions**:
+1. Check that rust-core is built: `ls rust-core/*.node`
+2. Verify Rust is installed: `rustc --version`
+3. Rebuild the module: `cd rust-core && npm run build`
+4. Set `USE_RUST_CRYPTO=false` in .env to use JavaScript crypto as fallback
+5. Check server logs for detailed error messages
+
+**Problem**: Performance not improving with Rust
+
+**Solutions**:
+1. Verify `USE_RUST_CRYPTO=true` is set in your .env file
+2. Check server logs to confirm Rust crypto is being used (look for "Using Rust crypto" message)
+3. Test with the benchmark: `node test-rust.js`
+4. Ensure you're testing with files large enough to see the difference (>1MB)
+
 ## Support
 
 For support, please:
@@ -605,4 +896,99 @@ For support, please:
 - Feature requests: Open an issue with the "enhancement" label
 - Bug reports: Open an issue with detailed reproduction steps
 - Security issues: Email the development team directly
-- General questions: Check the FAQ above or open a discussion 
+- General questions: Check the FAQ above or open a discussion
+
+## Quick Reference
+
+### Common Commands
+
+#### Local Development
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
+
+# Run linter
+npm run lint
+
+# Database operations
+npx prisma db push          # Apply schema changes
+npx prisma db seed          # Seed database
+npx prisma studio          # Open Prisma Studio
+npx prisma generate        # Generate Prisma client
+
+# Generate encryption key
+node generate-encryption-key.js
+
+# Test Rust crypto
+node test-rust.js
+```
+
+#### Podman/Docker
+```bash
+# Start services
+./podman-start.sh
+
+# Stop services
+./podman-stop.sh
+
+# View logs
+podman compose -f podman-compose.yml logs -f
+podman compose -f podman-compose.yml logs -f app
+
+# Container status
+podman compose -f podman-compose.yml ps
+
+# Restart containers
+podman compose -f podman-compose.yml restart
+
+# Enter container
+podman compose -f podman-compose.yml exec app bash
+
+# Database operations in container
+podman compose -f podman-compose.yml exec app npx prisma db push
+podman compose -f podman-compose.yml exec app npx prisma db seed
+podman compose -f podman-compose.yml exec app npx prisma studio
+
+# Build production image
+podman build -f Containerfile -t clovalink:latest .
+```
+
+#### Environment Setup
+```bash
+# Copy environment file
+cp .env.example .env
+
+# Generate secrets
+openssl rand -base64 32                    # For NEXTAUTH_SECRET
+node generate-encryption-key.js            # For ENCRYPTION_KEY
+
+# Rust crypto setup
+cd rust-core
+npm install
+npm run build
+cd ..
+```
+
+### Default Credentials
+- **Email**: `admin@example.com`
+- **Password**: `admin123`
+- **⚠️ Change immediately after first login!**
+
+### Port Configuration
+- **Application**: `3000`
+- **PostgreSQL**: `5432`
+- **Prisma Studio**: `5555`
+- **Redis** (optional): `6379`
+
+---
+
+**Made with ❤️ by the ClovaLink Team** 
