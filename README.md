@@ -1,8 +1,34 @@
 # ClovaLink
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16.x-black)](https://nextjs.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15.x-blue)](https://www.postgresql.org/)
+
 A secure document management and sharing platform built with Next.js, Prisma, and PostgreSQL.
 
 ![ClovaLink Logo](public/logo.svg)
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Documentation](#documentation)
+- [Supported File Types](#supported-file-types)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+  - [Local Development](#local-development)
+  - [Podman Deployment](#podman-deployment-recommended)
+- [Available Scripts](#available-scripts)
+- [Environment Variables](#environment-variables)
+- [Technologies Used](#technologies-used)
+- [Security Architecture](#security-architecture)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
+- [License](#license)
+- [FAQ](#frequently-asked-questions-faq)
+- [Troubleshooting](#troubleshooting)
+- [Support](#support)
 
 ## Overview
 
@@ -870,4 +896,99 @@ For support, please:
 - Feature requests: Open an issue with the "enhancement" label
 - Bug reports: Open an issue with detailed reproduction steps
 - Security issues: Email the development team directly
-- General questions: Check the FAQ above or open a discussion 
+- General questions: Check the FAQ above or open a discussion
+
+## Quick Reference
+
+### Common Commands
+
+#### Local Development
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
+
+# Run linter
+npm run lint
+
+# Database operations
+npx prisma db push          # Apply schema changes
+npx prisma db seed          # Seed database
+npx prisma studio          # Open Prisma Studio
+npx prisma generate        # Generate Prisma client
+
+# Generate encryption key
+node generate-encryption-key.js
+
+# Test Rust crypto
+node test-rust.js
+```
+
+#### Podman/Docker
+```bash
+# Start services
+./podman-start.sh
+
+# Stop services
+./podman-stop.sh
+
+# View logs
+podman compose -f podman-compose.yml logs -f
+podman compose -f podman-compose.yml logs -f app
+
+# Container status
+podman compose -f podman-compose.yml ps
+
+# Restart containers
+podman compose -f podman-compose.yml restart
+
+# Enter container
+podman compose -f podman-compose.yml exec app bash
+
+# Database operations in container
+podman compose -f podman-compose.yml exec app npx prisma db push
+podman compose -f podman-compose.yml exec app npx prisma db seed
+podman compose -f podman-compose.yml exec app npx prisma studio
+
+# Build production image
+podman build -f Containerfile -t clovalink:latest .
+```
+
+#### Environment Setup
+```bash
+# Copy environment file
+cp .env.example .env
+
+# Generate secrets
+openssl rand -base64 32                    # For NEXTAUTH_SECRET
+node generate-encryption-key.js            # For ENCRYPTION_KEY
+
+# Rust crypto setup
+cd rust-core
+npm install
+npm run build
+cd ..
+```
+
+### Default Credentials
+- **Email**: `admin@example.com`
+- **Password**: `admin123`
+- **⚠️ Change immediately after first login!**
+
+### Port Configuration
+- **Application**: `3000`
+- **PostgreSQL**: `5432`
+- **Prisma Studio**: `5555`
+- **Redis** (optional): `6379`
+
+---
+
+**Made with ❤️ by the ClovaLink Team** 
