@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import DashboardLayout from '@/components/ui/DashboardLayout';
 import { Card } from 'react-bootstrap';
 import { FaUserShield, FaFolderOpen, FaShareAlt, FaKey, FaArrowsAlt, FaStar, FaLock, FaThumbtack, FaQuestionCircle } from 'react-icons/fa';

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, Badge, Spinner, Button } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
 import { useParams, useRouter } from 'next/navigation';

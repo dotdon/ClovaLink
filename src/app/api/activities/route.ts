@@ -4,6 +4,9 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hasPermission, Permission } from '@/lib/permissions';
 
+// Cache activities for 15 seconds
+export const revalidate = 15;
+
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);

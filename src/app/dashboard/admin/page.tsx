@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, Row, Col, Table, Button, Badge, Form, Alert } from 'react-bootstrap';
 import { FaUserPlus, FaBuilding, FaFileAlt, FaChartBar } from 'react-icons/fa';
 import DashboardLayout from '@/components/ui/DashboardLayout';

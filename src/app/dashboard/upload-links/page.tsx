@@ -1,12 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, Table, Button, Badge, Alert } from 'react-bootstrap';
+import dynamic from 'next/dynamic';
 import DashboardLayout from '@/components/ui/DashboardLayout';
 import { FaPlus, FaCopy, FaTrash, FaUser, FaCalendar, FaLink } from 'react-icons/fa';
-import CreateUploadLinkModal from '@/components/modals/CreateUploadLinkModal';
 import { useSession } from 'next-auth/react';
 import { hasPermission, Permission } from '@/lib/permissions';
+
+const CreateUploadLinkModal = dynamic(() => import('@/components/modals/CreateUploadLinkModal'), {
+  ssr: false,
+});
 
 interface UploadLink {
   id: string;

@@ -1,15 +1,22 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, Button, Alert, Spinner, Modal } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
 import { FaPlus, FaBuilding, FaUsers, FaFileAlt, FaChevronRight, FaFileDownload, FaCalendar, FaEdit, FaHdd } from 'react-icons/fa';
-import AddCompanyModal from '@/components/modals/AddCompanyModal';
-import EditCompanyModal from '@/components/modals/EditCompanyModal';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { hasPermission, Permission, canAccessCompany } from '@/lib/permissions';
 import Image from 'next/image';
+
+const AddCompanyModal = dynamic(() => import('@/components/modals/AddCompanyModal'), {
+  ssr: false,
+});
+
+const EditCompanyModal = dynamic(() => import('@/components/modals/EditCompanyModal'), {
+  ssr: false,
+});
 
 interface Company {
   id: string;

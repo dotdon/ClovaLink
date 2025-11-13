@@ -1,15 +1,30 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Button, Form, Modal, Alert, Dropdown, ButtonGroup } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
 import { FaDownload, FaTrash, FaFolder, FaEye, FaUpload, FaFolderPlus, FaFile, FaEdit, FaArrowLeft, FaEllipsisV, FaSearch, FaCheckCircle, FaShare, FaFilePdf, FaFileWord, FaFileImage, FaInfo, FaTh, FaList, FaSortAlphaDown, FaSortAmountDown, FaCalendarAlt, FaStar, FaRegStar, FaThumbtack, FaBuilding, FaLock, FaClipboardList, FaArrowsAlt, FaInfoCircle, FaStickyNote } from 'react-icons/fa';
 import { useSession } from 'next-auth/react';
 import { hasPermission, Permission, canAccessFolder, canManageFolder, canManageDocument } from '@/lib/permissions';
-import DocumentViewerModal from '@/components/viewers/DocumentViewerModal';
-import ActiveUsers from '@/components/ActiveUsers';
-import MemoModal from '@/components/modals/MemoModal';
-import TrashModal from '@/components/modals/TrashModal';
+import dynamic from 'next/dynamic';
+
+// Dynamic imports for heavy components - reduces initial bundle size
+const DocumentViewerModal = dynamic(() => import('@/components/viewers/DocumentViewerModal'), {
+  ssr: false,
+  loading: () => null,
+});
+
+const ActiveUsers = dynamic(() => import('@/components/ActiveUsers'), {
+  ssr: false,
+});
+
+const MemoModal = dynamic(() => import('@/components/modals/MemoModal'), {
+  ssr: false,
+});
+
+const TrashModal = dynamic(() => import('@/components/modals/TrashModal'), {
+  ssr: false,
+});
 
 interface Document {
   id: string;

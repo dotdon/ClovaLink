@@ -1,11 +1,18 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, Table, Button, Badge, Modal, Alert, Dropdown } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
 import { FaPlus, FaBuilding, FaEnvelope, FaUserTag, FaChevronRight, FaEdit, FaFileDownload, FaTrash, FaShieldAlt, FaKey, FaUser, FaUserShield, FaExclamationTriangle, FaUserSlash, FaHistory, FaFileAlt, FaCheckCircle, FaTimesCircle, FaInfoCircle, FaTh, FaThList, FaFilter, FaSearch, FaComments, FaFile as FaFileIcon, FaEllipsisV } from 'react-icons/fa';
-import AddEmployeeModal from '@/components/modals/AddEmployeeModal';
-import EditEmployeeModal from '@/components/modals/EditEmployeeModal';
+import dynamic from 'next/dynamic';
+
+const AddEmployeeModal = dynamic(() => import('@/components/modals/AddEmployeeModal'), {
+  ssr: false,
+});
+
+const EditEmployeeModal = dynamic(() => import('@/components/modals/EditEmployeeModal'), {
+  ssr: false,
+});
 import { useSession } from 'next-auth/react';
 import { hasPermission, Permission, canAccessCompany } from '@/lib/permissions';
 

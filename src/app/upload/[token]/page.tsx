@@ -1,11 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Container } from 'react-bootstrap';
-import DocumentUpload from '@/components/DocumentUpload';
+import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { FaUpload, FaCheckCircle, FaExclamationTriangle, FaShieldAlt, FaLock } from 'react-icons/fa';
 import Image from 'next/image';
+
+const DocumentUpload = dynamic(() => import('@/components/DocumentUpload'), {
+  ssr: false,
+});
 
 export default function UploadPage() {
   const [error, setError] = useState<string | null>(null);

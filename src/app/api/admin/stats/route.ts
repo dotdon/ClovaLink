@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+// Cache stats for 30 seconds to reduce database load
+export const revalidate = 30;
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);

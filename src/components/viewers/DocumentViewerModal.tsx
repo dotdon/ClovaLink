@@ -1,10 +1,19 @@
 'use client';
 
-import React from 'react';
+import dynamic from 'next/dynamic';
 import { Modal, Button, Alert } from 'react-bootstrap';
 import { FaDownload, FaTimes } from 'react-icons/fa';
-import PdfViewer from './PdfViewer';
-import DocxViewer from './DocxViewer';
+
+// Dynamic imports for heavy PDF and DOCX viewers - reduces initial bundle by ~500KB
+const PdfViewer = dynamic(() => import('./PdfViewer'), {
+  ssr: false,
+  loading: () => <div className="text-center p-4"><div className="spinner-border" role="status" /></div>,
+});
+
+const DocxViewer = dynamic(() => import('./DocxViewer'), {
+  ssr: false,
+  loading: () => <div className="text-center p-4"><div className="spinner-border" role="status" /></div>,
+});
 
 interface Document {
   id: string;
