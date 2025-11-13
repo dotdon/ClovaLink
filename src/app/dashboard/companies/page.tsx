@@ -48,9 +48,15 @@ export default function CompaniesPage() {
   const fetchCompanies = async () => {
     try {
       const response = await fetch('/api/companies');
-      if (!response.ok) throw new Error('Failed to fetch companies');
-      const { companies } = await response.json();
-      setCompanies(companies);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData.error || errorData.message || `HTTP ${response.status}: Failed to fetch companies`;
+        throw new Error(errorMsg);
+      }
+      const result = await response.json();
+      // Handle both old and new response formats
+      const companies = result.success ? result.data.companies : result.companies;
+      setCompanies(companies || []);
     } catch (error) {
       console.error('Error fetching companies:', error);
       setError(error instanceof Error ? error.message : 'Failed to fetch companies');
@@ -78,17 +84,20 @@ export default function CompaniesPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create company');
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.message || 'Failed to create company');
       }
 
-      const { company } = await response.json();
+      const result = await response.json();
+      // Handle both old and new response formats
+      const company = result.success ? result.data.company : result.company;
       
       // Refresh the companies list
       await fetchCompanies();
       setShowAddModal(false);
     } catch (error) {
       console.error('Error creating company:', error);
-      alert('Failed to create company. Please try again.');
+      alert(error instanceof Error ? error.message : 'Failed to create company. Please try again.');
     }
   };
 

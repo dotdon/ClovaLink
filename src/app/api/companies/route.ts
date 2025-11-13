@@ -1,36 +1,43 @@
-import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import { authOptions } from '@/lib/auth';
 import { hasPermission, Permission } from '@/lib/permissions';
+import { withApiMiddleware, defaultRateLimits } from '@/lib/apiMiddleware';
+import { validateRequest, schemas } from '@/lib/validation';
+import { successResponse, internalErrorResponse, forbiddenResponse, validationErrorResponse } from '@/lib/apiResponse';
+import { z } from 'zod';
 
 // Route segment config to prevent timeouts on fast navigation
-// Shorter timeout to fail fast rather than hang
 export const maxDuration = 15;
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: Request) {
+// Validation schema for creating a company
+const createCompanySchema = z.object({
+  name: schemas.companyName,
+});
+
+async function handlePost(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  
+  // Permission check
+  if (!hasPermission(session!, Permission.CREATE_COMPANIES)) {
+    return forbiddenResponse('You do not have permission to create companies');
+  }
+
+  // Validate request body
+  const validation = await validateRequest(req, createCompanySchema);
+  
+  if (!validation.success) {
+    return validationErrorResponse(validation.errors, 'Invalid company data');
+  }
+
+  const { name } = validation.data as { name: string };
+
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Check if user has permission to create companies
-    if (!hasPermission(session, Permission.CREATE_COMPANIES)) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
-    }
-
-    const data = await request.json();
-    
-    if (!data.name) {
-      return NextResponse.json({ error: 'Company name is required' }, { status: 400 });
-    }
-
     const company = await prisma.company.create({
       data: {
-        name: data.name,
+        name,
       },
       include: {
         _count: {
@@ -42,30 +49,33 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({ company });
+    return successResponse({ company }, 'Company created successfully');
   } catch (error) {
     console.error('Error creating company:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return internalErrorResponse('Failed to create company');
   }
 }
 
-export async function GET() {
+export const POST = withApiMiddleware(handlePost, {
+  requireAuth: true,
+  requireRole: 'ADMIN', // Only admins can create companies
+  rateLimit: defaultRateLimits.write,
+  allowedMethods: ['POST'],
+});
+
+async function handleGet(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  
+  // Permission check
+  if (!hasPermission(session!, Permission.VIEW_COMPANIES)) {
+    return forbiddenResponse('You do not have permission to view companies');
+  }
+
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Check if user has permission to view companies
-    if (!hasPermission(session, Permission.VIEW_COMPANIES)) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
-    }
-
     // Build query based on user role
-    const where = session.user.role === 'ADMIN' 
+    const where = session!.user.role === 'ADMIN' 
       ? {} // Admins can see all companies
-      : { id: session.user.companyId }; // Others can only see their own company
+      : { id: session!.user.companyId }; // Others can only see their own company
 
     const companies = await prisma.company.findMany({
       where,
@@ -101,9 +111,19 @@ export async function GET() {
       })
     );
 
-    return NextResponse.json({ companies: companiesWithStorage });
+    return successResponse(
+      { companies: companiesWithStorage },
+      undefined,
+      { total: companiesWithStorage.length }
+    );
   } catch (error) {
     console.error('Error fetching companies:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return internalErrorResponse('Failed to fetch companies');
   }
-} 
+}
+
+export const GET = withApiMiddleware(handleGet, {
+  requireAuth: true,
+  rateLimit: defaultRateLimits.read,
+  allowedMethods: ['GET'],
+}); 

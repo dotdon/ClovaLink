@@ -237,9 +237,10 @@ The Containerfile automatically:
 ## Technologies Used
 
 ### Core Stack
-- **Frontend**: Next.js 15.x (React 19 framework)
+- **Frontend**: Next.js 16.x (React 19 framework with Turbopack)
 - **Backend**: Next.js API routes
 - **Database**: PostgreSQL 15.x with Prisma ORM
+- **Cache/Rate Limiting**: Redis 7.x
 - **Authentication**: NextAuth.js with multi-factor authentication
 - **File Storage**: Local file system (configurable)
 - **Containerization**: Podman with compose support

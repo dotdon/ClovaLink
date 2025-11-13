@@ -68,9 +68,24 @@ export default function EditEmployeeModal({ show, onHide, employee, onSubmit }: 
   const fetchCompanies = async () => {
     try {
       const response = await fetch('/api/companies');
-      if (!response.ok) throw new Error('Failed to fetch companies');
-      const { companies: data } = await response.json();
-      setCompanies(data || []);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.message || 'Failed to fetch companies');
+      }
+      const result = await response.json();
+      // Handle both old and new response formats
+      let companiesList;
+      if (result.success && result.data && result.data.companies) {
+        companiesList = result.data.companies;
+      } else if (result.companies) {
+        companiesList = result.companies;
+      } else if (Array.isArray(result)) {
+        companiesList = result;
+      } else {
+        companiesList = [];
+      }
+      const data = Array.isArray(companiesList) ? companiesList : [];
+      setCompanies(data);
     } catch (error) {
       console.error('Failed to fetch companies:', error);
       setCompanies([]);

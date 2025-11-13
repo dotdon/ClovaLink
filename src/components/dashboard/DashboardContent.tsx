@@ -100,9 +100,17 @@ export default function DashboardContent({
       }
 
       if (activitiesData) {
-        setActivities(activitiesData.activities || []);
-        if (activitiesData.pagination) {
-          setPagination(activitiesData.pagination);
+        // Handle both old and new response formats
+        const activities = activitiesData.success 
+          ? activitiesData.data.activities 
+          : activitiesData.activities;
+        const paginationData = activitiesData.success
+          ? activitiesData.data.pagination
+          : activitiesData.pagination;
+          
+        setActivities(activities || []);
+        if (paginationData) {
+          setPagination(paginationData);
         }
       }
     } catch (error) {

@@ -104,10 +104,13 @@ export default function EmployeesPage() {
     try {
       const response = await fetch('/api/employees');
       if (!response.ok) throw new Error('Failed to fetch employees');
-      const data = await response.json();
-      setEmployees(data);
+      const result = await response.json();
+      // Handle both old and new response formats
+      const employees = result.success ? result.data.employees : result;
+      setEmployees(Array.isArray(employees) ? employees : []);
     } catch (error) {
       console.error('Error fetching employees:', error);
+      setError(error instanceof Error ? error.message : 'Failed to fetch employees');
     } finally {
       setIsLoading(false);
     }
@@ -117,9 +120,9 @@ export default function EmployeesPage() {
     try {
       const response = await fetch('/api/companies');
       if (!response.ok) throw new Error('Failed to fetch companies');
-      const data = await response.json();
-      // API returns { companies: [...] }
-      const companiesList = data.companies || data;
+      const result = await response.json();
+      // Handle both old and new response formats
+      const companiesList = result.success ? result.data.companies : (result.companies || result);
       setCompanies(Array.isArray(companiesList) ? companiesList : []);
     } catch (error) {
       console.error('Error fetching companies:', error);
@@ -186,7 +189,9 @@ export default function EmployeesPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create employee');
+        // Show validation errors if available
+        const errorMsg = errorData.data?.errors?.join(', ') || errorData.error || errorData.message || 'Failed to create employee';
+        throw new Error(errorMsg);
       }
 
       await fetchEmployees();

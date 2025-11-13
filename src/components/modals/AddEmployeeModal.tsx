@@ -39,15 +39,31 @@ export default function AddEmployeeModal({ show, onHide, onSubmit }: AddEmployee
   const fetchCompanies = async () => {
     try {
       const response = await fetch('/api/companies');
-      if (!response.ok) throw new Error('Failed to fetch companies');
-      const { companies: data } = await response.json();
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.message || 'Failed to fetch companies');
+      }
+      const result = await response.json();
+      // Handle both old and new response formats
+      let companiesList;
+      if (result.success && result.data && result.data.companies) {
+        companiesList = result.data.companies;
+      } else if (result.companies) {
+        companiesList = result.companies;
+      } else if (Array.isArray(result)) {
+        companiesList = result;
+      } else {
+        companiesList = [];
+      }
+      const data = Array.isArray(companiesList) ? companiesList : [];
       setCompanies(data);
       // Set the first company as default if available
-      if (data.length > 0 && !formData.companyId) {
+      if (data && data.length > 0 && !formData.companyId) {
         setFormData(prev => ({ ...prev, companyId: data[0].id }));
       }
     } catch (error) {
       console.error('Failed to fetch companies:', error);
+      setCompanies([]); // Set empty array on error to prevent undefined errors
     }
   };
 

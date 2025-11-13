@@ -1,23 +1,20 @@
-import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hasPermission, Permission } from '@/lib/permissions';
+import { withApiMiddleware, defaultRateLimits } from '@/lib/apiMiddleware';
+import { successResponse, errorResponse, internalErrorResponse } from '@/lib/apiResponse';
 
-// Cache activities for 15 seconds
 export const revalidate = 15;
 
-export async function GET(request: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+async function handleGet(req: NextRequest) {
+  const session = await getServerSession(authOptions);
 
+  try {
     // Get the employee with their company info
     const employee = await prisma.employee.findUnique({
-      where: { id: session.user.id },
+      where: { id: session!.user.id },
       select: {
         id: true,
         companyId: true,
@@ -26,19 +23,19 @@ export async function GET(request: Request) {
     });
 
     if (!employee) {
-      return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
+      return errorResponse('Employee not found', 404);
     }
 
     // Parse pagination parameters from URL
-    const { searchParams } = new URL(request.url);
+    const searchParams = req.nextUrl.searchParams;
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100); // Cap at 100
     const skip = (page - 1) * limit;
     const documentId = searchParams.get('documentId');
     const folderId = searchParams.get('folderId');
 
     // Build where clause based on role and filters
-    let where: any = session.user.role === 'ADMIN'
+    let where: any = session!.user.role === 'ADMIN'
       ? {} // Admins can see all activities
       : { companyId: employee.companyId }; // Others only see their company's activities
 
@@ -80,19 +77,29 @@ export async function GET(request: Request) {
     ]);
 
     const totalPages = Math.ceil(total / limit);
+    const hasMore = page < totalPages;
 
-    return NextResponse.json({ 
-      activities,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages,
-        hasMore: page < totalPages
+    // Return in old format for backward compatibility
+    return successResponse(
+      { 
+        activities,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+          hasMore,
+        }
       }
-    });
+    );
   } catch (error) {
     console.error('Error fetching activities:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return internalErrorResponse('Failed to fetch activities');
   }
-} 
+}
+
+export const GET = withApiMiddleware(handleGet, {
+  requireAuth: true,
+  rateLimit: defaultRateLimits.read,
+  allowedMethods: ['GET'],
+}); 

@@ -292,11 +292,28 @@ export default function MessagesPage() {
     try {
       const response = await fetch('/api/employees');
       if (response.ok) {
-        const data = await response.json();
-        setEmployees(data.filter((emp: Employee) => emp.id !== session?.user?.id));
+        const result = await response.json();
+        // Handle both old and new response formats
+        let employeesList;
+        if (result.success && result.data && result.data.employees) {
+          employeesList = result.data.employees;
+        } else if (result.employees) {
+          employeesList = result.employees;
+        } else if (Array.isArray(result)) {
+          employeesList = result;
+        } else {
+          employeesList = [];
+        }
+        const employeesArray = Array.isArray(employeesList) ? employeesList : [];
+        setEmployees(employeesArray.filter((emp: Employee) => emp.id !== session?.user?.id));
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to fetch employees:', errorData.error || errorData.message || 'Unknown error');
+        setEmployees([]);
       }
     } catch (error) {
       console.error('Error fetching employees:', error);
+      setEmployees([]);
     }
   };
 

@@ -35,6 +35,8 @@
     "bcryptjs": "^2.4.3",
     "bootstrap": "^5.3.3",
     "docx-preview": "^0.3.2",
+    "ioredis": "^5.8.2",
+    "isomorphic-dompurify": "^2.31.0",
     "jszip": "^3.10.1",
     "lodash": "^4.17.21",
     "next": "^16.0.2",
@@ -53,7 +55,8 @@
     "recharts": "^3.4.1",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
