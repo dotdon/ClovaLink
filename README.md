@@ -168,6 +168,13 @@ ClovaLink supports multiple deployment options:
    npm run dev
    ```
 
+6. **Access the application**:
+   - Open your browser and navigate to: `http://localhost:3000`
+   - **Default admin credentials**:
+     - Email: `admin@example.com`
+     - Password: `admin123`
+   - **⚠️ Important**: Change the admin password immediately after first login!
+
 ### Podman Deployment (Recommended)
 
 1. **Install Podman** (if not already installed):
@@ -219,6 +226,13 @@ ClovaLink supports multiple deployment options:
    podman compose -f podman-compose.yml exec app npx prisma db push
    podman compose -f podman-compose.yml exec app npx prisma db seed
    ```
+
+7. **Access the application**:
+   - Open your browser and navigate to: `http://localhost:3000`
+   - **Default admin credentials**:
+     - Email: `admin@example.com`
+     - Password: `admin123`
+   - **⚠️ Important**: Change the admin password immediately after first login!
 
 ### Podman Commands
 
@@ -764,6 +778,86 @@ A: Yes, memos are visible to all users who have access to the document or folder
 2. Clear browser cache
 3. Check server resources
 4. Restart the app container: `podman compose -f podman-compose.yml restart app`
+
+### Authentication Issues
+
+**Problem**: Can't login with passkey
+
+**Solutions**:
+1. Ensure your browser supports WebAuthn (Chrome, Firefox, Safari, Edge modern versions)
+2. Check that your authenticator is registered in your account settings
+3. Try using your backup authentication method (password + 2FA)
+4. Verify the authenticator device is connected and working
+
+**Problem**: Lost 2FA device
+
+**Solutions**:
+1. Use backup codes if you saved them during 2FA setup
+2. Contact your administrator to disable 2FA on your account
+3. Administrators can reset 2FA from the employee management page
+
+**Problem**: 2FA code not working
+
+**Solutions**:
+1. Ensure your device time is synchronized (TOTP requires accurate time)
+2. Wait for the next code cycle (codes refresh every 30 seconds)
+3. Check that you're entering the current code, not an expired one
+4. Try using a backup code if available
+
+### Messaging Issues
+
+**Problem**: Can't send messages
+
+**Solutions**:
+1. Ensure you have permission to send messages
+2. Check that the recipient has messaging enabled
+3. Verify your encryption keys are set up (check browser console for errors)
+4. Try refreshing the page to regenerate encryption keys
+
+**Problem**: Messages not appearing
+
+**Solutions**:
+1. Check your internet connection
+2. Refresh the page to reconnect to the WebSocket server
+3. Clear browser cache and local storage
+4. Check browser console for WebSocket connection errors
+
+### Calendar Issues
+
+**Problem**: Events not syncing
+
+**Solutions**:
+1. Refresh the calendar page
+2. Check that events were created in the correct company context
+3. Verify event dates are in the future (past events may be filtered)
+4. Check the calendar view filters (month/week/day view)
+
+**Problem**: Reminders not working
+
+**Solutions**:
+1. Ensure browser notifications are enabled for the site
+2. Check that the reminder time hasn't already passed
+3. Keep the browser tab open or enable background notifications
+4. Verify the event has reminders configured
+
+### Rust Crypto Issues
+
+**Problem**: Rust crypto fails to load
+
+**Solutions**:
+1. Check that rust-core is built: `ls rust-core/*.node`
+2. Verify Rust is installed: `rustc --version`
+3. Rebuild the module: `cd rust-core && npm run build`
+4. Set `USE_RUST_CRYPTO=false` in .env to use JavaScript crypto as fallback
+5. Check server logs for detailed error messages
+
+**Problem**: Performance not improving with Rust
+
+**Solutions**:
+1. Verify `USE_RUST_CRYPTO=true` is set in your .env file
+2. Check server logs to confirm Rust crypto is being used (look for "Using Rust crypto" message)
+3. Test with the benchmark: `node test-rust.js`
+4. Ensure you're testing with files large enough to see the difference (>1MB)
 
 ## Support
 

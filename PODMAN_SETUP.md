@@ -90,9 +90,11 @@ This script will:
 
 Open your browser and navigate to: `http://localhost:3000`
 
-Default admin credentials:
+**Default admin credentials:**
 - Email: `admin@example.com`
 - Password: `admin123`
+
+**⚠️ Security Note**: Change the admin password immediately after first login from Account Settings.
 
 ## Container Management
 
