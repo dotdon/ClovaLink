@@ -19,12 +19,30 @@ export async function GET() {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    // Get total counts
+    // Get total counts with additional metrics
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    // Generate last 7 days for chart data
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(now);
+      date.setDate(date.getDate() - (6 - i));
+      date.setHours(0, 0, 0, 0);
+      return date;
+    });
+
     const [
       totalCompanies,
       totalEmployees,
       totalDocuments,
       activeDownloadLinks,
+      totalFolders,
+      recentDocuments,
+      documentsLast30Days,
+      activeUsers,
+      documentsByDay,
+      employeesByDay,
     ] = await Promise.all([
       prisma.company.count(),
       prisma.employee.count(),
@@ -37,6 +55,64 @@ export async function GET() {
           ]
         },
       }),
+      prisma.folder.count(),
+      prisma.document.count({
+        where: {
+          createdAt: {
+            gte: sevenDaysAgo,
+          },
+        },
+      }),
+      prisma.document.count({
+        where: {
+          createdAt: {
+            gte: thirtyDaysAgo,
+          },
+        },
+      }),
+      prisma.employee.count({
+        where: {
+          isActive: true,
+        },
+      }),
+      // Get document counts per day for last 7 days
+      Promise.all(
+        last7Days.map(async (date) => {
+          const nextDay = new Date(date);
+          nextDay.setDate(nextDay.getDate() + 1);
+          const count = await prisma.document.count({
+            where: {
+              createdAt: {
+                gte: date,
+                lt: nextDay,
+              },
+            },
+          });
+          return {
+            date: date.toISOString().split('T')[0],
+            count,
+          };
+        })
+      ),
+      // Get employee counts per day for last 7 days
+      Promise.all(
+        last7Days.map(async (date) => {
+          const nextDay = new Date(date);
+          nextDay.setDate(nextDay.getDate() + 1);
+          const count = await prisma.employee.count({
+            where: {
+              createdAt: {
+                gte: date,
+                lt: nextDay,
+              },
+            },
+          });
+          return {
+            date: date.toISOString().split('T')[0],
+            count,
+          };
+        })
+      ),
     ]);
 
     return NextResponse.json({
@@ -45,6 +121,14 @@ export async function GET() {
         totalEmployees,
         totalDocuments,
         activeDownloadLinks,
+        totalFolders,
+        recentDocuments,
+        documentsLast30Days,
+        activeUsers,
+        chartData: {
+          documents: documentsByDay,
+          employees: employeesByDay,
+        },
       }
     });
   } catch (error) {

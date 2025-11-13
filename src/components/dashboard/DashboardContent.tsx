@@ -2,15 +2,32 @@
 
 import { useState, useEffect } from 'react';
 import { Card, Alert, Button } from 'react-bootstrap';
-import { FaBuilding, FaUsers, FaFileAlt, FaLink, FaClock, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaClock, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { useSession } from 'next-auth/react';
 import { hasPermission, Permission } from '@/lib/permissions';
+import dynamic from 'next/dynamic';
+
+// Dynamically import charts to avoid SSR issues
+const StatCard = dynamic(() => import('./StatCard'), { ssr: false });
+
+interface ChartDataPoint {
+  date: string;
+  count: number;
+}
 
 interface DashboardStats {
   totalCompanies: number;
   totalEmployees: number;
   totalDocuments: number;
   activeDownloadLinks: number;
+  totalFolders: number;
+  recentDocuments: number;
+  documentsLast30Days: number;
+  activeUsers: number;
+  chartData?: {
+    documents: ChartDataPoint[];
+    employees: ChartDataPoint[];
+  };
 }
 
 interface Activity {
@@ -112,33 +129,42 @@ export default function DashboardContent({
   const showStats = session?.user?.role === 'ADMIN';
   const showActivities = hasPermission(session, Permission.VIEW_ACTIVITIES);
 
-  const StatCard = ({ title, value, icon: Icon, color }: { title: string; value: number; icon: any; color: string }) => (
-    <Card className="stat-card">
-      <Card.Body>
-        <div className="stat-content">
-          <p className="stat-title">{title}</p>
-          <h3 className="stat-value">{value}</h3>
-        </div>
-      </Card.Body>
-    </Card>
-  );
+  // Format date on client-side only to avoid hydration mismatch
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString();
+    } catch {
+      return dateString;
+    }
+  };
 
-  const ActivityItem = ({ activity }: { activity: Activity }) => (
-    <div className="activity-item">
-      <div className="activity-icon">
-        <FaClock />
+  const ActivityItem = ({ activity }: { activity: Activity }) => {
+    const [formattedDate, setFormattedDate] = useState('');
+
+    useEffect(() => {
+      // Format date only on client side
+      setFormattedDate(formatDate(activity.timestamp || activity.createdAt));
+    }, [activity.timestamp, activity.createdAt]);
+
+    return (
+      <div className="activity-item">
+        <div className="activity-icon">
+          <FaClock />
+        </div>
+        <div className="activity-content">
+          <p className="activity-text">
+            <strong>{activity.employee.name}</strong> {activity.description}
+            {activity.document && <span className="activity-doc"> - {activity.document.name}</span>}
+          </p>
+          <small className="activity-time">
+            {formattedDate || 'Loading...'}
+          </small>
+        </div>
       </div>
-      <div className="activity-content">
-        <p className="activity-text">
-          <strong>{activity.employee.name}</strong> {activity.description}
-          {activity.document && <span className="activity-doc"> - {activity.document.name}</span>}
-        </p>
-        <small className="activity-time">
-          {new Date(activity.timestamp || activity.createdAt || '').toLocaleString()}
-        </small>
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="dashboard-container">
@@ -157,28 +183,52 @@ export default function DashboardContent({
       {showStats && stats && (
         <div className="stats-grid">
           <StatCard
-            title="Companies"
+            title="Total Companies"
             value={stats.totalCompanies}
-            icon={FaBuilding}
-            color="primary"
+            color="#667eea"
+            subtitle="Organizations"
+            chartData={stats.chartData?.documents || []}
+            chartType="area"
           />
           <StatCard
-            title="Employees"
+            title="Total Employees"
             value={stats.totalEmployees}
-            icon={FaUsers}
-            color="success"
+            color="#f5576c"
+            subtitle={`${stats.activeUsers} active`}
+            chartData={stats.chartData?.employees || []}
+            chartType="line"
           />
           <StatCard
-            title="Documents"
+            title="Total Documents"
             value={stats.totalDocuments}
-            icon={FaFileAlt}
-            color="info"
+            color="#4facfe"
+            subtitle={`${stats.recentDocuments} this week`}
+            chartData={stats.chartData?.documents || []}
+            chartType="area"
           />
           <StatCard
-            title="Upload Links"
+            title="Total Folders"
+            value={stats.totalFolders}
+            color="#43e97b"
+            subtitle="Organized"
+            chartData={[]}
+            chartType="bar"
+          />
+          <StatCard
+            title="Active Upload Links"
             value={stats.activeDownloadLinks}
-            icon={FaLink}
-            color="warning"
+            color="#fa709a"
+            subtitle="Currently active"
+            chartData={[]}
+            chartType="bar"
+          />
+          <StatCard
+            title="Active Users"
+            value={stats.activeUsers}
+            color="#30cfd0"
+            subtitle="Online now"
+            chartData={stats.chartData?.employees || []}
+            chartType="line"
           />
         </div>
       )}
@@ -301,51 +351,8 @@ export default function DashboardContent({
         .stats-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 2rem;
+          gap: 1.5rem;
           margin-bottom: 3rem;
-        }
-
-        :global(.stat-card) {
-          border: none;
-          border-radius: 16px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-          margin: 0;
-          background: white;
-          transition: all 0.3s ease;
-        }
-        
-        :global(.stat-card:hover) {
-          transform: translateY(-4px);
-          box-shadow: 0 8px 20px rgba(0,0,0,0.12);
-        }
-
-        :global(.stat-card .card-body) {
-          padding: 2.25rem;
-          text-align: center;
-        }
-        
-        :global(.stat-content) {
-          width: 100%;
-        }
-
-        :global(.stat-value) {
-          font-size: 3rem;
-          font-weight: 800;
-          margin: 0.5rem 0 0;
-          line-height: 1;
-          background: #667eea;
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-
-        :global(.stat-title) {
-          color: #666;
-          margin: 0;
-          font-size: 0.875rem;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 1px;
         }
 
         :global(.activity-card) {
@@ -507,18 +514,6 @@ export default function DashboardContent({
             margin-bottom: 2rem;
           }
 
-          :global(.stat-card .card-body) {
-            padding: 1.5rem 1.25rem;
-          }
-
-          :global(.stat-value) {
-            font-size: 2rem;
-          }
-
-          :global(.stat-title) {
-            font-size: 0.75rem;
-          }
-
           :global(.activity-card .card-header) {
             padding: 1.25rem;
           }
@@ -562,6 +557,13 @@ export default function DashboardContent({
             gap: 1.5rem;
           }
         }
+        
+        @media (min-width: 1400px) {
+          .stats-grid {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2.5rem;
+          }
+        }
 
         @media (min-width: 1024px) {
           .dashboard-container {
@@ -569,8 +571,8 @@ export default function DashboardContent({
           }
 
           .stats-grid {
-            grid-template-columns: repeat(4, 1fr);
-            gap: 2.5rem;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
           }
 
           .dashboard-header {
@@ -590,18 +592,6 @@ export default function DashboardContent({
           .subtitle {
             font-size: 1.25rem;
             color: rgba(255, 255, 255, 0.85) !important;
-          }
-
-          :global(.stat-card .card-body) {
-            padding: 2.5rem;
-          }
-
-          :global(.stat-value) {
-            font-size: 3.5rem;
-          }
-          
-          :global(.stat-title) {
-            font-size: 0.875rem;
           }
           
           :global(.activity-card .card-header) {
