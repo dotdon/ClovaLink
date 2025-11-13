@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, Fragment, FormEvent, MouseEvent, DragEvent, ChangeEvent } from 'react';
+import { useState, useEffect, Fragment, FormEvent, MouseEvent, DragEvent, ChangeEvent, useTransition, useMemo } from 'react';
+import { flushSync } from 'react-dom';
 import { Button, Form, Modal, Alert, Dropdown, ButtonGroup } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
 import { FaDownload, FaTrash, FaFolder, FaEye, FaUpload, FaFolderPlus, FaFile, FaEdit, FaArrowLeft, FaEllipsisV, FaSearch, FaCheckCircle, FaShare, FaFilePdf, FaFileWord, FaFileImage, FaInfo, FaTh, FaList, FaSortAlphaDown, FaSortAmountDown, FaCalendarAlt, FaStar, FaRegStar, FaThumbtack, FaBuilding, FaLock, FaClipboardList, FaArrowsAlt, FaInfoCircle, FaStickyNote } from 'react-icons/fa';
@@ -253,8 +254,11 @@ function RenameModal({ show, onHide, item, onRename }: RenameModalProps) {
 
 export default function DocumentsPage() {
   const { data: session } = useSession();
+  const [isPending, startTransition] = useTransition();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [unorganizedDocuments, setUnorganizedDocuments] = useState<Document[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0); // Force re-render when state changes
+  const [pendingMoves, setPendingMoves] = useState<Set<string>>(new Set()); // Track items that were optimistically moved
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -385,7 +389,7 @@ export default function DocumentsPage() {
     }
   };
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = async (preserveOptimisticUpdates = false) => {
     if (!selectedCompanyId) {
       setIsLoading(false);
       return;
@@ -397,8 +401,102 @@ export default function DocumentsPage() {
       const response = await fetch(`/api/documents${companyFilter}`);
       if (!response.ok) throw new Error('Failed to fetch documents');
       const data = await response.json();
-      setFolders(data.folders || []);
-      setUnorganizedDocuments(data.unorganizedDocuments || []);
+      
+      if (preserveOptimisticUpdates && pendingMoves.size > 0) {
+        // Merge server data with optimistic updates
+        // This ensures items we just moved don't disappear if server hasn't caught up yet
+        const serverFolders = data.folders || [];
+        const serverUnorganizedDocs = data.unorganizedDocuments || [];
+        
+        // Helper to find an item in folder structure
+        const findItemInFolders = (folderList: Folder[], itemId: string): Document | Folder | null => {
+          for (const folder of folderList) {
+            if (folder.id === itemId) return folder;
+            const doc = folder.documents?.find(d => d.id === itemId);
+            if (doc) return doc;
+            if (folder.children) {
+              const found = findItemInFolders(folder.children, itemId);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+        
+        // Check if server has the moved items, if not preserve from current state
+        setFolders(prevFolders => {
+          const serverHasAllMoves = Array.from(pendingMoves).every(itemId => {
+            const inFolders = findItemInFolders(serverFolders, itemId);
+            const inUnorganized = serverUnorganizedDocs.find(d => d.id === itemId);
+            return inFolders !== null || inUnorganized !== undefined;
+          });
+          
+          // If server has all moves, use server data
+          if (serverHasAllMoves) {
+            setPendingMoves(new Set()); // Clear pending moves
+            return serverFolders;
+          }
+          
+          // Otherwise, merge: use server data but preserve optimistic updates
+          const mergedFolders = serverFolders.map(serverFolder => {
+            // Find corresponding folder in previous state
+            const findFolder = (folderList: Folder[], targetId: string): Folder | null => {
+              for (const folder of folderList) {
+                if (folder.id === targetId) return folder;
+                if (folder.children) {
+                  const found = findFolder(folder.children, targetId);
+                  if (found) return found;
+                }
+              }
+              return null;
+            };
+            
+            const prevFolder = findFolder(prevFolders, serverFolder.id);
+            if (!prevFolder) return serverFolder;
+            
+            // Merge documents: use server docs, but add any optimistically moved docs that aren't in server response
+            const serverDocIds = new Set((serverFolder.documents || []).map(d => d.id));
+            const optimisticDocs = (prevFolder.documents || []).filter(doc => 
+              pendingMoves.has(doc.id) && !serverDocIds.has(doc.id)
+            );
+            
+            return {
+              ...serverFolder,
+              documents: [...(serverFolder.documents || []), ...optimisticDocs],
+              children: serverFolder.children ? serverFolder.children.map(child => {
+                const prevChild = findFolder(prevFolders, child.id);
+                if (!prevChild) return child;
+                const childServerDocIds = new Set((child.documents || []).map(d => d.id));
+                const childOptimisticDocs = (prevChild.documents || []).filter(doc => 
+                  pendingMoves.has(doc.id) && !childServerDocIds.has(doc.id)
+                );
+                return {
+                  ...child,
+                  documents: [...(child.documents || []), ...childOptimisticDocs],
+                };
+              }) : serverFolder.children,
+            };
+          });
+          
+          return mergedFolders;
+        });
+        
+        // Also merge unorganizedDocuments
+        setUnorganizedDocuments(prevUnorganized => {
+          const serverDocIds = new Set(serverUnorganizedDocs.map(d => d.id));
+          const optimisticDocs = prevUnorganized.filter(doc => 
+            pendingMoves.has(doc.id) && !serverDocIds.has(doc.id)
+          );
+          return [...serverUnorganizedDocs, ...optimisticDocs];
+        });
+        
+        // Clear pending moves after server should have caught up
+        setTimeout(() => {
+          setPendingMoves(new Set());
+        }, 10000); // 10 second delay to ensure server has processed
+      } else {
+        setFolders(data.folders || []);
+        setUnorganizedDocuments(data.unorganizedDocuments || []);
+      }
     } catch (error) {
       console.error('Error fetching documents:', error);
       setError(error instanceof Error ? error.message : 'Failed to fetch documents');
@@ -1203,11 +1301,14 @@ export default function DocumentsPage() {
       };
     }
 
+    // Return a new object reference to ensure React detects changes
+    // Include refreshKey to force re-computation when state changes
     return {
       folders: (currentFolder.children || []).filter((folder: Folder) => 
         folder && canAccessFolder(session, folder)
       ),
-      documents: currentFolder.documents || []
+      documents: currentFolder.documents || [],
+      _key: refreshKey // Include refresh key to force re-render
     };
   };
 
@@ -1348,6 +1449,42 @@ export default function DocumentsPage() {
 
     if (!draggedItem) return;
 
+    // Find the item being moved
+    const findItem = (): Document | Folder | null => {
+      if (draggedItem.type === 'document') {
+        if (!currentFolderId) {
+          return unorganizedDocuments.find(d => d.id === draggedItem.id) || null;
+        }
+        const currentFolder = folders.find(f => f.id === currentFolderId);
+        if (currentFolder) {
+          return currentFolder.documents?.find(d => d.id === draggedItem.id) || null;
+        }
+      } else {
+        const findFolder = (folderList: Folder[]): Folder | null => {
+          for (const folder of folderList) {
+            if (folder.id === draggedItem.id) return folder;
+            if (folder.children) {
+              const found = findFolder(folder.children);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+        return findFolder(folders);
+      }
+      return null;
+    };
+
+    const itemToMove = findItem();
+    if (!itemToMove) {
+      setDraggedItem(null);
+      return;
+    }
+
+    // Store original state for rollback
+    const originalFolders = folders;
+    const originalUnorganizedDocuments = unorganizedDocuments;
+
     try {
       const endpoint = draggedItem.type === 'document' 
         ? `/api/documents/${draggedItem.id}/move`
@@ -1358,6 +1495,128 @@ export default function DocumentsPage() {
         : { parentId: targetFolderId };        // Folders use parentId
 
       const method = draggedItem.type === 'document' ? 'POST' : 'PATCH';
+      
+      // Optimistic update - update UI immediately (synchronous for instant feedback)
+      // Use flushSync to ensure state updates are applied synchronously
+      flushSync(() => {
+        if (draggedItem.type === 'folder') {
+          // Use functional update for proper state synchronization
+          setFolders(prevFolders => {
+            // Remove folder from current location
+            const removeFolderFromState = (folderList: Folder[]): Folder[] => {
+              return folderList.filter(f => f.id !== draggedItem.id).map(folder => ({
+                ...folder,
+                children: folder.children ? removeFolderFromState(folder.children) : []
+              }));
+            };
+
+            // Add folder to new location
+            const addFolderToState = (folderList: Folder[]): Folder[] => {
+              if (!targetFolderId) {
+                return [...folderList, { ...itemToMove as Folder, parentId: null }];
+              }
+              return folderList.map(folder => {
+                if (folder.id === targetFolderId) {
+                  return {
+                    ...folder,
+                    children: [...(folder.children || []), { ...itemToMove as Folder, parentId: targetFolderId }]
+                  };
+                }
+                if (folder.children && folder.children.length > 0) {
+                  return {
+                    ...folder,
+                    children: addFolderToState(folder.children)
+                  };
+                }
+                return folder;
+              });
+            };
+
+            let updatedFolders = removeFolderFromState(prevFolders);
+            updatedFolders = addFolderToState(updatedFolders);
+            return updatedFolders;
+          });
+          // Force re-render to ensure UI updates immediately
+          setRefreshKey(prev => prev + 1);
+        } else {
+          // Document move: remove from source and add to destination
+          const removeDocFromState = (docs: Document[]): Document[] => {
+            return docs.filter(d => d.id !== draggedItem.id);
+          };
+
+          const addDocToState = (docs: Document[]): Document[] => {
+            return [...docs, { ...itemToMove as Document, folderId: targetFolderId }];
+          };
+
+          // Document move: use functional updates for proper state synchronization
+          setFolders(prevFolders => {
+            // Update source location
+            let updatedFolders = prevFolders;
+            if (currentFolderId) {
+              const updateFolderDocumentsRemove = (folderList: Folder[]): Folder[] => {
+                return folderList.map(folder => {
+                  if (folder.id === currentFolderId) {
+                    return {
+                      ...folder,
+                      documents: removeDocFromState(folder.documents || [])
+                    };
+                  }
+                  if (folder.children && folder.children.length > 0) {
+                    return {
+                      ...folder,
+                      children: updateFolderDocumentsRemove(folder.children)
+                    };
+                  }
+                  return folder;
+                });
+              };
+              updatedFolders = updateFolderDocumentsRemove(updatedFolders);
+            }
+
+            // Update destination location
+            if (targetFolderId) {
+              const updateFolderDocumentsAdd = (folderList: Folder[]): Folder[] => {
+                return folderList.map(folder => {
+                  if (folder.id === targetFolderId) {
+                    // Create a completely new folder object to ensure React detects the change
+                    const newDocuments = addDocToState(folder.documents || []);
+                    return {
+                      ...folder,
+                      documents: newDocuments,
+                      // Force update timestamp to ensure re-render
+                      updatedAt: new Date().toISOString(),
+                    };
+                  }
+                  if (folder.children && folder.children.length > 0) {
+                    return {
+                      ...folder,
+                      children: updateFolderDocumentsAdd(folder.children)
+                    };
+                  }
+                  return folder;
+                });
+              };
+              updatedFolders = updateFolderDocumentsAdd(updatedFolders);
+            }
+
+            return updatedFolders;
+          });
+
+          // Update unorganizedDocuments separately for root-level moves
+          if (!currentFolderId) {
+            setUnorganizedDocuments(prev => removeDocFromState(prev));
+          }
+          if (!targetFolderId) {
+            setUnorganizedDocuments(prev => addDocToState(prev));
+          }
+
+          // Track this move as pending
+          setPendingMoves(prev => new Set(prev).add(draggedItem.id));
+          
+          // Force re-render to ensure UI updates immediately
+          setRefreshKey(prev => prev + 1);
+        }
+      });
       
       const response = await fetch(endpoint, {
         method: method,
@@ -1377,16 +1636,35 @@ export default function DocumentsPage() {
       setSuccessMessage(result.message || `${draggedItem.type === 'document' ? 'Document' : 'Folder'} moved successfully`);
       setShowSuccessModal(true);
       
-      // Refresh the documents list to show the updated structure
-      await fetchDocuments();
-      
       // If we moved a folder that we're currently inside, navigate back
       if (draggedItem.type === 'folder' && currentFolderId === draggedItem.id) {
         handleNavigateBack();
       }
+
+      // If we moved a document into the folder we're currently viewing, refresh the view immediately
+      if (draggedItem.type === 'document' && targetFolderId === currentFolderId) {
+        // Force re-render by updating refresh key
+        setRefreshKey(prev => prev + 1);
+      }
+
+      // Don't refresh immediately - optimistic update is correct
+      // Server will sync on next navigation or manual refresh
+      // Only clear pending moves after server should have processed
+      setTimeout(() => {
+        setPendingMoves(prev => {
+          const updated = new Set(prev);
+          updated.delete(draggedItem.id);
+          return updated;
+        });
+      }, 10000); // Clear after 10 seconds
     } catch (error) {
       console.error('Error moving item:', error);
+      // Rollback on error
+      setFolders(originalFolders);
+      setUnorganizedDocuments(originalUnorganizedDocuments);
       alert(error instanceof Error ? error.message : 'Failed to move item');
+      // Refresh on error to ensure consistency
+      await fetchDocuments();
     } finally {
       setDraggedItem(null);
     }
@@ -1500,6 +1778,10 @@ export default function DocumentsPage() {
       ? `/api/documents/folders/${itemToMove.id}/move`
       : `/api/documents/${itemToMove.id}/move`;
 
+    // Store original state for rollback
+    const originalFolders = folders;
+    const originalUnorganizedDocuments = unorganizedDocuments;
+
     try {
       const bodyParam = isFolder 
         ? { parentId: moveTargetFolderId, targetCompanyId: moveTargetCompanyId }
@@ -1507,6 +1789,134 @@ export default function DocumentsPage() {
 
       const method = isFolder ? 'PATCH' : 'POST';
       
+      // Optimistic update - update UI immediately (synchronous for instant feedback)
+      // Use flushSync to ensure state updates are applied synchronously
+      flushSync(() => {
+        if (isFolder) {
+          // Remove the folder from its current location
+          const removeFolderFromState = (folderList: Folder[]): Folder[] => {
+            return folderList.filter(f => f.id !== itemToMove.id).map(folder => ({
+              ...folder,
+              children: folder.children ? removeFolderFromState(folder.children) : []
+            }));
+          };
+
+          // Add the folder to its new location
+          const addFolderToState = (folderList: Folder[]): Folder[] => {
+            if (!moveTargetFolderId) {
+              // Moving to root
+              return [...folderList, { ...itemToMove as Folder, parentId: null }];
+            }
+            return folderList.map(folder => {
+              if (folder.id === moveTargetFolderId) {
+                return {
+                  ...folder,
+                  children: [...(folder.children || []), { ...itemToMove as Folder, parentId: moveTargetFolderId }]
+                };
+              }
+              if (folder.children && folder.children.length > 0) {
+                return {
+                  ...folder,
+                  children: addFolderToState(folder.children)
+                };
+              }
+              return folder;
+            });
+          };
+
+          // Use functional update to ensure we work with latest state
+          setFolders(prevFolders => {
+            let updatedFolders = removeFolderFromState(prevFolders);
+            updatedFolders = addFolderToState(updatedFolders);
+            return updatedFolders;
+          });
+          // Force re-render to ensure UI updates immediately
+          setRefreshKey(prev => prev + 1);
+        } else {
+          // Document move: remove from source and add to destination
+          // Use functional updates to ensure we're working with latest state
+          setFolders(prevFolders => {
+            const removeDocFromState = (docs: Document[]): Document[] => {
+              return docs.filter(d => d.id !== itemToMove.id);
+            };
+
+            const addDocToState = (docs: Document[]): Document[] => {
+              return [...docs, { ...itemToMove as Document, folderId: moveTargetFolderId }];
+            };
+
+            // Update source location
+            let updatedFolders = prevFolders;
+            if (currentFolderId) {
+              // We're inside a folder, remove from folder's documents
+              const updateFolderDocumentsRemove = (folderList: Folder[]): Folder[] => {
+                return folderList.map(folder => {
+                  if (folder.id === currentFolderId) {
+                    return {
+                      ...folder,
+                      documents: removeDocFromState(folder.documents || [])
+                    };
+                  }
+                  if (folder.children && folder.children.length > 0) {
+                    return {
+                      ...folder,
+                      children: updateFolderDocumentsRemove(folder.children)
+                    };
+                  }
+                  return folder;
+                });
+              };
+              updatedFolders = updateFolderDocumentsRemove(updatedFolders);
+            }
+
+            // Update destination location
+            if (moveTargetFolderId) {
+              // Moving to a folder, add to folder's documents
+              const updateFolderDocumentsAdd = (folderList: Folder[]): Folder[] => {
+                return folderList.map(folder => {
+                  if (folder.id === moveTargetFolderId) {
+                    // Create a completely new folder object to ensure React detects the change
+                    const newDocuments = addDocToState(folder.documents || []);
+                    return {
+                      ...folder,
+                      documents: newDocuments,
+                      // Force update timestamp to ensure re-render
+                      updatedAt: new Date().toISOString(),
+                    };
+                  }
+                  if (folder.children && folder.children.length > 0) {
+                    return {
+                      ...folder,
+                      children: updateFolderDocumentsAdd(folder.children)
+                    };
+                  }
+                  return folder;
+                });
+              };
+              updatedFolders = updateFolderDocumentsAdd(updatedFolders);
+            }
+
+            return updatedFolders;
+          });
+
+          // Update unorganizedDocuments separately for root-level moves
+          if (!currentFolderId) {
+            // We're at root level, remove from unorganizedDocuments
+            setUnorganizedDocuments(prev => prev.filter(d => d.id !== itemToMove.id));
+          }
+          if (!moveTargetFolderId) {
+            // Moving to root, add to unorganizedDocuments
+            setUnorganizedDocuments(prev => [...prev, { ...itemToMove as Document, folderId: null }]);
+          }
+
+          // Track this move as pending
+          setPendingMoves(prev => new Set(prev).add(itemToMove.id));
+          
+          // Force re-render to ensure UI updates immediately
+          setRefreshKey(prev => prev + 1);
+        }
+      });
+
+      // Make API call
       const response = await fetch(endpoint, {
         method: method,
         headers: {
@@ -1522,51 +1932,6 @@ export default function DocumentsPage() {
 
       const result = await response.json();
       
-      // Optimistically update the UI
-      if (isFolder) {
-        // Remove the folder from its current location
-        const removeFolderFromState = (folderList: Folder[]): Folder[] => {
-          return folderList.filter(f => f.id !== itemToMove.id).map(folder => ({
-            ...folder,
-            children: folder.children ? removeFolderFromState(folder.children) : []
-          }));
-        };
-
-        // Add the folder to its new location
-        const addFolderToState = (folderList: Folder[]): Folder[] => {
-          if (!moveTargetFolderId) {
-            // Moving to root
-            return [...folderList, { ...itemToMove as Folder, parentId: null }];
-          }
-          return folderList.map(folder => {
-            if (folder.id === moveTargetFolderId) {
-              return {
-                ...folder,
-                children: [...(folder.children || []), { ...itemToMove as Folder, parentId: moveTargetFolderId }]
-              };
-            }
-            if (folder.children && folder.children.length > 0) {
-              return {
-                ...folder,
-                children: addFolderToState(folder.children)
-              };
-            }
-            return folder;
-          });
-        };
-
-        let updatedFolders = removeFolderFromState(folders);
-        updatedFolders = addFolderToState(updatedFolders);
-        setFolders(updatedFolders);
-      } else {
-        // Remove document from current location and add to new location
-        const removeDocFromState = (docs: Document[]): Document[] => {
-          return docs.filter(d => d.id !== itemToMove.id);
-        };
-
-        setCurrentDocuments(removeDocFromState(currentDocuments));
-      }
-      
       setSuccessMessage(result.message || `${isFolder ? 'Folder' : 'Document'} moved successfully`);
       setShowSuccessModal(true);
       setShowMoveModal(false);
@@ -1575,8 +1940,28 @@ export default function DocumentsPage() {
       if (isFolder && currentFolderId === itemToMove.id) {
         handleNavigateBack();
       }
+
+      // If we moved a document into the folder we're currently viewing, refresh the view immediately
+      if (!isFolder && moveTargetFolderId === currentFolderId) {
+        // Force re-render by updating refresh key
+        setRefreshKey(prev => prev + 1);
+      }
+
+      // Don't refresh immediately - optimistic update is correct
+      // Server will sync on next navigation or manual refresh
+      // Only clear pending moves after server should have processed
+      setTimeout(() => {
+        setPendingMoves(prev => {
+          const updated = new Set(prev);
+          updated.delete(itemToMove.id);
+          return updated;
+        });
+      }, 10000); // Clear after 10 seconds
     } catch (error) {
       console.error('Error moving item:', error);
+      // Rollback on error
+      setFolders(originalFolders);
+      setUnorganizedDocuments(originalUnorganizedDocuments);
       alert(error instanceof Error ? error.message : 'Failed to move item');
       // Refresh on error to ensure consistency
       await fetchDocuments();
@@ -1601,7 +1986,10 @@ export default function DocumentsPage() {
     });
   };
 
-  const { folders: currentFolders, documents: currentDocuments } = getCurrentFolderContents();
+  // Memoize folder contents to ensure it updates when folders or refreshKey changes
+  const { folders: currentFolders, documents: currentDocuments } = useMemo(() => {
+    return getCurrentFolderContents();
+  }, [folders, unorganizedDocuments, currentFolderId, refreshKey, session, unlockedFolders]);
   
   const filteredItems = sortItems([
     ...currentFolders,
