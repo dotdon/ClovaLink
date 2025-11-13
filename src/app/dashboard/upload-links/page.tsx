@@ -278,20 +278,37 @@ export default function UploadLinksPage() {
           </>
         )}
 
-        <Card className="info-card mt-4">
-          <Card.Header>
-            <h5 className="mb-0">About Upload Links</h5>
-          </Card.Header>
-          <Card.Body>
-            <p>Upload links allow you to:</p>
-            <ul>
-              <li>Create secure, temporary links for external users to upload documents</li>
-              <li>Set expiration dates and usage limits</li>
-              <li>Track usage and manage active links</li>
-              <li>Automatically scan uploaded documents for security</li>
-            </ul>
-          </Card.Body>
-        </Card>
+        <div className="info-section">
+          <div className="info-card-modern">
+            <div className="info-header">
+              <div className="info-icon">
+                <FaLink />
+              </div>
+              <h5>About Upload Links</h5>
+            </div>
+            <div className="info-content">
+              <p className="info-intro">Upload links allow you to:</p>
+              <ul className="info-list">
+                <li>
+                  <span className="list-icon">✓</span>
+                  <span>Create secure, temporary links for external users to upload documents</span>
+                </li>
+                <li>
+                  <span className="list-icon">✓</span>
+                  <span>Set expiration dates and usage limits</span>
+                </li>
+                <li>
+                  <span className="list-icon">✓</span>
+                  <span>Track usage and manage active links</span>
+                </li>
+                <li>
+                  <span className="list-icon">✓</span>
+                  <span>Automatically scan uploaded documents for security</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
 
         {canCreateLinks && (
           <CreateUploadLinkModal
@@ -689,6 +706,110 @@ export default function UploadLinksPage() {
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
           }
 
+          /* Info Section */
+          .info-section {
+            margin-top: 2rem;
+          }
+
+          .info-card-modern {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 16px;
+            padding: 0;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.15);
+            transition: all 0.3s ease;
+          }
+
+          .info-card-modern:hover {
+            border-color: rgba(102, 126, 234, 0.4);
+            box-shadow: 0 12px 40px rgba(102, 126, 234, 0.2);
+            transform: translateY(-2px);
+          }
+
+          .info-header {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+            padding: 1.5rem 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+          }
+
+          .info-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: #667eea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: white;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+          }
+
+          .info-header h5 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #ffffff !important;
+            display: flex;
+            align-items: center;
+          }
+
+          .info-content {
+            padding: 1.5rem 2rem;
+          }
+
+          .info-intro {
+            color: rgba(255, 255, 255, 0.9) !important;
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+          }
+
+          .info-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+          }
+
+          .info-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            padding: 0.5rem 0;
+          }
+
+          .list-icon {
+            color: #667eea;
+            font-weight: 700;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+            margin-top: 0.1rem;
+            background: rgba(102, 126, 234, 0.15);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+          }
+
+          .info-list li span:last-child {
+            flex: 1;
+            color: rgba(255, 255, 255, 0.85);
+          }
+
           /* Mobile Styles */
         @media (max-width: 1023px) {
           .upload-links-container {
@@ -825,10 +946,48 @@ export default function UploadLinksPage() {
               font-size: 1.25rem;
             }
 
-            :global(.info-card) {
+            .info-section {
+              margin-top: 1.5rem;
+            }
+
+            .info-card-modern {
               border-radius: 12px !important;
-              background: rgba(255, 255, 255, 0.03) !important;
-              border: 1px solid rgba(102, 126, 234, 0.2) !important;
+            }
+
+            .info-header {
+              padding: 1rem 1.25rem !important;
+              flex-direction: column;
+              align-items: flex-start;
+              gap: 0.75rem;
+            }
+
+            .info-icon {
+              width: 40px;
+              height: 40px;
+              font-size: 1.1rem;
+            }
+
+            .info-header h5 {
+              font-size: 1.1rem !important;
+            }
+
+            .info-content {
+              padding: 1rem 1.25rem !important;
+            }
+
+            .info-intro {
+              font-size: 0.9rem !important;
+            }
+
+            .info-list li {
+              font-size: 0.875rem;
+              gap: 0.5rem;
+            }
+
+            .list-icon {
+              width: 20px;
+              height: 20px;
+              font-size: 0.9rem;
             }
           }
 
