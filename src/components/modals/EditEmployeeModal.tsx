@@ -269,7 +269,9 @@ export default function EditEmployeeModal({ show, onHide, employee, onSubmit }: 
               >
                 <option value="USER">User - Basic Access</option>
                 <option value="MANAGER">Manager - Enhanced Permissions</option>
+                <option value="IT">IT - Technical Support</option>
                 <option value="ADMIN">Admin - Full Control</option>
+                <option value="SUPER_ADMIN">Super Admin - System Administrator</option>
               </Form.Select>
             </Form.Group>
 

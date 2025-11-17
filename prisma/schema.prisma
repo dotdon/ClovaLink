@@ -9,7 +9,9 @@ datasource db {
 }
 
 enum Role {
+  SUPER_ADMIN
   ADMIN
+  IT
   MANAGER
   USER
 }
@@ -66,6 +68,7 @@ model Employee {
   receivedMessages    Message[]       @relation("ReceivedMessages") // Messages received by this employee
   channelMemberships  ChannelMember[] // Channels this employee is a member of
   notifications       Notification[]  // Notifications for this employee
+  notificationPreferences NotificationPreferences? // Notification preferences for this employee
   createdEvents       CalendarEvent[] @relation("CreatedEvents") // Events created by this employee
   eventAttendances    EventAttendee[] // Events this employee is attending
   memos               Memo[]          // Memos created by this employee
@@ -288,9 +291,11 @@ model LoginActivity {
   location       String?  // City, Country
   userAgent      String?  // Browser/device info
   success        Boolean  @default(true)
+  suspicious     Boolean  @default(false) // Flag for suspicious login attempts
 
   @@index([employeeId])
   @@index([loginAt])
+  @@index([suspicious])
   @@map("login_activities")
 }
 
@@ -556,4 +561,31 @@ model Memo {
   @@index([employeeId])
   @@index([companyId])
   @@map("memos")
+}
+
+// Notification preferences for employees
+model NotificationPreferences {
+  id                    String   @id @default(cuid())
+  employeeId            String   @unique
+  employee              Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  // Email notification preferences
+  emailLoginNotifications      Boolean @default(true)  // Notify on login
+  emailSuspiciousLogin         Boolean @default(true)  // Notify on suspicious login
+  emailFailedLogin             Boolean @default(true)  // Notify on failed login attempts
+  emailNewMessage              Boolean @default(true)  // Notify on new messages
+  emailCalendarInvitation      Boolean @default(true)  // Notify on calendar invitations
+  emailCalendarReminder        Boolean @default(true)  // Notify on calendar reminders
+  emailEmployeeInvited         Boolean @default(true)  // Notify when employee is invited
+  
+  // In-app notification preferences
+  inAppLoginNotifications      Boolean @default(false) // In-app login notifications
+  inAppNewMessage              Boolean @default(true)  // In-app message notifications
+  inAppCalendarInvitation      Boolean @default(true)  // In-app calendar notifications
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@index([employeeId])
+  @@map("notification_preferences")
 } 

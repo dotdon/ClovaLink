@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
-import { FaHome, FaBuilding, FaUsers, FaFolder, FaLink, FaSignOutAlt, FaQuestionCircle, FaBars, FaTimes, FaCog, FaUserCircle, FaComments, FaCalendar } from 'react-icons/fa';
+import { FaHome, FaBuilding, FaUsers, FaFolder, FaLink, FaSignOutAlt, FaQuestionCircle, FaBars, FaTimes, FaCog, FaUserCircle, FaComments, FaCalendar, FaShieldAlt } from 'react-icons/fa';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -172,14 +172,25 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { path: '/dashboard/calendar', label: 'Calendar', icon: FaCalendar },
     { path: '/dashboard/upload-links', label: 'Upload Links', icon: FaLink },
     { path: '/dashboard/account', label: 'My Account', icon: FaUserCircle },
-    { path: '/dashboard/settings', label: 'Settings', icon: FaCog, adminOnly: true },
+    { path: '/dashboard/security', label: 'Security', icon: FaShieldAlt, superAdminOnly: true },
+    { path: '/dashboard/settings', label: 'Settings', icon: FaCog, superAdminOnly: true },
     { path: '/dashboard/help', label: 'Help & FAQs', icon: FaQuestionCircle },
   ];
 
   // Filter navigation items based on user role
   const visibleItems = navigationItems.filter(item => {
+    // Super admin only items (Settings, Security for SUPER_ADMIN)
+    if (item.superAdminOnly) {
+      // Security is for SUPER_ADMIN and IT only
+      if (item.path === '/dashboard/security') {
+        return session?.user?.role === 'SUPER_ADMIN' || session?.user?.role === 'IT';
+      }
+      // Settings is for SUPER_ADMIN only
+      return session?.user?.role === 'SUPER_ADMIN';
+    }
+    // Admin only items (available to ADMIN, SUPER_ADMIN, and IT)
     if (item.adminOnly) {
-      return session?.user?.role === 'ADMIN';
+      return session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN' || session?.user?.role === 'IT';
     }
     return true;
   });

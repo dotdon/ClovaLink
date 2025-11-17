@@ -264,6 +264,16 @@ export async function POST(request: Request) {
           messageId: message.id,
         },
       });
+
+      // Send email notification (fire and forget)
+      try {
+        const { notifyNewMessage } = await import('@/lib/services/emailService');
+        notifyNewMessage(message.id).catch(err => {
+          console.error('Failed to send message notification email:', err);
+        });
+      } catch (error) {
+        console.error('Error importing email service:', error);
+      }
     }
 
     // Emit WebSocket event for real-time delivery

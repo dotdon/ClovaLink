@@ -120,8 +120,8 @@ export async function GET() {
 
     // Use Prisma's built-in query builder with the UploadLink model
     const uploadLinks = await prisma.uploadLink.findMany({
-      where: session.user.role === 'ADMIN' 
-        ? {} // Admins can see all links
+      where: (session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN') 
+        ? {} // Admins and Super Admins can see all links
         : {
             employee: {
               companyId: session.user.companyId // Others can only see links from their company

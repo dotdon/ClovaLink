@@ -195,6 +195,13 @@ export async function initializeDefaultSettings() {
       description: 'Maximum login attempts before lockout',
       isEncrypted: false,
     },
+    {
+      key: 'login_activity_retention_days',
+      value: '90',
+      category: 'security',
+      description: 'Number of days to retain login activity records (0 = never delete)',
+      isEncrypted: false,
+    },
     // General Settings
     {
       key: 'app_name',

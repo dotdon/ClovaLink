@@ -23,12 +23,12 @@ async function main() {
   const password = 'admin123'; // Default password
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  // Create admin user
+  // Create super admin user
   const adminUser = await prisma.employee.create({
     data: {
       email: 'admin@example.com',
-      name: 'Admin User',
-      role: 'ADMIN',
+      name: 'Super Admin',
+      role: 'SUPER_ADMIN',
       companyId: company.id,
       password: hashedPassword, // Add the hashed password
     },
@@ -36,7 +36,7 @@ async function main() {
 
   console.log('🌱 Seeded database with:', {
     company: company.name,
-    admin: adminUser.email,
+    superAdmin: adminUser.email,
     password: password, // Log the plain password for initial login
   });
 }

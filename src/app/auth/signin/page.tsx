@@ -66,6 +66,13 @@ export default function SignIn() {
       } else {
         console.log('✅ Login successful');
         
+        // Track login with IP and user agent for email notifications
+        fetch('/api/auth/track-login', {
+          method: 'POST',
+        }).catch(err => {
+          console.error('Failed to track login:', err);
+        });
+        
         // Check if user must change password
         const passwordCheckRes = await fetch('/api/employees/must-change-password');
         if (passwordCheckRes.ok) {
@@ -182,6 +189,13 @@ export default function SignIn() {
           setError(result.error === 'Invalid TOTP code' ? 'Invalid 6-digit code. Please try again.' : 'Authentication failed. Please try again.');
         }
       } else {
+        // Track login with IP and user agent for email notifications
+        fetch('/api/auth/track-login', {
+          method: 'POST',
+        }).catch(err => {
+          console.error('Failed to track login:', err);
+        });
+
         // Check if 2FA is required and user doesn't have it (passkeys count as 2FA, so this check is mainly for TOTP)
         // If user just logged in with passkey, they already have 2FA, so we can skip this check
         router.push(callbackUrl);

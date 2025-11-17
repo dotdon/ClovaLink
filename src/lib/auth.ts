@@ -122,7 +122,8 @@ export const authOptions: NextAuthOptions = {
               },
             });
 
-            // Create login activity record
+            // Note: IP and user agent will be added via trackLoginActivity function
+            // Create login activity record (basic)
             await prisma.loginActivity.create({
               data: {
                 employeeId: user.id,

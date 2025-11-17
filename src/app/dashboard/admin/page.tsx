@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Row, Col, Table, Button, Badge, Form, Alert } from 'react-bootstrap';
-import { FaUserPlus, FaBuilding, FaFileAlt, FaChartBar } from 'react-icons/fa';
+import { Card, Row, Col, Table, Button, Badge, Form, Alert, Spinner } from 'react-bootstrap';
+import { FaUserPlus, FaBuilding, FaFileAlt, FaChartBar, FaExclamationTriangle } from 'react-icons/fa';
 import DashboardLayout from '@/components/ui/DashboardLayout';
 import { useSession } from 'next-auth/react';
 
@@ -22,10 +22,28 @@ interface ActivitySummary {
   shares: number;
 }
 
+interface SuspiciousLogin {
+  id: string;
+  loginAt: string;
+  ipAddress: string | null;
+  location: string | null;
+  userAgent: string | null;
+  employee: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    company: {
+      name: string;
+    } | null;
+  };
+}
+
 export default function AdminDashboard() {
   const { data: session } = useSession();
   const [stats, setStats] = useState<Stats | null>(null);
   const [activities, setActivities] = useState<ActivitySummary[]>([]);
+  const [suspiciousLogins, setSuspiciousLogins] = useState<SuspiciousLogin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,9 +53,10 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const [statsResponse, activitiesResponse] = await Promise.all([
+      const [statsResponse, activitiesResponse, suspiciousLoginsResponse] = await Promise.all([
         fetch('/api/admin/stats'),
         fetch('/api/admin/activities/summary'),
+        fetch('/api/admin/suspicious-logins'),
       ]);
 
       if (!statsResponse.ok || !activitiesResponse.ok) {
@@ -46,9 +65,13 @@ export default function AdminDashboard() {
 
       const statsData = await statsResponse.json();
       const activitiesData = await activitiesResponse.json();
+      const suspiciousLoginsData = suspiciousLoginsResponse.ok 
+        ? await suspiciousLoginsResponse.json() 
+        : { suspiciousLogins: [] };
 
       setStats(statsData);
       setActivities(activitiesData);
+      setSuspiciousLogins(suspiciousLoginsData.suspiciousLogins || []);
     } catch (err) {
       setError('Failed to load dashboard data');
       console.error(err);
@@ -57,7 +80,10 @@ export default function AdminDashboard() {
     }
   };
 
-  if (!session?.user || session.user.role !== 'ADMIN') {
+  // Check if user is admin, super admin, or IT
+  const hasAccess = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN' || session?.user?.role === 'IT';
+  
+  if (!hasAccess) {
     return (
       <DashboardLayout>
         <Alert variant="danger">
@@ -142,6 +168,68 @@ export default function AdminDashboard() {
                 </div>
                 <FaChartBar className="text-warning" size={24} />
               </div>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+
+      <Row className="mb-4">
+        <Col md={12}>
+          <Card>
+            <Card.Header className="d-flex justify-content-between align-items-center">
+              <h5 className="mb-0">
+                <FaExclamationTriangle className="me-2 text-danger" />
+                Suspicious Login Attempts
+              </h5>
+              <Badge bg="danger">{suspiciousLogins.length}</Badge>
+            </Card.Header>
+            <Card.Body>
+              {loading ? (
+                <div className="text-center py-4">
+                  <Spinner animation="border" variant="primary" />
+                </div>
+              ) : suspiciousLogins.length === 0 ? (
+                <Alert variant="success" className="mb-0">
+                  No suspicious login attempts detected. All clear! ✅
+                </Alert>
+              ) : (
+                <Table responsive hover>
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Employee</th>
+                      <th>Company</th>
+                      <th>IP Address</th>
+                      <th>Location</th>
+                      <th>Device</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {suspiciousLogins.map((login) => (
+                      <tr key={login.id}>
+                        <td>{new Date(login.loginAt).toLocaleString()}</td>
+                        <td>
+                          <div>
+                            <strong>{login.employee.name}</strong>
+                            <br />
+                            <small className="text-muted">{login.employee.email}</small>
+                          </div>
+                        </td>
+                        <td>{login.employee.company?.name || 'N/A'}</td>
+                        <td>
+                          <code>{login.ipAddress || 'Unknown'}</code>
+                        </td>
+                        <td>{login.location || 'Unknown'}</td>
+                        <td>
+                          <small className="text-muted" style={{ maxWidth: '200px', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {login.userAgent || 'Unknown'}
+                          </small>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              )}
             </Card.Body>
           </Card>
         </Col>

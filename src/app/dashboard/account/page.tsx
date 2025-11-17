@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react';
 import { Card, Form, Button, Alert, ListGroup, Badge, Tabs, Tab } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
-import { FaKey, FaTrash, FaPlus, FaShieldAlt, FaQrcode, FaCheck, FaTimes, FaLock, FaUser } from 'react-icons/fa';
+import { FaKey, FaTrash, FaPlus, FaShieldAlt, FaQrcode, FaCheck, FaTimes, FaLock, FaUser, FaCog } from 'react-icons/fa';
 import { startAttestation } from '@simplewebauthn/browser';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { formatRoleLabel, getRoleBadgeVariant } from '@/lib/utils/roles';
 
 interface Passkey {
   id: string;
@@ -45,12 +46,19 @@ export default function AccountPage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState(0);
+  const [passwordFeedback, setPasswordFeedback] = useState('');
   
   // Profile picture state
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [uploadingPicture, setUploadingPicture] = useState(false);
+  
+  // Advanced security state
+  const [showAdvancedSecurity, setShowAdvancedSecurity] = useState(false);
 
   const require2fa = searchParams?.get('require2fa') === 'true';
+  const roleLabel = formatRoleLabel(session?.user?.role);
+  const roleBadgeVariant = getRoleBadgeVariant(session?.user?.role);
 
   useEffect(() => {
     fetchPasskeys();
@@ -398,6 +406,41 @@ export default function AccountPage() {
     }
   };
 
+  const checkPasswordStrength = (password: string) => {
+    let strength = 0;
+    let feedback = '';
+
+    if (password.length === 0) {
+      setPasswordStrength(0);
+      setPasswordFeedback('');
+      return;
+    }
+
+    // Length check
+    if (password.length >= 8) strength += 1;
+    if (password.length >= 12) strength += 1;
+    if (password.length >= 16) strength += 1;
+
+    // Character variety checks
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength += 1;
+    if (/[0-9]/.test(password)) strength += 1;
+    if (/[^A-Za-z0-9]/.test(password)) strength += 1;
+
+    // Set feedback
+    if (strength <= 2) {
+      feedback = 'Weak - Add more characters and variety';
+    } else if (strength <= 4) {
+      feedback = 'Fair - Consider adding special characters';
+    } else if (strength <= 5) {
+      feedback = 'Good - Your password is reasonably strong';
+    } else {
+      feedback = 'Excellent - Very strong password!';
+    }
+
+    setPasswordStrength(Math.min(strength, 6));
+    setPasswordFeedback(feedback);
+  };
+
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -408,6 +451,11 @@ export default function AccountPage() {
 
     if (newPassword.length < 8) {
       setError('Password must be at least 8 characters');
+      return;
+    }
+
+    if (passwordStrength < 3) {
+      setError('Please choose a stronger password');
       return;
     }
 
@@ -433,6 +481,8 @@ export default function AccountPage() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      setPasswordStrength(0);
+      setPasswordFeedback('');
     } catch (error: any) {
       setError(error.message || 'Failed to change password');
     } finally {
@@ -566,7 +616,7 @@ export default function AccountPage() {
                       </div>
                       <div className="info-item">
                         <span className="info-label">Role</span>
-                        <Badge bg="primary" className="role-badge">{session?.user?.role}</Badge>
+                        <Badge bg={roleBadgeVariant} className="role-badge">{roleLabel}</Badge>
                       </div>
                     </div>
                   </div>
@@ -634,29 +684,79 @@ export default function AccountPage() {
                 </div>
               </Tab>
 
-              {/* Passkeys Tab */}
-              <Tab eventKey="passkeys" title="Passkeys">
+              {/* Security Tab */}
+              <Tab eventKey="security" title="Security">
+                
+                {/* Security Overview */}
+                <div className="security-overview-card">
+                  <div className="security-status-header">
+                    <div className="status-icon">
+                      <FaShieldAlt />
+                    </div>
+                    <div>
+                      <h5 className="status-title">Account Security Status</h5>
+                      <p className="status-subtitle">
+                        {has2FA ? '✓ Your account is protected with 2FA' : '⚠ Two-factor authentication is not enabled'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="security-metrics">
+                    <div className={`security-metric ${has2FA ? 'metric-success' : 'metric-warning'}`}>
+                      <div className="metric-label">Two-Factor Auth</div>
+                      <div className="metric-value">{has2FA ? 'Enabled' : 'Disabled'}</div>
+                      <div className="metric-detail">
+                        {passkeys.length > 0 && totpEnabled && '✓ Passkey + TOTP'}
+                        {passkeys.length > 0 && !totpEnabled && '✓ Passkey only'}
+                        {!passkeys.length && totpEnabled && '✓ TOTP only'}
+                        {!has2FA && '⚠ Not configured'}
+                      </div>
+                    </div>
+                    <div className="security-metric metric-info">
+                      <div className="metric-label">Passkeys</div>
+                      <div className="metric-value">{passkeys.length}</div>
+                      <div className="metric-detail">Registered devices</div>
+                    </div>
+                    <div className="security-metric metric-info">
+                      <div className="metric-label">Authenticator</div>
+                      <div className="metric-value">{totpEnabled ? 'Active' : 'Inactive'}</div>
+                      <div className="metric-detail">TOTP status</div>
+                    </div>
+                  </div>
+
+                  {twoFactorRequired && !has2FA && (
+                    <Alert variant="danger" className="mt-3 mb-0">
+                      <strong>⚠️ Action Required</strong>
+                      <p className="mb-0 mt-2">
+                        Your organization requires two-factor authentication. Please enable at least one method below.
+                      </p>
+                    </Alert>
+                  )}
+                </div>
+
+                {/* Passkeys Section */}
                 <div className="profile-section-card">
                   <div className="section-header">
                     <div className="section-icon">
                       <FaKey />
                     </div>
-                    <h5 className="section-title">Your Passkeys</h5>
+                    <h5 className="section-title">Passkeys (Recommended)</h5>
+                    <Badge bg="success" className="ms-auto">Most Secure</Badge>
                   </div>
                   <div className="section-content">
                     <p className="section-description">
-                      Passkeys let you sign in using Face ID, Touch ID, or a security key. They're more secure than passwords and count as two-factor authentication.
+                      Sign in using Face ID, Touch ID, Windows Hello, or a hardware security key. Passkeys are phishing-resistant and provide the highest level of security.
                     </p>
                     
-                    {has2FA && (
-                      <Alert variant="success" className="modern-alert">
-                        <FaCheck className="me-2" />
-                        You have 2FA enabled {passkeys.length > 0 && totpEnabled ? '(Passkey + TOTP)' : passkeys.length > 0 ? '(Passkey)' : '(TOTP)'}
-                      </Alert>
-                    )}
+                    <div className="feature-benefits mb-3">
+                      <div className="benefit-item"><FaCheck className="text-success me-2" />No passwords to remember</div>
+                      <div className="benefit-item"><FaCheck className="text-success me-2" />Phishing resistant</div>
+                      <div className="benefit-item"><FaCheck className="text-success me-2" />Works across all your devices</div>
+                    </div>
 
                     {passkeys.length > 0 && (
-                      <div className="passkeys-list">
+                      <div className="passkeys-list mb-4">
+                        <h6 style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.95rem', marginBottom: '0.75rem' }}>Your Passkeys</h6>
                         {passkeys.map((passkey) => (
                           <div key={passkey.id} className="passkey-item">
                             <div className="passkey-icon">
@@ -683,16 +783,19 @@ export default function AccountPage() {
                       </div>
                     )}
                     
-                    <Form.Group className="mb-3 mt-4">
+                    <Form.Group className="mb-3">
                       <Form.Label>Device Name (optional)</Form.Label>
                       <Form.Control
                         type="text"
-                        placeholder="e.g., MacBook Pro, iPhone"
+                        placeholder="e.g., MacBook Pro, iPhone 15"
                         value={deviceName}
                         onChange={(e) => setDeviceName(e.target.value)}
                         disabled={registeringPasskey}
                         className="modern-input"
                       />
+                      <Form.Text>
+                        Give your device a name to identify it later
+                      </Form.Text>
                     </Form.Group>
                     
                     <Button
@@ -701,36 +804,32 @@ export default function AccountPage() {
                       className="gradient-btn"
                     >
                       <FaPlus className="me-2" />
-                      {registeringPasskey ? 'Setting up...' : 'Add New Passkey'}
+                      {registeringPasskey ? 'Setting up passkey...' : 'Add New Passkey'}
                     </Button>
                   </div>
                 </div>
-              </Tab>
 
-              {/* Security (TOTP) Tab */}
-              <Tab eventKey="security" title="Authenticator App">
+                {/* TOTP Section */}
                 <div className="profile-section-card">
                   <div className="section-header">
                     <div className="section-icon">
                       <FaShieldAlt />
                     </div>
-                    <h5 className="section-title">Two-Factor Authentication (TOTP)</h5>
+                    <h5 className="section-title">Authenticator App (TOTP)</h5>
+                    {totpEnabled && <Badge bg="success" className="ms-auto">Enabled</Badge>}
                   </div>
                   <div className="section-content">
                     <p className="section-description">
-                      Use an authenticator app like Google Authenticator or Authy to generate 6-digit codes for signing in.
+                      Use Google Authenticator, Authy, or similar apps to generate 6-digit time-based codes for signing in. More compatible but slightly less secure than passkeys.
                     </p>
+                    
+                    <div className="feature-benefits mb-3">
+                      <div className="benefit-item"><FaCheck className="text-info me-2" />Works on all devices</div>
+                      <div className="benefit-item"><FaCheck className="text-info me-2" />No hardware required</div>
+                      <div className="benefit-item"><FaCheck className="text-info me-2" />Widely supported</div>
+                    </div>
 
-                    {twoFactorRequired && !totpEnabled && passkeys.length === 0 && (
-                      <Alert variant="danger" className="modern-alert">
-                        <strong>⚠️ 2FA is Required</strong>
-                        <p className="mb-0 mt-2">
-                          Your organization requires two-factor authentication. Please set up TOTP below or add a Passkey in the Passkeys tab.
-                        </p>
-                      </Alert>
-                    )}
-
-                {totpEnabled ? (
+                    {totpEnabled ? (
                   <div>
                     <Alert variant="success">
                       <FaCheck className="me-2" />
@@ -868,6 +967,189 @@ export default function AccountPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Password Management */}
+                <div className="profile-section-card">
+                  <div className="section-header">
+                    <div className="section-icon">
+                      <FaLock />
+                    </div>
+                    <h5 className="section-title">Password Management</h5>
+                  </div>
+                  <div className="section-content">
+                    <p className="section-description">
+                      Change your password regularly to keep your account secure. Use a strong, unique password.
+                    </p>
+
+                    <Form onSubmit={handleChangePassword}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Current Password</Form.Label>
+                        <Form.Control
+                          type="password"
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          disabled={changingPassword}
+                          required
+                          className="modern-input"
+                        />
+                      </Form.Group>
+
+                      <Form.Group className="mb-3">
+                        <Form.Label>New Password</Form.Label>
+                        <Form.Control
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => {
+                            setNewPassword(e.target.value);
+                            checkPasswordStrength(e.target.value);
+                          }}
+                          disabled={changingPassword}
+                          required
+                          className="modern-input"
+                        />
+                        {newPassword && (
+                          <div className="password-strength-container mt-2">
+                            <div className="strength-bars">
+                              {[1, 2, 3, 4, 5, 6].map((level) => (
+                                <div
+                                  key={level}
+                                  className={`strength-bar ${
+                                    passwordStrength >= level
+                                      ? passwordStrength <= 2
+                                        ? 'weak'
+                                        : passwordStrength <= 4
+                                        ? 'fair'
+                                        : passwordStrength <= 5
+                                        ? 'good'
+                                        : 'excellent'
+                                      : ''
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <div className="strength-feedback">{passwordFeedback}</div>
+                          </div>
+                        )}
+                        <Form.Text>
+                          At least 8 characters with uppercase, lowercase, and numbers
+                        </Form.Text>
+                      </Form.Group>
+
+                      <Form.Group className="mb-3">
+                        <Form.Label>Confirm New Password</Form.Label>
+                        <Form.Control
+                          type="password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          disabled={changingPassword}
+                          required
+                          className="modern-input"
+                        />
+                      </Form.Group>
+
+                      <div className="password-requirements">
+                        <div className="requirement-title">Password Requirements:</div>
+                        <div className={`requirement-item ${newPassword.length >= 8 ? 'met' : ''}`}>
+                          <FaCheck className="me-2" />
+                          At least 8 characters
+                        </div>
+                        <div className={`requirement-item ${/[A-Z]/.test(newPassword) ? 'met' : ''}`}>
+                          <FaCheck className="me-2" />
+                          One uppercase letter
+                        </div>
+                        <div className={`requirement-item ${/[a-z]/.test(newPassword) ? 'met' : ''}`}>
+                          <FaCheck className="me-2" />
+                          One lowercase letter
+                        </div>
+                        <div className={`requirement-item ${/[0-9]/.test(newPassword) ? 'met' : ''}`}>
+                          <FaCheck className="me-2" />
+                          One number
+                        </div>
+                        <div className={`requirement-item ${/[^A-Za-z0-9]/.test(newPassword) ? 'met' : ''}`}>
+                          <FaCheck className="me-2" />
+                          One special character (recommended)
+                        </div>
+                      </div>
+
+                      <Button
+                        type="submit"
+                        disabled={changingPassword || passwordStrength < 3}
+                        className="gradient-btn mt-3"
+                      >
+                        <FaLock className="me-2" />
+                        {changingPassword ? 'Changing Password...' : 'Change Password'}
+                      </Button>
+                    </Form>
+                  </div>
+                </div>
+
+                {/* Advanced Security Options */}
+                <div className="profile-section-card">
+                  <div className="section-header">
+                    <div className="section-icon">
+                      <FaCog />
+                    </div>
+                    <h5 className="section-title">Advanced Security</h5>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      onClick={() => setShowAdvancedSecurity(!showAdvancedSecurity)}
+                      className="ms-auto"
+                      style={{ color: '#667eea', textDecoration: 'none' }}
+                    >
+                      {showAdvancedSecurity ? 'Hide' : 'Show'}
+                    </Button>
+                  </div>
+                  {showAdvancedSecurity && (
+                    <div className="section-content">
+                      <Alert variant="info" className="modern-alert">
+                        <strong>Security Recommendations</strong>
+                        <ul className="mb-0 mt-2" style={{ paddingLeft: '1.2rem' }}>
+                          <li>Enable both passkey and authenticator app for maximum security</li>
+                          <li>Use unique passwords for each service</li>
+                          <li>Never share your backup codes with anyone</li>
+                          <li>Review your active passkeys regularly</li>
+                          <li>Change your password if you suspect it has been compromised</li>
+                        </ul>
+                      </Alert>
+
+                      <div className="security-info-grid">
+                        <div className="security-info-item">
+                          <div className="info-icon">🔒</div>
+                          <div className="info-content">
+                            <div className="info-title">Account Recovery</div>
+                            <div className="info-text">
+                              Your backup codes can be used to access your account if you lose access to your 2FA devices.
+                              Keep them safe!
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="security-info-item">
+                          <div className="info-icon">📱</div>
+                          <div className="info-content">
+                            <div className="info-title">Device Management</div>
+                            <div className="info-text">
+                              You have {passkeys.length} registered passkey{passkeys.length !== 1 ? 's' : ''}. 
+                              {passkeys.length === 0 && ' Consider adding one for enhanced security.'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="security-info-item">
+                          <div className="info-icon">⚡</div>
+                          <div className="info-content">
+                            <div className="info-title">Session Security</div>
+                            <div className="info-text">
+                              Your session will automatically expire after a period of inactivity to protect your account.
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
               </Tab>
             </Tabs>
           </Card.Body>
@@ -1267,7 +1549,6 @@ export default function AccountPage() {
           }
 
           :global(.role-badge) {
-            background: #667eea !important;
             padding: 0.4rem 0.85rem !important;
             font-size: 0.85rem !important;
             font-weight: 600 !important;
@@ -1480,6 +1761,282 @@ export default function AccountPage() {
 
             .passkey-item {
               flex-wrap: wrap;
+            }
+          }
+
+          /* Security Overview */
+          .security-overview-card {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 14px;
+            padding: 1.5rem;
+            margin-bottom: 1.25rem;
+          }
+
+          .security-status-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+          }
+
+          .status-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: #667eea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+          }
+
+          .status-title {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #ffffff !important;
+          }
+
+          .status-subtitle {
+            margin: 0.25rem 0 0 0;
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 0.9rem;
+          }
+
+          .security-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.75rem;
+          }
+
+          .security-metric {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+          }
+
+          .metric-success {
+            border-color: rgba(82, 196, 26, 0.4);
+            background: rgba(82, 196, 26, 0.1);
+          }
+
+          .metric-warning {
+            border-color: rgba(255, 193, 7, 0.4);
+            background: rgba(255, 193, 7, 0.1);
+          }
+
+          .metric-info {
+            border-color: rgba(102, 126, 234, 0.3);
+          }
+
+          .metric-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 0.5rem;
+          }
+
+          .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 0.25rem;
+          }
+
+          .metric-detail {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.7);
+          }
+
+          /* Feature Benefits */
+          .feature-benefits {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+          }
+
+          .benefit-item {
+            display: flex;
+            align-items: center;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+          }
+
+          .benefit-item svg {
+            font-size: 0.85rem;
+          }
+
+          :global(.text-success) {
+            color: #52c41a !important;
+          }
+
+          :global(.text-info) {
+            color: #667eea !important;
+          }
+
+          /* Password Strength Indicator */
+          .password-strength-container {
+            margin-top: 0.75rem;
+          }
+
+          .strength-bars {
+            display: flex;
+            gap: 0.3rem;
+            margin-bottom: 0.5rem;
+          }
+
+          .strength-bar {
+            flex: 1;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            transition: all 0.3s ease;
+          }
+
+          .strength-bar.weak {
+            background: #ff4d4f;
+          }
+
+          .strength-bar.fair {
+            background: #faad14;
+          }
+
+          .strength-bar.good {
+            background: #52c41a;
+          }
+
+          .strength-bar.excellent {
+            background: #1890ff;
+          }
+
+          .strength-feedback {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 500;
+          }
+
+          /* Password Requirements */
+          .password-requirements {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+          }
+
+          .requirement-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 0.75rem;
+          }
+
+          .requirement-item {
+            display: flex;
+            align-items: center;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+            transition: all 0.3s ease;
+          }
+
+          .requirement-item:last-child {
+            margin-bottom: 0;
+          }
+
+          .requirement-item.met {
+            color: #52c41a;
+          }
+
+          .requirement-item svg {
+            font-size: 0.75rem;
+            opacity: 0.3;
+          }
+
+          .requirement-item.met svg {
+            opacity: 1;
+          }
+
+          /* Security Info Grid */
+          .security-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+          }
+
+          .security-info-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 10px;
+            padding: 1rem;
+            display: flex;
+            gap: 1rem;
+            transition: all 0.3s ease;
+          }
+
+          .security-info-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(102, 126, 234, 0.4);
+          }
+
+          .info-icon {
+            font-size: 1.75rem;
+            flex-shrink: 0;
+          }
+
+          .info-content {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .info-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+          }
+
+          .info-text {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.4;
+          }
+
+          /* Mobile Responsive for New Components */
+          @media (max-width: 767px) {
+            .security-metrics {
+              grid-template-columns: 1fr;
+              gap: 0.5rem;
+            }
+
+            .security-info-grid {
+              grid-template-columns: 1fr;
+              gap: 0.75rem;
+            }
+
+            .security-overview-card {
+              padding: 1rem;
+            }
+
+            .status-icon {
+              width: 40px;
+              height: 40px;
+              font-size: 1.2rem;
+            }
+
+            .status-title {
+              font-size: 1.1rem;
+            }
+
+            .metric-value {
+              font-size: 1.25rem;
             }
           }
         `}</style>

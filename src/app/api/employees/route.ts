@@ -47,9 +47,9 @@ async function handlePost(req: NextRequest) {
       return errorResponse('Company not found', 404);
     }
 
-    // Only admins can create employees in any company
+    // Only admins and super admins can create employees in any company
     // Managers can only create employees in their own company
-    if (session!.user.role !== 'ADMIN' && session!.user.companyId !== companyId) {
+    if (session!.user.role !== 'ADMIN' && session!.user.role !== 'SUPER_ADMIN' && session!.user.companyId !== companyId) {
       return forbiddenResponse('You can only create employees in your own company');
     }
 
@@ -87,6 +87,16 @@ async function handlePost(req: NextRequest) {
       },
     });
 
+    // Send invitation email (don't wait for it, fire and forget)
+    try {
+      const { notifyEmployeeInvited } = await import('@/lib/services/emailService');
+      notifyEmployeeInvited(employee.id, password).catch(err => {
+        console.error('Failed to send employee invitation email:', err);
+      });
+    } catch (error) {
+      console.error('Error importing email service:', error);
+    }
+
     return successResponse({ employee }, 'Employee created successfully');
   } catch (error) {
     console.error('Error creating employee:', error);
@@ -109,8 +119,8 @@ async function handleGet(req: NextRequest) {
 
   try {
     // Build query based on user's role
-    const where = session!.user.role === 'ADMIN'
-      ? {} // Admins can see all employees
+    const where = (session!.user.role === 'ADMIN' || session!.user.role === 'SUPER_ADMIN')
+      ? {} // Admins and Super Admins can see all employees
       : { companyId: session!.user.companyId }; // Others can only see employees in their company
 
     const employees = await prisma.employee.findMany({

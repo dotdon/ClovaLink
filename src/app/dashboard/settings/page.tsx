@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, Form, Button, Alert, Tabs, Tab, Spinner, ListGroup, Badge } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
 import ThemedModal from '@/components/ui/ThemedModal';
-import { FaSave, FaSync, FaCog, FaKey, FaTrash, FaPlus, FaShieldAlt, FaQrcode, FaCheck, FaTimes, FaBuilding, FaExclamationTriangle, FaUsers, FaFileAlt, FaHdd } from 'react-icons/fa';
+import { FaSave, FaSync, FaCog, FaKey, FaTrash, FaPlus, FaShieldAlt, FaQrcode, FaCheck, FaTimes, FaBuilding, FaExclamationTriangle, FaUsers, FaFileAlt, FaHdd, FaEnvelope, FaUpload, FaLock, FaGlobe, FaServer, FaUserLock, FaPaperPlane, FaInfoCircle, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import { startAttestation } from '@simplewebauthn/browser';
 import Image from 'next/image';
 
@@ -63,6 +63,63 @@ export default function SettingsPage() {
 
   // Local form state
   const [formData, setFormData] = useState<Record<string, string>>({});
+  
+  // Collapsible sections state
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    smtp_server: true,
+    smtp_auth: true,
+    smtp_sender: true,
+    upload_limits: true,
+    upload_storage: true,
+    upload_security: true,
+    security_2fa: true,
+    security_session: true,
+    security_password: true,
+    security_personal_2fa: true,
+    general_identity: true,
+    general_regional: true,
+    general_activity: true,
+    general_features: true,
+  });
+  
+  const toggleSection = (sectionKey: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [sectionKey]: !prev[sectionKey]
+    }));
+  };
+
+  // Helper to render collapsible section header
+  const renderSectionHeader = (sectionKey: string, title: string, icon: React.ReactNode, description?: string) => {
+    const isExpanded = expandedSections[sectionKey];
+    return (
+      <div 
+        className="collapsible-section-header"
+        onClick={() => toggleSection(sectionKey)}
+        style={{ cursor: 'pointer' }}
+      >
+        <div className="section-header-content">
+          <div className="section-header-icon">
+            {icon}
+          </div>
+          <div className="section-header-text">
+            <h6 className="section-header-title">{title}</h6>
+            {description && <p className="section-header-desc">{description}</p>}
+          </div>
+        </div>
+        <div className="section-header-toggle">
+          {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
+        </div>
+      </div>
+    );
+  };
+
+  // Helper to get setting value for summary cards
+  const getSettingValue = (category: string, key: string, defaultValue: string = '') => {
+    const categorySettings = settings[category] || [];
+    const setting = categorySettings.find(s => s.key === key);
+    return formData[key] || setting?.value || defaultValue;
+  };
 
   useEffect(() => {
     fetchSettings();
@@ -541,7 +598,8 @@ export default function SettingsPage() {
     }
 
     // Password fields - show as text but indicate they're encrypted in DB
-    if (def.isEncrypted || def.key.includes('password')) {
+    // But exclude numeric password settings like password_min_length, password_expiry_days
+    if ((def.isEncrypted || def.key.includes('password')) && !def.key.includes('password_min') && !def.key.includes('password_expiry') && !def.key.includes('password_require')) {
       return (
         <Form.Group key={def.key} className="mb-3">
           <Form.Label style={{ color: 'rgba(255, 255, 255, 0.9)' }}>{label} <small style={{ color: 'rgba(255, 255, 255, 0.5)' }}>(encrypted in database)</small></Form.Label>
@@ -636,7 +694,8 @@ export default function SettingsPage() {
     }
 
     // Password fields - use password type but allow viewing what you type
-    if (setting.isEncrypted || setting.key.includes('password')) {
+    // But exclude numeric password settings like password_min_length, password_expiry_days
+    if ((setting.isEncrypted || setting.key.includes('password')) && !setting.key.includes('password_min') && !setting.key.includes('password_expiry') && !setting.key.includes('password_require')) {
       return (
         <Form.Group key={setting.key} className="mb-3">
           <Form.Label style={{ color: 'rgba(255, 255, 255, 0.9)' }}>{label} <small style={{ color: 'rgba(255, 255, 255, 0.5)' }}>(encrypted in database)</small></Form.Label>
@@ -762,111 +821,265 @@ export default function SettingsPage() {
               className="mb-4"
             >
             {/* SMTP Settings */}
-            <Tab eventKey="smtp" title="Email">
+            <Tab eventKey="smtp" title={
+              <span><FaEnvelope className="me-2" />Email</span>
+            }>
+              {/* Email Settings Summary Card */}
+              <Card className="settings-summary-card mb-4">
+                <Card.Body>
+                  <div className="summary-header">
+                    <div className="summary-icon-wrapper">
+                      <FaEnvelope />
+                    </div>
+                    <div className="summary-content">
+                      <h5 className="summary-title">Email Configuration Status</h5>
+                      <div className="summary-stats">
+                        <div className="summary-stat">
+                          <span className="stat-label">Server:</span>
+                          <span className="stat-value">
+                            {getSettingValue('smtp', 'smtp_host') || 'Not configured'}
+                          </span>
+                        </div>
+                        <div className="summary-stat">
+                          <span className="stat-label">Port:</span>
+                          <span className="stat-value">
+                            {getSettingValue('smtp', 'smtp_port', '587')}
+                          </span>
+                        </div>
+                        <div className="summary-stat">
+                          <span className="stat-label">Notifications:</span>
+                          <Badge bg={getSettingValue('smtp', 'enable_email_notifications', 'true') === 'true' ? 'success' : 'secondary'}>
+                            {getSettingValue('smtp', 'enable_email_notifications', 'true') === 'true' ? 'Enabled' : 'Disabled'}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Card.Body>
+              </Card>
+
               <Form>
-                <div className="settings-section">
-                  <h5 className="section-title" style={{ color: '#ffffff' }}>Server Configuration</h5>
-                  {(!settings.smtp || settings.smtp.length === 0) ? (
-                    <>
-                      {renderFieldFromDefault({ key: 'smtp_host', description: 'SMTP server hostname (e.g., smtp.gmail.com)', isEncrypted: false, defaultValue: '' })}
-                      {renderFieldFromDefault({ key: 'smtp_port', description: 'SMTP server port (587 for TLS, 465 for SSL)', isEncrypted: false, defaultValue: '587' })}
-                      {renderFieldFromDefault({ key: 'smtp_secure', description: 'Use SSL/TLS (true/false)', isEncrypted: false, defaultValue: 'false' })}
-                    </>
-                  ) : (
-                    settings.smtp.filter(s => ['smtp_host', 'smtp_port', 'smtp_secure'].includes(s.key)).map(renderSettingInput)
-                  )}
-                </div>
+                {/* Server Configuration Section */}
+                <Card className="settings-section-card mb-3">
+                  <Card.Body>
+                    {renderSectionHeader(
+                      'smtp_server',
+                      'Server Configuration',
+                      <FaServer />,
+                      'Configure your SMTP server connection details'
+                    )}
+                    {expandedSections.smtp_server && (
+                      <div className="section-content mt-3">
+                        {(!settings.smtp || settings.smtp.length === 0) ? (
+                          <>
+                            {renderFieldFromDefault({ key: 'smtp_host', description: 'SMTP server hostname (e.g., smtp.gmail.com)', isEncrypted: false, defaultValue: '' })}
+                            {renderFieldFromDefault({ key: 'smtp_port', description: 'SMTP server port (587 for TLS, 465 for SSL)', isEncrypted: false, defaultValue: '587' })}
+                            {renderFieldFromDefault({ key: 'smtp_secure', description: 'Use SSL/TLS (true/false)', isEncrypted: false, defaultValue: 'false' })}
+                          </>
+                        ) : (
+                          settings.smtp.filter(s => ['smtp_host', 'smtp_port', 'smtp_secure'].includes(s.key)).map(renderSettingInput)
+                        )}
+                      </div>
+                    )}
+                  </Card.Body>
+                </Card>
 
-                <div className="settings-section">
-                  <h5 className="section-title" style={{ color: '#ffffff' }}>Authentication</h5>
-                  {(!settings.smtp || settings.smtp.length === 0) ? (
-                    <>
-                      {renderFieldFromDefault({ key: 'smtp_user', description: 'SMTP authentication username', isEncrypted: false, defaultValue: '' })}
-                      {renderFieldFromDefault({ key: 'smtp_password', description: 'SMTP authentication password', isEncrypted: true, defaultValue: '' })}
-                    </>
-                  ) : (
-                    settings.smtp.filter(s => ['smtp_user', 'smtp_password'].includes(s.key)).map(renderSettingInput)
-                  )}
-                </div>
+                {/* Authentication Section */}
+                <Card className="settings-section-card mb-3">
+                  <Card.Body>
+                    {renderSectionHeader(
+                      'smtp_auth',
+                      'Authentication',
+                      <FaUserLock />,
+                      'SMTP login credentials'
+                    )}
+                    {expandedSections.smtp_auth && (
+                      <div className="section-content mt-3">
+                        {(!settings.smtp || settings.smtp.length === 0) ? (
+                          <>
+                            {renderFieldFromDefault({ key: 'smtp_user', description: 'SMTP authentication username', isEncrypted: false, defaultValue: '' })}
+                            {renderFieldFromDefault({ key: 'smtp_password', description: 'SMTP authentication password', isEncrypted: true, defaultValue: '' })}
+                          </>
+                        ) : (
+                          settings.smtp.filter(s => ['smtp_user', 'smtp_password'].includes(s.key)).map(renderSettingInput)
+                        )}
+                      </div>
+                    )}
+                  </Card.Body>
+                </Card>
 
-                <div className="settings-section">
-                  <h5 className="section-title" style={{ color: '#ffffff' }}>Sender Information</h5>
-                  {(!settings.smtp || settings.smtp.length === 0) ? (
-                    <>
-                      {renderFieldFromDefault({ key: 'smtp_from', description: 'From email address for outgoing emails', isEncrypted: false, defaultValue: '' })}
-                      {renderFieldFromDefault({ key: 'smtp_from_name', description: 'From name for outgoing emails', isEncrypted: false, defaultValue: 'ClovaLink' })}
-                      {renderFieldFromDefault({ key: 'enable_email_notifications', description: 'Enable email notifications (true/false)', isEncrypted: false, defaultValue: 'true' })}
-                    </>
-                  ) : (
-                    settings.smtp.filter(s => ['smtp_from', 'smtp_from_name', 'enable_email_notifications'].includes(s.key)).map(renderSettingInput)
-                  )}
-                </div>
-                <div className="d-flex gap-2">
+                {/* Sender Information Section */}
+                <Card className="settings-section-card mb-4">
+                  <Card.Body>
+                    {renderSectionHeader(
+                      'smtp_sender',
+                      'Sender Information',
+                      <FaPaperPlane />,
+                      'Configure the "From" address and name for outgoing emails'
+                    )}
+                    {expandedSections.smtp_sender && (
+                      <div className="section-content mt-3">
+                        {(!settings.smtp || settings.smtp.length === 0) ? (
+                          <>
+                            {renderFieldFromDefault({ key: 'smtp_from', description: 'From email address for outgoing emails', isEncrypted: false, defaultValue: '' })}
+                            {renderFieldFromDefault({ key: 'smtp_from_name', description: 'From name for outgoing emails', isEncrypted: false, defaultValue: 'ClovaLink' })}
+                            {renderFieldFromDefault({ key: 'enable_email_notifications', description: 'Enable email notifications (true/false)', isEncrypted: false, defaultValue: 'true' })}
+                          </>
+                        ) : (
+                          settings.smtp.filter(s => ['smtp_from', 'smtp_from_name', 'enable_email_notifications'].includes(s.key)).map(renderSettingInput)
+                        )}
+                      </div>
+                    )}
+                  </Card.Body>
+                </Card>
+
+                {/* Action Buttons */}
+                <div className="settings-actions">
                   <Button
                     variant="primary"
                     onClick={() => handleSaveCategory('smtp')}
                     disabled={saving}
                     className="save-settings-btn"
+                    size="lg"
                   >
                     <FaSave className="me-2" />
-                    {saving ? 'Saving...' : 'Save SMTP Settings'}
+                    {saving ? 'Saving...' : 'Save Email Settings'}
                   </Button>
                   <Button
                     variant="outline-secondary"
                     onClick={fetchSettings}
                     disabled={loading}
+                    size="lg"
                   >
                     <FaSync className="me-2" />
-                    Reset
+                    Reset Changes
                   </Button>
                 </div>
               </Form>
             </Tab>
 
             {/* Upload Settings */}
-            <Tab eventKey="upload" title="Upload">
+            <Tab eventKey="upload" title={
+              <span><FaUpload className="me-2" />Upload</span>
+            }>
+              {/* Upload Settings Summary Card */}
+              <Card className="settings-summary-card mb-4">
+                <Card.Body>
+                  <div className="summary-header">
+                    <div className="summary-icon-wrapper">
+                      <FaUpload />
+                    </div>
+                    <div className="summary-content">
+                      <h5 className="summary-title">Upload Configuration Status</h5>
+                      <div className="summary-stats">
+                        <div className="summary-stat">
+                          <span className="stat-label">Max Size:</span>
+                          <span className="stat-value">
+                            {(() => {
+                              const size = parseInt(getSettingValue('upload', 'max_upload_size', '104857600'));
+                              return size >= 1048576 ? `${Math.round(size / 1048576)}MB` : `${Math.round(size / 1024)}KB`;
+                            })()}
+                          </span>
+                        </div>
+                        <div className="summary-stat">
+                          <span className="stat-label">Storage Limit:</span>
+                          <span className="stat-value">
+                            {getSettingValue('upload', 'storage_limit_gb', '0') === '0' ? 'Unlimited' : `${getSettingValue('upload', 'storage_limit_gb', '0')}GB`}
+                          </span>
+                        </div>
+                        <div className="summary-stat">
+                          <span className="stat-label">Virus Scan:</span>
+                          <Badge bg={getSettingValue('upload', 'enable_virus_scan', 'false') === 'true' ? 'success' : 'secondary'}>
+                            {getSettingValue('upload', 'enable_virus_scan', 'false') === 'true' ? 'Enabled' : 'Disabled'}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Card.Body>
+              </Card>
+
               <Form>
-                <div className="settings-section">
-                  <h5 className="section-title" style={{ color: '#ffffff' }}>Upload Limits</h5>
-                  {(!settings.upload || settings.upload.length === 0) ? (
-                    <>
-                      {renderFieldFromDefault({ key: 'max_upload_size', description: 'Maximum file upload size in bytes (100MB = 104857600)', isEncrypted: false, defaultValue: '104857600' })}
-                      {renderFieldFromDefault({ key: 'allowed_file_types', description: 'Comma-separated list of allowed file extensions', isEncrypted: false, defaultValue: '.pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.txt,.zip' })}
-                    </>
-                  ) : (
-                    settings.upload.filter(s => ['max_upload_size', 'allowed_file_types'].includes(s.key)).map(renderSettingInput)
-                  )}
-                </div>
+                {/* Upload Limits Section */}
+                <Card className="settings-section-card mb-3">
+                  <Card.Body>
+                    {renderSectionHeader(
+                      'upload_limits',
+                      'Upload Limits',
+                      <FaFileAlt />,
+                      'Configure file size and type restrictions'
+                    )}
+                    {expandedSections.upload_limits && (
+                      <div className="section-content mt-3">
+                        {(!settings.upload || settings.upload.length === 0) ? (
+                          <>
+                            {renderFieldFromDefault({ key: 'max_upload_size', description: 'Maximum file upload size in bytes (100MB = 104857600)', isEncrypted: false, defaultValue: '104857600' })}
+                            {renderFieldFromDefault({ key: 'allowed_file_types', description: 'Comma-separated list of allowed file extensions', isEncrypted: false, defaultValue: '.pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.txt,.zip' })}
+                          </>
+                        ) : (
+                          settings.upload.filter(s => ['max_upload_size', 'allowed_file_types'].includes(s.key)).map(renderSettingInput)
+                        )}
+                      </div>
+                    )}
+                  </Card.Body>
+                </Card>
 
-                <div className="settings-section">
-                  <h5 className="section-title" style={{ color: '#ffffff' }}>Storage & Cleanup</h5>
-                  {(!settings.upload || settings.upload.length === 0) ? (
-                    <>
-                      {renderFieldFromDefault({ key: 'upload_dir', description: 'Directory path for uploaded files', isEncrypted: false, defaultValue: './uploads' })}
-                      {renderFieldFromDefault({ key: 'storage_limit_gb', description: 'Total storage limit in GB (0 = unlimited)', isEncrypted: false, defaultValue: '0' })}
-                      {renderFieldFromDefault({ key: 'auto_delete_expired', description: 'Auto-delete expired documents (true/false)', isEncrypted: false, defaultValue: 'true' })}
-                    </>
-                  ) : (
-                    settings.upload.filter(s => ['upload_dir', 'storage_limit_gb', 'auto_delete_expired'].includes(s.key)).map(renderSettingInput)
-                  )}
-                </div>
+                {/* Storage & Cleanup Section */}
+                <Card className="settings-section-card mb-3">
+                  <Card.Body>
+                    {renderSectionHeader(
+                      'upload_storage',
+                      'Storage & Cleanup',
+                      <FaHdd />,
+                      'Manage storage limits and automatic cleanup'
+                    )}
+                    {expandedSections.upload_storage && (
+                      <div className="section-content mt-3">
+                        {(!settings.upload || settings.upload.length === 0) ? (
+                          <>
+                            {renderFieldFromDefault({ key: 'upload_dir', description: 'Directory path for uploaded files', isEncrypted: false, defaultValue: './uploads' })}
+                            {renderFieldFromDefault({ key: 'storage_limit_gb', description: 'Total storage limit in GB (0 = unlimited)', isEncrypted: false, defaultValue: '0' })}
+                            {renderFieldFromDefault({ key: 'auto_delete_expired', description: 'Auto-delete expired documents (true/false)', isEncrypted: false, defaultValue: 'true' })}
+                          </>
+                        ) : (
+                          settings.upload.filter(s => ['upload_dir', 'storage_limit_gb', 'auto_delete_expired'].includes(s.key)).map(renderSettingInput)
+                        )}
+                      </div>
+                    )}
+                  </Card.Body>
+                </Card>
 
-                <div className="settings-section">
-                  <h5 className="section-title" style={{ color: '#ffffff' }}>Security Scanning</h5>
-                  {(!settings.upload || settings.upload.length === 0) ? (
-                    <>
-                      {renderFieldFromDefault({ key: 'enable_virus_scan', description: 'Enable virus scanning on upload (true/false)', isEncrypted: false, defaultValue: 'false' })}
-                    </>
-                  ) : (
-                    settings.upload.filter(s => ['enable_virus_scan'].includes(s.key)).map(renderSettingInput)
-                  )}
-                </div>
-                <div className="d-flex gap-2">
+                {/* Security Scanning Section */}
+                <Card className="settings-section-card mb-4">
+                  <Card.Body>
+                    {renderSectionHeader(
+                      'upload_security',
+                      'Security Scanning',
+                      <FaShieldAlt />,
+                      'Virus scanning and security options'
+                    )}
+                    {expandedSections.upload_security && (
+                      <div className="section-content mt-3">
+                        {(!settings.upload || settings.upload.length === 0) ? (
+                          <>
+                            {renderFieldFromDefault({ key: 'enable_virus_scan', description: 'Enable virus scanning on upload (true/false)', isEncrypted: false, defaultValue: 'false' })}
+                          </>
+                        ) : (
+                          settings.upload.filter(s => ['enable_virus_scan'].includes(s.key)).map(renderSettingInput)
+                        )}
+                      </div>
+                    )}
+                  </Card.Body>
+                </Card>
+
+                {/* Action Buttons */}
+                <div className="settings-actions">
                   <Button
                     variant="primary"
                     onClick={() => handleSaveCategory('upload')}
                     disabled={saving}
                     className="save-settings-btn"
+                    size="lg"
                   >
                     <FaSave className="me-2" />
                     {saving ? 'Saving...' : 'Save Upload Settings'}
@@ -875,23 +1088,69 @@ export default function SettingsPage() {
                     variant="outline-secondary"
                     onClick={fetchSettings}
                     disabled={loading}
+                    size="lg"
                   >
                     <FaSync className="me-2" />
-                    Reset
+                    Reset Changes
                   </Button>
                 </div>
               </Form>
             </Tab>
 
             {/* Security Settings */}
-            <Tab eventKey="security" title="Security">
+            <Tab eventKey="security" title={
+              <span><FaLock className="me-2" />Security</span>
+            }>
+              {/* Security Settings Summary Card */}
+              <Card className="settings-summary-card mb-4">
+                <Card.Body>
+                  <div className="summary-header">
+                    <div className="summary-icon-wrapper">
+                      <FaShieldAlt />
+                    </div>
+                    <div className="summary-content">
+                      <h5 className="summary-title">Security Configuration Status</h5>
+                      <div className="summary-stats">
+                        <div className="summary-stat">
+                          <span className="stat-label">2FA Required:</span>
+                          <Badge bg={twoFactorRequired ? 'success' : 'secondary'}>
+                            {twoFactorRequired ? 'Yes' : 'No'}
+                          </Badge>
+                        </div>
+                        <div className="summary-stat">
+                          <span className="stat-label">Session Timeout:</span>
+                          <span className="stat-value">
+                            {(() => {
+                              const timeout = parseInt(getSettingValue('security', 'session_timeout', '3600'));
+                              return timeout >= 3600 ? `${Math.round(timeout / 3600)}h` : `${Math.round(timeout / 60)}m`;
+                            })()}
+                          </span>
+                        </div>
+                        <div className="summary-stat">
+                          <span className="stat-label">Min Password:</span>
+                          <span className="stat-value">
+                            {getSettingValue('security', 'password_min_length', '8')} chars
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Card.Body>
+              </Card>
+
               <Form>
-                <div className="settings-section">
-                  <h5 className="section-title" style={{ color: '#ffffff' }}>
-                    <FaShieldAlt className="me-2" style={{ color: '#667eea' }} />
-                    Organization 2FA Policy (Admin Only)
-                  </h5>
-                  {twoFactorRequired ? (
+                {/* Organization 2FA Policy Section */}
+                <Card className="settings-section-card mb-3">
+                  <Card.Body>
+                    {renderSectionHeader(
+                      'security_2fa',
+                      'Organization 2FA Policy',
+                      <FaShieldAlt />,
+                      'Require two-factor authentication for all users (Admin Only)'
+                    )}
+                    {expandedSections.security_2fa && (
+                      <div className="section-content mt-3">
+                        {twoFactorRequired ? (
                     <Alert variant="success" className="mb-3">
                       <strong>✓ 2FA is REQUIRED for all users</strong>
                       <p className="mb-0 mt-2">
@@ -925,10 +1184,22 @@ export default function SettingsPage() {
                   ) : (
                     settings.security.filter(s => s.key === 'require_two_factor').map(renderSettingInput)
                   )}
-                </div>
+                        </div>
+                      )}
+                    </Card.Body>
+                  </Card>
 
-                <div className="settings-section">
-                  <h5 className="section-title" style={{ color: '#ffffff' }}>Session Management</h5>
+                {/* Session Management Section */}
+                <Card className="settings-section-card mb-3">
+                  <Card.Body>
+                    {renderSectionHeader(
+                      'security_session',
+                      'Session Management',
+                      <FaLock />,
+                      'Configure session timeout and login security'
+                    )}
+                    {expandedSections.security_session && (
+                      <div className="section-content mt-3">
                   {(!settings.security || settings.security.length === 0) ? (
                     <>
                       {renderFieldFromDefault({ key: 'session_timeout', description: 'Session timeout in seconds (3600 = 1 hour)', isEncrypted: false, defaultValue: '3600' })}
@@ -938,10 +1209,22 @@ export default function SettingsPage() {
                   ) : (
                     settings.security.filter(s => ['session_timeout', 'max_login_attempts', 'lockout_duration'].includes(s.key)).map(renderSettingInput)
                   )}
-                </div>
+                      </div>
+                    )}
+                  </Card.Body>
+                </Card>
 
-                <div className="settings-section">
-                  <h5 className="section-title" style={{ color: '#ffffff' }}>Password Policy</h5>
+                {/* Password Policy Section */}
+                <Card className="settings-section-card mb-3">
+                  <Card.Body>
+                    {renderSectionHeader(
+                      'security_password',
+                      'Password Policy',
+                      <FaLock />,
+                      'Configure password requirements and rules'
+                    )}
+                    {expandedSections.security_password && (
+                      <div className="section-content mt-3">
                   {(!settings.security || settings.security.length === 0) ? (
                     <>
                       {renderFieldFromDefault({ key: 'password_min_length', description: 'Minimum password length', isEncrypted: false, defaultValue: '8' })}
@@ -953,13 +1236,22 @@ export default function SettingsPage() {
                   ) : (
                     settings.security.filter(s => ['password_min_length', 'require_password_uppercase', 'require_password_numbers', 'require_password_special', 'password_expiry_days'].includes(s.key)).map(renderSettingInput)
                   )}
-                </div>
+                      </div>
+                    )}
+                  </Card.Body>
+                </Card>
 
-                <div className="settings-section">
-                  <h5 className="section-title" style={{ color: '#ffffff' }}>
-                    <FaShieldAlt className="me-2" style={{ color: '#667eea' }} />
-                    Your Personal 2FA Settings
-                  </h5>
+                {/* Personal 2FA Settings Section */}
+                <Card className="settings-section-card mb-4">
+                  <Card.Body>
+                    {renderSectionHeader(
+                      'security_personal_2fa',
+                      'Your Personal 2FA Settings',
+                      <FaShieldAlt />,
+                      'Configure two-factor authentication for your personal account'
+                    )}
+                    {expandedSections.security_personal_2fa !== false && (
+                      <div className="section-content mt-3">
                   <p style={{ color: 'rgba(255, 255, 255, 0.6)' }} className="mb-3">
                     Configure two-factor authentication for your personal account. This is separate from the organization-wide 2FA policy above.
                   </p>
@@ -1118,13 +1410,19 @@ export default function SettingsPage() {
                       </Button>
                     </Alert>
                   )}
-                </div>
-                <div className="d-flex gap-2">
+                      </div>
+                    )}
+                  </Card.Body>
+                </Card>
+
+                {/* Action Buttons */}
+                <div className="settings-actions">
                   <Button
                     variant="primary"
                     onClick={() => handleSaveCategory('security')}
                     disabled={saving}
                     className="save-settings-btn"
+                    size="lg"
                   >
                     <FaSave className="me-2" />
                     {saving ? 'Saving...' : 'Save Security Settings'}
@@ -1133,19 +1431,65 @@ export default function SettingsPage() {
                     variant="outline-secondary"
                     onClick={fetchSettings}
                     disabled={loading}
+                    size="lg"
                   >
                     <FaSync className="me-2" />
-                    Reset
+                    Reset Changes
                   </Button>
                 </div>
               </Form>
             </Tab>
 
             {/* General Settings */}
-            <Tab eventKey="general" title="General">
+            <Tab eventKey="general" title={
+              <span><FaGlobe className="me-2" />General</span>
+            }>
+              {/* General Settings Summary Card */}
+              <Card className="settings-summary-card mb-4">
+                <Card.Body>
+                  <div className="summary-header">
+                    <div className="summary-icon-wrapper">
+                      <FaCog />
+                    </div>
+                    <div className="summary-content">
+                      <h5 className="summary-title">General Configuration Status</h5>
+                      <div className="summary-stats">
+                        <div className="summary-stat">
+                          <span className="stat-label">App Name:</span>
+                          <span className="stat-value">
+                            {getSettingValue('general', 'app_name', 'ClovaLink')}
+                          </span>
+                        </div>
+                        <div className="summary-stat">
+                          <span className="stat-label">Timezone:</span>
+                          <span className="stat-value">
+                            {getSettingValue('general', 'timezone', 'UTC')}
+                          </span>
+                        </div>
+                        <div className="summary-stat">
+                          <span className="stat-label">Activity Logs:</span>
+                          <Badge bg={getSettingValue('general', 'enable_activity_logs', 'true') === 'true' ? 'success' : 'secondary'}>
+                            {getSettingValue('general', 'enable_activity_logs', 'true') === 'true' ? 'Enabled' : 'Disabled'}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Card.Body>
+              </Card>
+
               <Form>
-                <div className="settings-section">
-                  <h5 className="section-title" style={{ color: '#ffffff' }}>Application Identity</h5>
+                {/* Application Identity Section */}
+                <Card className="settings-section-card mb-3">
+                  <Card.Body>
+                    {renderSectionHeader(
+                      'general_identity',
+                      'Application Identity',
+                      <FaBuilding />,
+                      'Configure application name and branding'
+                    )}
+                    {expandedSections.general_identity && (
+                      <div className="section-content mt-3">
                   {(!settings.general || settings.general.length === 0) ? (
                     <>
                       {renderFieldFromDefault({ key: 'app_name', description: 'Application name displayed in UI', isEncrypted: false, defaultValue: 'ClovaLink' })}
@@ -1155,10 +1499,22 @@ export default function SettingsPage() {
                   ) : (
                     settings.general.filter(s => ['app_name', 'company_logo_url', 'support_email'].includes(s.key)).map(renderSettingInput)
                   )}
-                </div>
+                      </div>
+                    )}
+                  </Card.Body>
+                </Card>
 
-                <div className="settings-section">
-                  <h5 className="section-title" style={{ color: '#ffffff' }}>Regional Settings</h5>
+                {/* Regional Settings Section */}
+                <Card className="settings-section-card mb-3">
+                  <Card.Body>
+                    {renderSectionHeader(
+                      'general_regional',
+                      'Regional Settings',
+                      <FaGlobe />,
+                      'Configure timezone and date format'
+                    )}
+                    {expandedSections.general_regional && (
+                      <div className="section-content mt-3">
                   {(!settings.general || settings.general.length === 0) ? (
                     <>
                       {renderFieldFromDefault({ key: 'timezone', description: 'Server timezone (e.g., America/New_York)', isEncrypted: false, defaultValue: 'UTC' })}
@@ -1167,10 +1523,22 @@ export default function SettingsPage() {
                   ) : (
                     settings.general.filter(s => ['timezone', 'date_format'].includes(s.key)).map(renderSettingInput)
                   )}
-                </div>
+                      </div>
+                    )}
+                  </Card.Body>
+                </Card>
 
-                <div className="settings-section">
-                  <h5 className="section-title" style={{ color: '#ffffff' }}>Activity & Logging</h5>
+                {/* Activity & Logging Section */}
+                <Card className="settings-section-card mb-3">
+                  <Card.Body>
+                    {renderSectionHeader(
+                      'general_activity',
+                      'Activity & Logging',
+                      <FaFileAlt />,
+                      'Configure activity logging and retention'
+                    )}
+                    {expandedSections.general_activity && (
+                      <div className="section-content mt-3">
                   {(!settings.general || settings.general.length === 0) ? (
                     <>
                       {renderFieldFromDefault({ key: 'enable_activity_logs', description: 'Enable activity logging (true/false)', isEncrypted: false, defaultValue: 'true' })}
@@ -1179,10 +1547,22 @@ export default function SettingsPage() {
                   ) : (
                     settings.general.filter(s => ['enable_activity_logs', 'activity_retention_days'].includes(s.key)).map(renderSettingInput)
                   )}
-                </div>
+                      </div>
+                    )}
+                  </Card.Body>
+                </Card>
 
-                <div className="settings-section">
-                  <h5 className="section-title" style={{ color: '#ffffff' }}>Features & Access</h5>
+                {/* Features & Access Section */}
+                <Card className="settings-section-card mb-4">
+                  <Card.Body>
+                    {renderSectionHeader(
+                      'general_features',
+                      'Features & Access',
+                      <FaCog />,
+                      'Configure feature flags and access controls'
+                    )}
+                    {expandedSections.general_features && (
+                      <div className="section-content mt-3">
                   {(!settings.general || settings.general.length === 0) ? (
                     <>
                       {renderFieldFromDefault({ key: 'default_link_expiry', description: 'Default link expiry in days', isEncrypted: false, defaultValue: '7' })}
@@ -1192,13 +1572,19 @@ export default function SettingsPage() {
                   ) : (
                     settings.general.filter(s => ['default_link_expiry', 'enable_api_access', 'maintenance_mode'].includes(s.key)).map(renderSettingInput)
                   )}
-                </div>
-                <div className="d-flex gap-2">
+                      </div>
+                    )}
+                  </Card.Body>
+                </Card>
+
+                {/* Action Buttons */}
+                <div className="settings-actions">
                   <Button
                     variant="primary"
                     onClick={() => handleSaveCategory('general')}
                     disabled={saving}
                     className="save-settings-btn"
+                    size="lg"
                   >
                     <FaSave className="me-2" />
                     {saving ? 'Saving...' : 'Save General Settings'}
@@ -1207,9 +1593,10 @@ export default function SettingsPage() {
                     variant="outline-secondary"
                     onClick={fetchSettings}
                     disabled={loading}
+                    size="lg"
                   >
                     <FaSync className="me-2" />
-                    Reset
+                    Reset Changes
                   </Button>
                 </div>
               </Form>
@@ -2115,6 +2502,221 @@ export default function SettingsPage() {
 
         :global(.settings-section p) {
           color: rgba(255, 255, 255, 0.7) !important;
+        }
+
+        /* Summary Cards */
+        :global(.settings-summary-card) {
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%) !important;
+          border: 1px solid rgba(102, 126, 234, 0.3) !important;
+          border-radius: 14px !important;
+          box-shadow: 0 4px 20px rgba(102, 126, 234, 0.15) !important;
+        }
+
+        :global(.settings-summary-card .card-body) {
+          padding: 1.5rem !important;
+        }
+
+        .summary-header {
+          display: flex;
+          align-items: center;
+          gap: 1.25rem;
+        }
+
+        .summary-icon-wrapper {
+          width: 56px;
+          height: 56px;
+          border-radius: 14px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.5rem;
+          color: white;
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+          flex-shrink: 0;
+        }
+
+        .summary-content {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .summary-title {
+          margin: 0 0 0.75rem 0;
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #ffffff !important;
+        }
+
+        .summary-stats {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 1.5rem;
+        }
+
+        .summary-stat {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .stat-label {
+          color: rgba(255, 255, 255, 0.6);
+          font-size: 0.9rem;
+          font-weight: 500;
+        }
+
+        .stat-value {
+          color: #ffffff;
+          font-size: 0.95rem;
+          font-weight: 600;
+        }
+
+        /* Settings Section Cards */
+        :global(.settings-section-card) {
+          background: rgba(255, 255, 255, 0.03) !important;
+          border: 1px solid rgba(102, 126, 234, 0.2) !important;
+          border-radius: 12px !important;
+          transition: all 0.3s ease !important;
+        }
+
+        :global(.settings-section-card:hover) {
+          border-color: rgba(102, 126, 234, 0.4) !important;
+          box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15) !important;
+        }
+
+        :global(.settings-section-card .card-body) {
+          padding: 1.25rem !important;
+        }
+
+        /* Collapsible Section Headers */
+        .collapsible-section-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0.75rem 0;
+          border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+          margin-bottom: 0;
+          transition: all 0.2s ease;
+        }
+
+        .collapsible-section-header:hover {
+          border-bottom-color: rgba(102, 126, 234, 0.4);
+        }
+
+        .section-header-content {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          flex: 1;
+        }
+
+        .section-header-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
+          background: rgba(102, 126, 234, 0.2);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #667eea;
+          font-size: 1.1rem;
+          flex-shrink: 0;
+        }
+
+        .section-header-text {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .section-header-title {
+          margin: 0;
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: #ffffff !important;
+        }
+
+        .section-header-desc {
+          margin: 0.25rem 0 0 0;
+          font-size: 0.85rem;
+          color: rgba(255, 255, 255, 0.6);
+        }
+
+        .section-header-toggle {
+          color: rgba(255, 255, 255, 0.5);
+          font-size: 0.9rem;
+          transition: all 0.2s ease;
+        }
+
+        .collapsible-section-header:hover .section-header-toggle {
+          color: #667eea;
+        }
+
+        /* Section Content */
+        .section-content {
+          padding-top: 1rem;
+        }
+
+        /* Settings Actions */
+        .settings-actions {
+          display: flex;
+          gap: 1rem;
+          padding-top: 1.5rem;
+          margin-top: 1.5rem;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        :global(.settings-actions .btn-lg) {
+          padding: 0.875rem 2rem !important;
+          font-size: 1rem !important;
+          font-weight: 600 !important;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 767px) {
+          .summary-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+          }
+
+          .summary-icon-wrapper {
+            width: 48px;
+            height: 48px;
+            font-size: 1.25rem;
+          }
+
+          .summary-title {
+            font-size: 1.1rem;
+          }
+
+          .summary-stats {
+            flex-direction: column;
+            gap: 0.75rem;
+          }
+
+          .section-header-content {
+            gap: 0.75rem;
+          }
+
+          .section-header-icon {
+            width: 36px;
+            height: 36px;
+            font-size: 1rem;
+          }
+
+          .section-header-title {
+            font-size: 1rem;
+          }
+
+          .settings-actions {
+            flex-direction: column;
+            gap: 0.75rem;
+          }
+
+          :global(.settings-actions .btn) {
+            width: 100% !important;
+          }
         }
       `}</style>
     </DashboardLayout>

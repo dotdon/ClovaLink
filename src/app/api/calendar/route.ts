@@ -186,6 +186,18 @@ export async function POST(request: Request) {
       },
     });
 
+    // Send email invitations to attendees (fire and forget)
+    if (event.attendees.length > 0) {
+      try {
+        const { notifyCalendarEventInvitation } = await import('@/lib/services/emailService');
+        notifyCalendarEventInvitation(event.id).catch(err => {
+          console.error('Failed to send calendar event invitation emails:', err);
+        });
+      } catch (error) {
+        console.error('Error importing email service:', error);
+      }
+    }
+
     // Create notifications for attendees
     if (attendeeIds && attendeeIds.length > 0) {
       await Promise.all(
@@ -243,7 +255,7 @@ export async function PATCH(request: Request) {
     // Check if user can edit this event
     const canEdit = 
       existingEvent.createdById === session.user.id || // Creator can edit
-      session.user.role === 'ADMIN' || // Admins can edit all
+      session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN' || // Admins and Super Admins can edit all
       (session.user.role === 'MANAGER' && existingEvent.companyId === session.user.companyId); // Managers can edit company events
 
     if (!canEdit) {
@@ -316,7 +328,7 @@ export async function DELETE(request: Request) {
     // Check if user can delete this event
     const canDelete = 
       existingEvent.createdById === session.user.id || // Creator can delete
-      session.user.role === 'ADMIN'; // Admins can delete all
+      session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN'; // Admins and Super Admins can delete all
 
     if (!canDelete) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });

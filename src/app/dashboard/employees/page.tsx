@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { Card, Table, Button, Badge, Modal, Alert, Dropdown } from 'react-bootstrap';
 import DashboardLayout from '@/components/ui/DashboardLayout';
-import { FaPlus, FaBuilding, FaEnvelope, FaUserTag, FaChevronRight, FaEdit, FaFileDownload, FaTrash, FaShieldAlt, FaKey, FaUser, FaUserShield, FaExclamationTriangle, FaUserSlash, FaHistory, FaFileAlt, FaCheckCircle, FaTimesCircle, FaInfoCircle, FaTh, FaThList, FaFilter, FaSearch, FaComments, FaFile as FaFileIcon, FaEllipsisV } from 'react-icons/fa';
+import { FaPlus, FaBuilding, FaEnvelope, FaUserTag, FaChevronRight, FaEdit, FaFileDownload, FaTrash, FaShieldAlt, FaKey, FaUser, FaUserShield, FaExclamationTriangle, FaUserSlash, FaHistory, FaFileAlt, FaCheckCircle, FaTimesCircle, FaInfoCircle, FaTh, FaThList, FaFilter, FaSearch, FaComments, FaFile as FaFileIcon, FaEllipsisV, FaTools } from 'react-icons/fa';
 import dynamic from 'next/dynamic';
+import { formatRoleLabel, getRoleBadgeVariant, getRoleBadgeClass } from '@/lib/utils/roles';
 
 const AddEmployeeModal = dynamic(() => import('@/components/modals/AddEmployeeModal'), {
   ssr: false,
@@ -68,15 +69,19 @@ export default function EmployeesPage() {
   const canCreateEmployee = hasPermission(session, Permission.CREATE_EMPLOYEES);
   const canEditEmployee = (employeeCompanyId: string, employeeRole: string) => {
     if (!session?.user) return false;
-    
-    // Admins can edit any employee
-    if (session.user.role === 'ADMIN') return true;
-    
-    // Managers can only edit non-admin employees in their company
-    if (session.user.role === 'MANAGER' && session.user.companyId === employeeCompanyId) {
-      return employeeRole !== 'ADMIN';
+
+    const viewerRole = session.user.role;
+
+    if (viewerRole === 'SUPER_ADMIN') return true;
+
+    if (viewerRole === 'ADMIN') {
+      return employeeRole !== 'SUPER_ADMIN';
     }
-    
+
+    if (viewerRole === 'MANAGER' && session.user.companyId === employeeCompanyId) {
+      return employeeRole !== 'ADMIN' && employeeRole !== 'SUPER_ADMIN';
+    }
+
     return false;
   };
 
@@ -84,20 +89,35 @@ export default function EmployeesPage() {
   // Only admins can delete/manage managers
   const canDeleteEmployee = (employeeRole: string) => {
     if (!session?.user) return false;
-    
-    // Only admins can delete/manage managers
-    if (employeeRole === 'MANAGER' || employeeRole === 'ADMIN') {
-      return session.user.role === 'ADMIN';
+
+    const viewerRole = session.user.role;
+
+    if (employeeRole === 'SUPER_ADMIN') {
+      return viewerRole === 'SUPER_ADMIN';
     }
-    
-    // For regular users, use canEditEmployee logic
-    return true;
+
+    if (employeeRole === 'ADMIN') {
+      return viewerRole === 'SUPER_ADMIN';
+    }
+
+    if (employeeRole === 'MANAGER') {
+      return viewerRole === 'ADMIN' || viewerRole === 'SUPER_ADMIN';
+    }
+
+    if (employeeRole === 'IT') {
+      return viewerRole === 'SUPER_ADMIN';
+    }
+
+    // For regular users, allow admins and super admins
+    return viewerRole === 'ADMIN' || viewerRole === 'SUPER_ADMIN';
   };
 
   // Check if email should be hidden (hide admin emails from non-admins)
   const shouldHideEmail = (employeeRole: string) => {
     if (!session?.user) return false;
-    return employeeRole === 'ADMIN' && session.user.role !== 'ADMIN';
+    return (employeeRole === 'ADMIN' || employeeRole === 'SUPER_ADMIN') &&
+      session.user.role !== 'ADMIN' &&
+      session.user.role !== 'SUPER_ADMIN';
   };
 
   const fetchEmployees = async () => {
@@ -270,15 +290,22 @@ export default function EmployeesPage() {
 
   const canExportActivities = (employeeId: string, employeeCompanyId: string, employeeRole: string) => {
     if (!session?.user) return false;
-    
-    // Admins can export activities for any employee
-    if (session.user.role === 'ADMIN') return true;
-    
-    // Managers can only export activities for non-admin employees in their company
-    if (session.user.role === 'MANAGER' && session.user.companyId === employeeCompanyId) {
-      return employeeRole !== 'ADMIN';
+
+    const viewerRole = session.user.role;
+
+    // Super Admins can export for any employee
+    if (viewerRole === 'SUPER_ADMIN') return true;
+
+    // Admins can export for anyone except Super Admins
+    if (viewerRole === 'ADMIN') {
+      return employeeRole !== 'SUPER_ADMIN';
     }
-    
+
+    // Managers can only export activities for non-admin, non-super-admin employees in their company
+    if (viewerRole === 'MANAGER' && session.user.companyId === employeeCompanyId) {
+      return employeeRole !== 'ADMIN' && employeeRole !== 'SUPER_ADMIN';
+    }
+
     return false;
   };
 
@@ -316,10 +343,10 @@ export default function EmployeesPage() {
               </div>
               <div className="detail">
                 <FaUserTag className="detail-icon" />
-                <Badge bg={employee.role === 'ADMIN' ? 'primary' : 'secondary'}>
-                  {employee.role}
+                <Badge bg={getRoleBadgeVariant(employee.role)}>
+                  {formatRoleLabel(employee.role)}
                 </Badge>
-                {session?.user?.role === 'MANAGER' && employee.role === 'ADMIN' && (
+                {session?.user?.role === 'MANAGER' && (employee.role === 'ADMIN' || employee.role === 'SUPER_ADMIN') && (
                   <span className="text-muted ms-2 small">
                     (restricted access)
                   </span>
@@ -368,7 +395,7 @@ export default function EmployeesPage() {
                     )}
                   </>
                 )}
-                {session?.user?.role === 'ADMIN' && (
+                {(session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN') && (
                   <>
                     <Dropdown.Divider />
                     <Dropdown.Item
@@ -397,20 +424,17 @@ export default function EmployeesPage() {
   );
 
   const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'ADMIN':
-        return 'admin-badge';
-      case 'MANAGER':
-        return 'manager-badge';
-      default:
-        return 'user-badge';
-    }
+    return getRoleBadgeClass(role);
   };
 
   const getRoleIcon = (role: string) => {
     switch (role) {
+      case 'SUPER_ADMIN':
+        return <FaShieldAlt />;
       case 'ADMIN':
         return <FaUserShield />;
+      case 'IT':
+        return <FaTools />;
       case 'MANAGER':
         return <FaUserTag />;
       default:
@@ -615,7 +639,7 @@ export default function EmployeesPage() {
                                     )}
                                   </>
                                 )}
-                                {session?.user?.role === 'ADMIN' && (
+                                {(session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN') && (
                                   <>
                                     <Dropdown.Divider />
                                     <Dropdown.Item
@@ -648,7 +672,7 @@ export default function EmployeesPage() {
                                 <span>Role</span>
                               </div>
                               <div className={`role-badge ${getRoleBadgeColor(employee.role)}`}>
-                                {employee.role}
+                                {formatRoleLabel(employee.role)}
                               </div>
                             </div>
                             
@@ -687,7 +711,7 @@ export default function EmployeesPage() {
                           </div>
                         </div>
                         
-                        {session?.user?.role === 'MANAGER' && employee.role === 'ADMIN' && (
+                        {(session?.user?.role === 'MANAGER') && (employee.role === 'ADMIN' || employee.role === 'SUPER_ADMIN') && (
                           <div className="restricted-banner">
                             <FaShieldAlt />
                             <span>Restricted Access</span>
@@ -759,8 +783,8 @@ export default function EmployeesPage() {
                               </div>
                             </td>
                             <td>
-                              <Badge bg={employee.role === 'ADMIN' ? 'primary' : employee.role === 'MANAGER' ? 'info' : 'secondary'}>
-                                {employee.role}
+                              <Badge bg={getRoleBadgeVariant(employee.role)}>
+                                {formatRoleLabel(employee.role)}
                               </Badge>
                             </td>
                             <td>
@@ -833,7 +857,7 @@ export default function EmployeesPage() {
                                         )}
                                       </>
                                     )}
-                                    {session?.user?.role === 'ADMIN' && (
+                                    {(session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN') && (
                                       <>
                                         <Dropdown.Divider />
                                         <Dropdown.Item
@@ -922,10 +946,10 @@ export default function EmployeesPage() {
                             </div>
                             <div className="detail">
                               <FaUserTag className="detail-icon" />
-                              <Badge bg={employee.role === 'ADMIN' ? 'primary' : 'secondary'}>
-                                {employee.role}
+                              <Badge bg={getRoleBadgeVariant(employee.role)}>
+                                {formatRoleLabel(employee.role)}
                               </Badge>
-                              {session?.user?.role === 'MANAGER' && employee.role === 'ADMIN' && (
+                              {session?.user?.role === 'MANAGER' && (employee.role === 'ADMIN' || employee.role === 'SUPER_ADMIN') && (
                                 <span className="text-muted ms-2 small">
                                   (restricted access)
                                 </span>
@@ -974,7 +998,7 @@ export default function EmployeesPage() {
                                   )}
                                 </>
                               )}
-                              {session?.user?.role === 'ADMIN' && (
+                              {(session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN') && (
                                 <>
                                   <Dropdown.Divider />
                                   <Dropdown.Item
@@ -1171,7 +1195,9 @@ export default function EmployeesPage() {
               <div className="flex-grow-1">
                 <div className="d-flex align-items-center gap-2">
                   <span style={{ fontSize: '1.25rem', fontWeight: '600' }}>Message Audit</span>
-                  <Badge bg="danger" style={{ fontSize: '0.7rem' }}>ADMIN</Badge>
+                  <Badge bg={getRoleBadgeVariant(session?.user?.role)} style={{ fontSize: '0.7rem' }}>
+                    {formatRoleLabel(session?.user?.role)} Only
+                  </Badge>
                 </div>
                 <div className="employee-name-subtitle" style={{ fontSize: '0.95rem', marginTop: '4px', opacity: '0.9' }}>
                   Viewing messages for: <strong>{messagesEmployee?.name}</strong> ({messagesEmployee?.email})
@@ -1225,8 +1251,8 @@ export default function EmployeesPage() {
                           <div className="conversation-details">
                             <div className="conversation-name">{conv.participant.name}</div>
                             <div className="conversation-email">{conv.participant.email}</div>
-                            <Badge bg={conv.participant.role === 'ADMIN' ? 'primary' : 'secondary'} className="mt-1">
-                              {conv.participant.role}
+                            <Badge bg={getRoleBadgeVariant(conv.participant.role)} className="mt-1">
+                              {formatRoleLabel(conv.participant.role)}
                             </Badge>
                           </div>
                           <div className="conversation-stats">
@@ -2042,8 +2068,13 @@ export default function EmployeesPage() {
             border-radius: 6px;
             font-size: 0.75rem;
             font-weight: 600;
-            text-transform: uppercase;
             letter-spacing: 0.3px;
+          }
+
+          .super-admin-badge {
+            background: linear-gradient(135deg, #dc3545 0%, #ff7f50 100%);
+            color: white;
+            box-shadow: 0 2px 10px rgba(220, 53, 69, 0.3);
           }
 
           .admin-badge {
@@ -2052,16 +2083,16 @@ export default function EmployeesPage() {
             box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
           }
 
+          .it-badge {
+            background: linear-gradient(135deg, #f6c343 0%, #f9a602 100%);
+            color: #1a1a2e;
+            box-shadow: 0 2px 10px rgba(249, 166, 2, 0.3);
+          }
+
           .manager-badge {
             background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
             color: white;
             box-shadow: 0 2px 10px rgba(23, 162, 184, 0.3);
-          }
-
-          .user-badge {
-            background: rgba(255, 255, 255, 0.1);
-            color: rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.2);
           }
 
           /* Security Status */
