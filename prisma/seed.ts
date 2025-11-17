@@ -4,6 +4,14 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
+  // Check if any employees exist (database already seeded)
+  const employeeCount = await prisma.employee.count();
+
+  if (employeeCount > 0) {
+    console.log('✅ Database already seeded. Skipping...');
+    return;
+  }
+
   // Create initial company
   const company = await prisma.company.create({
     data: {
@@ -26,7 +34,7 @@ async function main() {
     },
   });
 
-  console.log('Seeded database with:', {
+  console.log('🌱 Seeded database with:', {
     company: company.name,
     admin: adminUser.email,
     password: password, // Log the plain password for initial login
