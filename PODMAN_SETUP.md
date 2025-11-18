@@ -26,8 +26,8 @@ Follow the official installation guide at [podman.io](https://podman.io/getting-
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/dotdon/clovalink.git
-cd clovalink
+git clone https://github.com/dotdon/ClovaLink.git
+cd ClovaLink
 ```
 
 ### 2. Configure Environment Variables
@@ -90,9 +90,11 @@ This script will:
 
 Open your browser and navigate to: `http://localhost:3000`
 
-Default admin credentials:
+**Default admin credentials:**
 - Email: `admin@example.com`
 - Password: `admin123`
+
+**⚠️ Security Note**: Change the admin password immediately after first login from Account Settings.
 
 ## Container Management
 
@@ -190,6 +192,58 @@ This will:
 - Encrypt each file with company-specific keys
 - Update database records with encryption metadata
 - Provide a summary report
+
+## Redis Setup (Optional)
+
+Redis is used for rate limiting and caching. While optional, it's recommended for production deployments.
+
+### Using Redis with Podman
+
+1. Add Redis to your `podman-compose.yml`:
+
+```yaml
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: clovalink-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+volumes:
+  redis_data:
+```
+
+2. Add Redis URL to your `.env`:
+
+```env
+REDIS_URL=redis://redis:6379
+```
+
+3. Restart containers:
+
+```bash
+podman compose -f podman-compose.yml down
+podman compose -f podman-compose.yml up -d
+```
+
+### Verifying Redis Connection
+
+Check if Redis is working:
+
+```bash
+podman compose -f podman-compose.yml exec redis redis-cli ping
+# Should respond with: PONG
+```
+
+View Redis logs:
+
+```bash
+podman compose -f podman-compose.yml logs redis
+```
 
 ## Troubleshooting
 
